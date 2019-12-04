@@ -1,0 +1,211 @@
+import UIBase from './UIBase';
+import { singleton } from '../../Tools/Singleton';
+
+export class ViewZOrder {
+    /**场景层 */
+    public static readonly Scene = 20;
+    /**顶部和底部菜单栏层级 */
+    public static readonly MenuPanel = 80;
+    /**UI层 */
+    public static readonly UI = 100;
+    /**弹框层 */
+    public static readonly Popup = 200;
+    /**提示层 */
+    public static readonly Tips = 300;
+    /**引导层 */
+    public static readonly Guide = 400;
+    /**通知层 */
+    public static readonly Notice = 500;
+    /**loading层 */
+    public static readonly Loading = 600;
+}
+
+/**确定框界面参数 */
+export interface DialogParams {
+    title: string,
+    content: string,
+    okCallback?: Function,
+    cancelCallback?: Function
+}
+
+
+export interface LoadingParams {
+    events: [],//监听的事件。比如网络断开，展示loading. 连接成功之后关闭.那还需要个回调.
+
+
+}
+
+/**
+ * 考虑缓存的问题。
+ */
+@singleton
+export default class UIManager {
+    public static instance: UIManager;
+
+    /**
+     * @description ui栈
+     * @private
+     * @type {UIBase[]}
+     * @memberof UIManager
+     */
+    private uiStack: UIBase[] = [];
+
+    /**
+     * @description 缓存的ui，如果ui标记needCache那么就会在存到这里。
+     * @private
+     * @type {UIBase[]}
+     * @memberof UIManager
+     */
+    private cachedUI: Map<string, UIBase> = new Map();
+
+    public openUI<T extends UIBase>(uiClass: { new(): T }, zOrder: number = ViewZOrder.UI, callback?: Function, onProgress?: Function, ...args: any[]) {
+        if (this.hasUI(uiClass)) {
+            console.error(`UIManager OpenUI 1: ui ${cc.js.getClassName(uiClass)} is already exist, please check`);
+            return;
+        }
+        cc.loader.loadRes(uiClass.PrefabPath, (completedCount: number, totalCount: number, item: any) => {
+            onProgress && onProgress(completedCount, totalCount, item);
+        }, (error, prefab) => {
+            if (error) {
+                console.error(`UIManager OpenUI: load ui error: ${error}`);
+                return;
+            }
+            if (this.hasUI(uiClass)) {
+                console.error(`UIManager OpenUI 2: ui ${cc.js.getClassName(uiClass)} is already exist, please check`);
+                return;
+            }
+
+            let uiNode: cc.Node = cc.instantiate(prefab);
+            let uiInstance = uiNode.getComponent(uiClass) as UIBase;
+            if (!uiInstance) {
+                console.error(`${uiClass.PrefabPath}没有绑定UI脚本!!!`);
+                return;
+            }
+            uiInstance.init(args);
+            let uiRoot = cc.director.getScene();
+            if (!uiRoot) {
+                console.error(`当前场景${cc.director.getScene().name}Canvas!!!`);
+                return;
+            }
+            uiNode.parent = uiRoot;
+            uiNode.zIndex = zOrder;
+            uiInstance.show();
+            this.uiStack.push(uiInstance);
+
+            callback && callback(uiInstance);
+        });
+    }
+
+
+
+    public getUIFromCachedList<T extends UIBase>(uiClass: { new(): T }): UIBase {
+        let ui = null;
+        let uiName = cc.js.getClassName(uiClass);
+        if (this.cachedUI.has(uiName)) {
+            ui = this.cachedUI.get(uiName);
+        }
+        return ui;
+    }
+
+    private setUIToCachedList(ui: UIBase) {
+        let uiName = cc.js.getClassName(ui);
+        this.cachedUI.set(uiName, ui);
+    }
+
+
+    public closeUIByUIClass<T extends UIBase>(uiClass: { new(): T }) {
+        for (let i = 0; i < this.uiStack.length; ++i) {
+            if (cc.js.getClassName(this.uiStack[i]) === cc.js.getClassName(uiClass)) {
+                if (cc.isValid(this.uiStack[i].node)) {
+                    this.uiStack[i].close();
+                }
+                this.uiStack.splice(i, 1);
+                return;
+            }
+        }
+    }
+    public closeUI(ui: UIBase) {
+        if (cc.isValid(ui)) {
+            ui.close();
+        }
+        let index = this.uiStack.indexOf(ui);
+        if (index >= 0) {
+            this.uiStack.splice(index, 1);
+        }
+    }
+    public closeAllUI() {
+        if (this.uiStack.length == 0) {
+            return;
+        }
+        this.closeUI(this.uiStack[0]);
+        while (this.uiStack.length > 0) {
+            this.closeUI(this.uiStack[0]);
+        }
+    }
+
+
+
+    public hideUI<T extends UIBase>(uiClass: { new(): T }) {
+        let ui = this.getUI(uiClass);
+        if (ui) {
+            ui.node.active = false;
+        }
+    }
+
+    public hasUI<T extends UIBase>(uiClass: { new(): T }): boolean {
+        let uiName = cc.js.getClassName(uiClass);
+        for (let i = 0; i < this.uiStack.length; ++i) {
+            if (cc.js.getClassName(this.uiStack[i]) == uiName) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public getUI<T extends UIBase>(uiClass: { new(): T }): UIBase {
+        for (let i = 0; i < this.uiStack.length; ++i) {
+            if (cc.js.getClassName(this.uiStack[i]) === cc.js.getClassName(uiClass)) {
+                return this.uiStack[i];
+            }
+        }
+        return null;
+    }
+
+    public isShowing<T extends UIBase>(uiClass: { new(): T }) {
+        let ui = this.getUI(uiClass);
+        if (!ui) {
+            return false;
+        }
+        return ui.node.active;
+    }
+
+    public showUI<T extends UIBase>(uiClass: { new(): T }, callback?: Function, ...args: any[]) {
+        this.openUI(uiClass, ViewZOrder.UI, callback, null, ...args);
+    }
+
+    // public showTips(message: string, ...param: any[]) {
+    //     let tipUI = this.getUI(UITips) as UITips;
+    //     if (!tipUI) {
+    //         this.openUI(UITips, ViewZOrder.Tips, (ui) => {
+    //             this.showTips(message);
+    //         });
+    //     } else {
+    //         tipUI.showTip(message);
+    //     }
+    // }
+
+    public static showPopup(uiClass, data?: DialogParams) {
+        UIManager.instance.openUI(uiClass, ViewZOrder.Popup, null, null, data);
+    }
+
+    // public showUI<T extends UIBase>(uiClass: UIClass<T>, callback?: Function) {
+    //     let ui = this.getUI(uiClass);
+    //     if (!ui) {
+    //         console.error(`UIManager showUI: ui ${uiClass.getName()} not exist`);
+    //         return;
+    //     }
+    //     ui.node.active = true;
+    // }
+
+
+}

@@ -1,27 +1,23 @@
-import { reject } from "./async";
-import { toString } from '../Collections/arrays';
-
-
 
 export default class Utils {
     constructor() { }
 
     /** 长震动 */
     public static vibrateLong() {
-        if ('vibrate' in window.navigator) {
-            window.navigator.vibrate(400);
-        } else if (window['wx'] && wx.vibrateLong) {
-            wx.vibrateLong();
-        }
+        // if ('vibrate' in window.navigator) {
+        //     window.navigator.vibrate(400);
+        // } else if (window['wx'] && wx.vibrateLong) {
+        //     wx.vibrateLong();
+        // }
     }
 
     /** 短震动 */
     public static vibrateShort() {
-        if ('vibrate' in window.navigator) {
-            window.navigator.vibrate(15);
-        } else if (window['wx'] && wx.vibrateShort) {
-            wx.vibrateShort();
-        }
+        // if ('vibrate' in window.navigator) {
+        //     window.navigator.vibrate(15);
+        // } else if (window['wx'] && wx.vibrateShort) {
+        //     wx.vibrateShort();
+        // }
     }
 
     /**

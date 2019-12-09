@@ -1,33 +1,9 @@
 import { IStorageProvider } from './IStorageProvider';
-var BackMusic = "BackMusic";
-var MusicEffect = "MusicEffect";
-var LoginTime = "LoginTime";
-var IDList = "IDList";
-var ExistFlag = "ExistFlag";
-const SameDay = 'SameDay';
-
-/**
- * 
- * 应该只提供读写功能。其他都是外层的事情了
- *
- */
-export default class LocalDataManager implements IStorageProvider {
+export default class LocalDataProvider implements IStorageProvider {
     constructor() {
-        this.initLocalData();
     }
     clear() {
         cc.sys.localStorage.clear();
-    }
-    initLocalData() {
-        var exist = this.read(ExistFlag);
-        if (!!exist) {
-            this.write(ExistFlag, true);
-            this.resetLocalUserData();
-        }
-    }
-    resetLocalUserData() {
-        this.write(BackMusic, true);
-        this.write(MusicEffect, true);
     }
     /**
      * 写入数据
@@ -68,10 +44,4 @@ export default class LocalDataManager implements IStorageProvider {
         }
         return def;
     }
-
 }
-
-
-window.LocalDataManager = new LocalDataManager();
-
-

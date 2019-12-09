@@ -1,5 +1,5 @@
 import { RewardVideoCallBackMsg } from '../AdsManager';
-import { IAdvertiser } from './IAdvertiser';
+import { IAdProvider } from './IAdvertiser';
 /**
  * 激励广告播放失败代码翻译
  */
@@ -16,7 +16,7 @@ export const TTRewardVideoErrMsg = {
 };
 
 
-export default class ByteDanceAds implements IAdvertiser {
+export default class ByteDanceAds implements IAdProvider {
 
 
     private bannerId: string = '';

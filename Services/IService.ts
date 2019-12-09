@@ -1,4 +1,4 @@
-import GameContext from "./GameContext";
+import GameContext from "../GameContext";
 
 export default interface IService {
 }
@@ -21,7 +21,7 @@ export function InjectService(serviceName: string, CCComponent?: boolean) {
         if (CCComponent) {
             GameContext.serviceNameArr.push(serviceName);
         } else {
-            GameContext.serviceClassDict.setValue(serviceName, target);
+            GameContext.serviceClassDict.set(serviceName, target);
         }
     }
 }

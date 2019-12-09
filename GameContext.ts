@@ -1,6 +1,6 @@
-import IService from "./IService";
-import Dictionary from './Collections/Dictionary';
+import IService from "./Services/IService";
 import { singleton } from './Tools/Singleton';
+
 
 @singleton
 export default class GameContext {
@@ -12,10 +12,9 @@ export default class GameContext {
      * @memberof GameContext
      */
     public static instance: GameContext = null;
-    public player: EntityExt = null;
-    public static serviceClassDict: Dictionary<string, any> = new Dictionary();
+    public static serviceClassDict: Map<string, any> = new Map();
     public static serviceNameArr: Array<string> = new Array();
-    private _servicesDictionary: Dictionary<string, IService> = new Dictionary<string, IService>();
+    private _servicesDictionary: Map<string, IService> = new Map<string, IService>();
 
 
     constructor() {
@@ -24,9 +23,9 @@ export default class GameContext {
 
 
     public registerServices() {
-        GameContext.serviceClassDict.forEach((key, value) => {
+        GameContext.serviceClassDict.forEach((value, key) => {
             let service: IService = new value();
-            this._servicesDictionary.setValue(key, service);
+            this._servicesDictionary.set(key, service);
         })
 
 
@@ -52,24 +51,18 @@ export default class GameContext {
             }
 
             console.log("registServices s", s);
-            this._servicesDictionary.setValue(s, services[0]);
+            this._servicesDictionary.set(s, services[0]);
         }
     }
 
     public getService<T extends IService>(c: { new(): T; }): T {
-        let service = <T>this._servicesDictionary.getValue(c.serviceName);
+        let service = <T>this._servicesDictionary.get(c.serviceName);
         if (!!service) {
             return service;
         }
         throw new Error("get service fail ,make sure you have already register it ");
 
-
-
     }
 
-
-    onDebugTouch() {
-        GameContext.instance.player.PlayerComponent.coins += 10000;
-    }
 
 }

@@ -1,33 +1,6 @@
-import ByteDanceAds from './Advertiser/ByteDanceAds';
-import { IAdvertiser } from './Advertiser/IAdvertiser';
-import DebugAds from './QingYouAds/DebugAds';
-//非通用型 无QY广告
-var Base64 = require("./Base64Tools");
-
-
-/**
- *  TODO: 在adsmanagernew的时候，遍历自己所有的组件，执行他们的init方法。
- *  需要处理的事情。
- * 1.显示广告
- *  奖励视频
- *  插页
- *  banner
- * 
- *  1.考虑播放的时候的事情。
- *  2.考虑平台生效的问题
- *  生效某个平台的
- * 
- * 1. 首先要判断平台吗？然后根据平台添加广告组件？ 可行
- * 2. 播放的时候，设定好规则。1.轮询。2.
- * 
- * 
- * 封装广告商的能力
- * 1.播放视频广告
- * 2.播放插页广告
- * 3.播放横幅广告
- * 
- */
-
+import ByteDanceAds from './Provider/ByteDanceAds';
+import { IAdProvider } from './Provider/IAdvertiser';
+import DebugAds from './DebugAds';
 
 /**
  * @description 视频广告播放回调，如果失败就读取errMsg
@@ -84,10 +57,10 @@ export class AdsManager {
     /**
      * @description 加入的广告组件都会存在这里。
      * @private
-     * @type {Array<IAdvertiser>}
+     * @type {Array<IAdProvider>}
      * @memberof AdsManager
      */
-    private adComponentsArr: Array<IAdvertiser> = new Array<IAdvertiser>();
+    private adComponentsArr: Array<IAdProvider> = new Array<IAdProvider>();
 
     constructor() {
         if (this.isNoAds()) {
@@ -98,10 +71,10 @@ export class AdsManager {
 
     }
 
-    public addAdvertiser(advertiser: IAdvertiser) {
+    public addAdvertiser(advertiser: IAdProvider) {
         this.adComponentsArr.push(advertiser);
     }
-    public removeAdvertiser(advertiser: IAdvertiser) {
+    public removeAdvertiser(advertiser: IAdProvider) {
 
     }
 

@@ -1,5 +1,5 @@
 import { RewardVideoCallBackMsg } from '../AdsManager';
-import { IAdvertiser } from './IAdvertiser';
+import { IAdProvider } from './IAdvertiser';
 /**
  * 激励广告播放失败代码翻译
  */
@@ -16,7 +16,7 @@ export const QQRewardVideoErrMsg = {
 };
 
 
-export default class QQAds implements IAdvertiser {
+export default class QQAds implements IAdProvider {
 
 
     private bannerAd: qq.BannerAd = null;

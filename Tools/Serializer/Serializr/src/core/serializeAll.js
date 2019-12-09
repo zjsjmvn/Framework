@@ -1,4 +1,6 @@
-import { invariant } from "../utils/utils"
+import {
+    invariant
+} from "../utils/utils"
 import createModelSchema from "../api/createModelSchema"
 import getDefaultModelSchema from "../api/getDefaultModelSchema"
 import setDefaultModelSchema from "../api/setDefaultModelSchema"
@@ -42,15 +44,17 @@ export default function serializeAll(targetOrPattern, clazzOrSchema) {
         invariant(typeof targetOrPattern === "function", "@serializeAll can only be used as class decorator");
         propSchema = true;
         invokeImmediately = true;
-    }
-    else {
+    } else {
         invariant(typeof targetOrPattern === "object" && targetOrPattern.test, "@serializeAll pattern doesn't have test");
         if (typeof clazzOrSchema === "function") {
             clazzOrSchema = object(clazzOrSchema);
         }
         invariant(typeof clazzOrSchema === "object" && clazzOrSchema.serializer, "couldn't resolve schema");
-        propSchema = Object.assign({}, clazzOrSchema, {pattern: targetOrPattern})
+        propSchema = Object.assign({}, clazzOrSchema, {
+            pattern: targetOrPattern
+        })
     }
+
     function result(target) {
         var info = getDefaultModelSchema(target);
         if (!info || !target.hasOwnProperty("serializeInfo")) {

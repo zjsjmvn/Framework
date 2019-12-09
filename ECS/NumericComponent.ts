@@ -32,6 +32,12 @@ export class NumericComponent {
         if (type !== NumericType.Base && type !== NumericType.BaseAddValue && type !== NumericType.BaseAddPercent && type !== NumericType.FinalAddValue && type !== NumericType.FinalAddPercent) {
             throw new Error('setByKey NumericType Value Error');
         }
+        if (type == NumericType.BaseAddPercent || type == NumericType.FinalAddPercent) {
+            if (value <= -100) {
+                // value低于-100后base会计算出负值。
+                cc.warn(`NumericComponent: setByKey ${NumericType[type]} is less than -100`);
+            }
+        }
         if (value === this.getByKey(type)) {
             return;
         }
@@ -44,5 +50,36 @@ export class NumericComponent {
         let f = ((this.getByKey(NumericType.Base) + this.getByKey(NumericType.BaseAddValue)) * (100 + this.getByKey(NumericType.BaseAddPercent)) / 100 + this.getByKey(NumericType.FinalAddValue)) * (100 + this.getByKey(NumericType.FinalAddPercent)) / 100;
         this.numericDic.setValue(NumericType.Final, f);
     }
+
+
+    /**
+     * @description 倒推base.如玩家扣血，newFinalHp = currentFinalHp-damage。newFinalHp是由base控制的，需要修改base才行
+     * @memberof NumericComponent
+     */
+    public getBaseByFinal(final: number): number {
+
+
+        let base = 0;
+        let finalAddPercent = (100 + this.getByKey(NumericType.FinalAddPercent)) / 100;
+        let finalAdd = this.getByKey(NumericType.FinalAddValue)
+        let baseAddPercent = (100 + this.getByKey(NumericType.BaseAddPercent)) / 100;
+        let baseAdd = this.getByKey(NumericType.BaseAddValue);
+        base = (final / finalAddPercent - finalAdd) / baseAddPercent - baseAdd;
+        return base;
+    }
 }
+
+/**
+ * test
+let a = new NumericComponent();
+a.setByKey(NumericType.Base, 0.2);
+a.setByKey(NumericType.BaseAddValue, 1000);
+a.setByKey(NumericType.BaseAddPercent, 100);
+a.setByKey(NumericType.FinalAddValue, 500);
+a.setByKey(NumericType.FinalAddPercent, -150);
+
+cc.log(a.getByKey(NumericType.Final));
+cc.log(a.getBaseByFinal(a.getByKey(NumericType.Final)));
+
+ */
 

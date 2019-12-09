@@ -1,5 +1,5 @@
 import { RewardVideoCallBackMsg } from '../AdsManager';
-export interface IAdvertiser {
+export interface IAdProvider {
 
 
     // init();

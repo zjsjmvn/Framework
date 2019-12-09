@@ -1,4 +1,4 @@
-import { RewardVideoCallBackMsg, AdsManager } from '../AdsManager';
+import { RewardVideoCallBackMsg, AdsManager } from './AdsManager';
 
 enum DebugAdsEnum {
     Banner = 0,

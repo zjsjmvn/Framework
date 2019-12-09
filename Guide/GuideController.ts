@@ -157,7 +157,7 @@ export class GuideController extends Thor {
      * @param touch
      * @returns {boolean}
      */
-    _onTouchStart(sender, event) {
+    _onTouchStart(event) {
         if (!!this._locateNodes && this._locateNodes.length === 0) return false;
         // if (this._currentStep.listenTouchEventType !== GuideHelper.TouchEvent.START){
 
@@ -191,10 +191,8 @@ export class GuideController extends Thor {
         }
         return !isContains;
     }
-    //如果是多点。
-    //touchmove一定要经过这个locatNodes才对。
-    //
-    _onTouchMove(sender, event) {
+
+    _onTouchMove(event) {
         //设置点击位置显示
         let point = this.node.convertToNodeSpaceAR(event.getLocation());
         // if (this._currentStep.listenTouchEventType === GuideHelper.TouchEvent.MOVE && this._currentStep.command === GuideHelper.GuideStepType.FINGER_GO_AND_BACK_COMMAND) {
@@ -234,16 +232,14 @@ export class GuideController extends Thor {
     }
 
     /**
-     * 
-     * @param sender 
-     * 
-     * @param event 
-     * 
+     * @description     
      * return true 不穿透 
      * return false 表示触摸穿透
-     * 
+     * @param {*} event
+     * @returns 
+     * @memberof GuideController
      */
-    _onTouchEnd(sender, event) {
+    _onTouchEnd(event) {
         cc.log('_onTouchEnd');
         // if (this._currentStep.listenTouchEventType&&this._currentStep.listenTouchEventType !== cc.Node.EventType.TOUCH_END){
         //     // this._processTasks()

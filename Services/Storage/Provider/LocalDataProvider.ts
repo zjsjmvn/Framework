@@ -2,9 +2,7 @@ import { IStorageProvider } from './IStorageProvider';
 export default class LocalDataProvider implements IStorageProvider {
     constructor() {
     }
-    clear() {
-        cc.sys.localStorage.clear();
-    }
+
     /**
      * 写入数据
      *

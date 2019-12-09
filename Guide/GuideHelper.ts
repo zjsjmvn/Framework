@@ -117,7 +117,7 @@ export module GuideHelper {
         START,
         MOVE,
         END,
-        CANCLE,
+        CANCEL,
         LONG,
     }
     /**

@@ -1,12 +1,12 @@
 import IService from "./Services/IService";
-import { singleton } from './Tools/Singleton';
+import { singleton } from './Tools/Decorator/Singleton';
 
 
 @singleton
 export default class GameContext {
 
     /**
-     * @description only for intellisense 
+     * @description only for ide intellisense 
      * @static
      * @type {GameContext}
      * @memberof GameContext

@@ -1,5 +1,5 @@
 import UIBase from './UIBase';
-import { singleton } from '../../Tools/Singleton';
+import { singleton } from '../../Tools/Decorator/Singleton';
 
 export class ViewZOrder {
     /**场景层 */

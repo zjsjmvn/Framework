@@ -97,6 +97,17 @@ export default class ByteDanceAds implements IAdProvider {
                     resolve(true);
                     this.bannerAd.show();
                 });
+                //TODO: 这个地方会让广告在屏幕最下居中。
+                this.bannerAd.onResize(size => {
+                    // good
+                    console.log(size.width, size.height);
+                    let width = cc.view.getFrameSize().width;
+                    let height = cc.view.getFrameSize().height;
+
+                    this.bannerAd.style.top = height - size.height;
+                    this.bannerAd.style.left = (width - size.width) / 2;
+
+                });
             };
         })
     }

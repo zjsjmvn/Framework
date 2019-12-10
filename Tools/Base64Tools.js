@@ -1,10 +1,9 @@
-
 // Create Base64 Objectvar
 var Base64 = {
     _keyStr: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/",
     //指定key加密
-    encode: function (e, key="") {
-        if(key !== ""){
+    encode: function (e, key = "") {
+        if (key !== "") {
             this._keyStr = key;
         }
         var t = "";
@@ -29,8 +28,8 @@ var Base64 = {
         return t
     },
     //指定key解密,解码有些bug。
-    decode: function (e,key="") {
-        if(key !== ""){
+    decode: function (e, key = "") {
+        if (key !== "") {
             this._keyStr = key;
         }
         var t = "";
@@ -103,17 +102,5 @@ var Base64 = {
     }
 }
 
-
-//mmgg
-// Decode the String
-//var decodedBannerString = Base64.decode("un31os38m\/fKv23+FkcfwAjhMrjTCrc1w8HWwgo5J8cWFKVWJrvVRkcAJrj5wgIyue9PCsiPoAbkosiLodIhusiPodoKzdJnon9EzsYLzAjNR\/vbodiLFeoPFeY1FeijoTPkosiEFdRWoeoaod3+on9+us9","36AsiH/2ItUFouzS9D0dOxrgJwMqRvCmafGeYVpTQ4NXlW5yPhknK18LEj+ZbcB7");
-// var decodedInterstitialString = Base64.decode("od3EunonzghQv2DPzGbyJr95RrV5wLVyvrvfqrxnFpuyq0ctqrHTwgoy0rjKwgtnv\/VKMrHlFnJKo2ahodo8FnIPodRhoeinodRkueoKueOKos3Puea1Fp4PwLPhodR5on35zdO5odYkmsIPodaWukKkok3husQPoeQkoP","36AsiH/2ItUFouzS9D0dOxrgJwMqRvCmafGeYVpTQ4NXlW5yPhknK18LEj+ZbcB7");
-
-// console.log("decode " + decodedInterstitialString); 
-// var arr = decodedInterstitialString.split("|");
-// for(var i in arr){
-//     cc.log(arr[i]);
-// }
-// ;
 
 module.exports = Base64;

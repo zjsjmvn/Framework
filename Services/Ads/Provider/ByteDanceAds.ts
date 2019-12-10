@@ -19,9 +19,8 @@ export const TTRewardVideoErrMsg = {
 export default class ByteDanceAds implements IAdProvider {
 
 
-    private bannerId: string = '';
+    private bannerId: string = null;
     private bannerAd: tt.BannerAd = null;
-    private lastStyle: tt.RectanbleStyle = null;
     private rewardedVideoAd: tt.RewardedVideoAd = null;
     private rewardCallBack: Function = null;
     private hasRewardAdInCache: boolean = false;
@@ -34,11 +33,8 @@ export default class ByteDanceAds implements IAdProvider {
      * @memberof ByteDanceAds
      */
     constructor(rewardVideoId, bannerId) {
-        // banner 不用初始化，只需要id即可。
-        this.bannerId = bannerId;
-        // 视频广告需要初始化。
         this.initRewardVideo(rewardVideoId);
-
+        this.initBanner(bannerId)
     }
     private initRewardVideo(rewardVideoId) {
         if (!!window.tt && !!window.tt.createRewardedVideoAd) {
@@ -79,42 +75,30 @@ export default class ByteDanceAds implements IAdProvider {
             console.error("ByteDanceAds：并不是头条平台，却引用了头条的广告组件");
         }
     }
+    private initBanner(bannerId) {
+        this.bannerId = bannerId;
+    }
+    showBanner(style: tt.RectanbleStyle): Promise<boolean> {
+        return new Promise((resolve, reject) => {
+            if (window.tt && window.tt.createBannerAd) {
+                console.log(JSON.stringify(style));
+                let param = {
+                    adUnitId: this.bannerId,
+                    style: style
+                };
+                this.bannerAd = window.tt.createBannerAd(param);
+                this.bannerAd.onError(err => {
+                    console.log("ByteDance banner error: ", err)
+                    resolve(false)
+                });
 
-    showBanner(style?: tt.RectanbleStyle) {
-        if (window.tt && window.tt.createBannerAd) {
-            console.log(JSON.stringify(style));
-            let param = {
-                adUnitId: this.bannerId,
-                style: style
-            };
-            this.bannerAd = window.tt.createBannerAd(param);
-            this.lastStyle = style;
-            this.bannerAd.onError(err => {
-                console.log("ByteDance banner error: ", err)
-            });
-
-            this.bannerAd.onLoad(() => {
-                console.log('tt banner 广告加载成功')
-                if (this.bannerAd) {
+                this.bannerAd.onLoad(() => {
+                    console.log('tt banner 广告加载成功')
+                    resolve(true);
                     this.bannerAd.show();
-                    this.bannerAd.style.width = style.width + 1;
-                } else {
-                    console.error("this.bannerAd is null");
-                }
-            });
-            this.bannerAd.onResize(size => {
-                // good
-                console.log(size.width, size.height);
-                let width = cc.view.getFrameSize().width;
-                let height = cc.view.getFrameSize().height;
-                this.bannerAd.style.top = height - size.height;
-                this.bannerAd.style.left = (width - size.width) / 2;
-
-
-            });
-            return this.bannerAd;
-        };
-        return null;
+                });
+            };
+        })
     }
     showInterstitial() {
 
@@ -165,8 +149,6 @@ export default class ByteDanceAds implements IAdProvider {
         return new Promise((resolve, reject) => {
             if (!!this.rewardedVideoAd) {
                 this.rewardedVideoAd.load()
-                    // todo
-
                     .then(() => {
                         console.log('ByteDanceAds 拉取视频广告成功');
                         this.hasRewardAdInCache = true;

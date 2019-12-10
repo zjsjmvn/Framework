@@ -1,6 +1,6 @@
-import ByteDanceAds from './Provider/ByteDanceAds';
 import { IAdProvider } from './Provider/IAdvertiser';
 import DebugAds from './DebugAds';
+import { singleton } from '../../Tools/Decorator/Singleton';
 
 /**
  * @description 视频广告播放回调，如果失败就读取errMsg
@@ -14,45 +14,24 @@ export class RewardVideoCallBackMsg {
 }
 
 
+@singleton
 export class AdsManager {
     /**
-     * @description 单例
+     * @description 单例,只是为了智能提示。instance会被singleton装饰器赋值。
      * @private
      * @static
      * @type {AdsManager}
      * @memberof AdsManager
      */
-    private static _instance: AdsManager = null
-    public static get instance() {
-        if (!AdsManager._instance) AdsManager._instance = new AdsManager();
-        return AdsManager._instance;
-    }
+    public static instance: AdsManager = null
 
-
-    /**
-     * @description 是否已经移除广告
-     * @private
-     * @type {boolean}
-     * @memberof AdsManager
-     */
-    private alreadyRemovedAds: boolean = false;
     /**
      * @description 最后一次展示插页的时间
      * @private
      * @type {number}
      * @memberof AdsManager
      */
-    private _last_show_interstitial_milsec: number = 0;
-
-    /**
-     * @description 是否正在展示banner
-     * @private
-     * @type {boolean}
-     * @memberof AdsManager
-     */
-    private isShowingBanner: boolean = false;
-
-
+    private _last_show_interstitial_timestamp: number = 0;
 
     /**
      * @description 加入的广告组件都会存在这里。
@@ -63,11 +42,6 @@ export class AdsManager {
     private adComponentsArr: Array<IAdProvider> = new Array<IAdProvider>();
 
     constructor() {
-        if (this.isNoAds()) {
-            return;
-        }
-
-        // this.adComponentsArr.push(new ByteDanceAds)
 
     }
 
@@ -79,40 +53,18 @@ export class AdsManager {
     }
 
     /**
-     * @description 去除广告
-     * @date 2019-09-06
-     * @memberof AdsManager
-     * 
-     *      */
-    public removeAds() {
-        this.alreadyRemovedAds = true;
-        // TODO:存档
-    }
-    //是否无广告
-    isNoAds() {
-        return this.alreadyRemovedAds;
-        //return true;
-    }
-
-
-    //#region 
-
-
-
-    /**
      * 显示横幅
      * @returns 无
      */
-    showBanner(style?) {
+    async showBanner(style?) {
         if (this.isNoAds()) return;
         if (CC_PREVIEW) {
             DebugAds.showBanner();
             return
         }
         style = style || this.defaultBannerStyle();
-        // 也需要判断广告商是否有banner广告，并不是所有广告商都有banner
         for (let i of this.adComponentsArr) {
-            if (!!i.showBanner(style)) {
+            if (!!await i.showBanner(style)) {
                 return;
             }
         }
@@ -132,18 +84,9 @@ export class AdsManager {
     _checkInterstitialIntervalTimeValid() {
         // 显示插页要控制时间。在制定时间内。只显示一次广告//
         // 目前设置两分钟只显示一次广告
-        // let show_interstitial_interval = window.show_interstitial_interval || 1;
-        // let milsec = Date.now() / 1000;
 
-        // if (milsec - this._last_show_interstitial_milsec < show_interstitial_interval * 60) {
-        //     return false;
-        // }
 
         return true;
-    }
-    _resetIntersitialIntervalTime() {
-        let milsec = Date.now() / 1000;
-        this._last_show_interstitial_milsec = milsec;
     }
 
     /**当前有插页能显示 */
@@ -303,12 +246,9 @@ export class AdsManager {
 
         return false;
     }
-    //#endregion
-    //------control all
 
     /**
      * @description 是否有奖励视频。
-     * @date 2019-09-09
      * @returns {boolean}
      * @memberof AdsManager
      */
@@ -325,23 +265,18 @@ export class AdsManager {
     }
 
     /**
-     * @description TODO: 有问题，单个组件返回的false会有问题。比如admob没有广告，那么是返回false，那应该是继续播放下一个的。但是呢，用户关闭的话，也是false。这样在请求就是错的。
-     * 
-     * @date 2019-09-09
+     * @description 
      * @returns {Promise<RewardVideoCallBackMsg>}
      * @memberof AdsManager
      */
     showRewardVideo(): Promise<RewardVideoCallBackMsg> {
         try {
             cc.log("AdsManager showRewardVideo");
-
             if (CC_PREVIEW) {
                 return DebugAds.showVideo();
             }
-
-            // TODO: 需要处理好头条视频广告的预加载问题。
             for (let i of this.adComponentsArr) {
-                if (i.hasRewardVideo() || true) {
+                if (i.hasRewardVideo()) {
                     return i.showRewardVideo();
                 }
             }
@@ -357,7 +292,6 @@ export class AdsManager {
     }
     /**
      * @description 预加载广告
-     * @date 2019-09-09
      * @param {boolean} [parallel] 是否并行加载，并行可能会导致卡顿。但是会调用所有广告平台的预加载功能。
      * @returns 
      * @memberof AdsManager
@@ -386,6 +320,11 @@ export class AdsManager {
     }
 
 
+    /**
+     * @description 默认广告为屏幕 居中最下。
+     * @returns 
+     * @memberof AdsManager
+     */
     defaultBannerStyle() {
         let width = cc.view.getFrameSize().width;
         let height = cc.view.getFrameSize().height;
@@ -407,6 +346,18 @@ export class AdsManager {
         }
         return style;
     };
+
+
+
+    /**
+     * @description 原生平台用到的。
+     * @private
+     * @returns {boolean}
+     * @memberof AdsManager
+     */
+    private isNoAds() {
+        return false;
+    }
 
 
 }

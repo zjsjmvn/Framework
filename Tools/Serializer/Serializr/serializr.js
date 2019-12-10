@@ -1,9 +1,10 @@
 /** serializr - (c) Michel Weststrate 2016 - MIT Licensed */
 (function (global, factory) {
     typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
-    typeof define === 'function' && define.amd ? define('serializr', ['exports'], factory) :
-    (global = global || self, factory(global.serializr = {}));
-}(this, function (exports) { 'use strict';
+        typeof define === 'function' && define.amd ? define('serializr', ['exports'], factory) :
+        (global = global || self, factory(global.serializr = {}));
+}(this, function (exports) {
+    'use strict';
 
     /**
      * Creates a model schema that (de)serializes from / to plain javascript objects.
@@ -23,7 +24,7 @@
      */
     function createSimpleSchema(props) {
         return {
-            factory: function() {
+            factory: function () {
                 return {}
             },
             props: props
@@ -91,7 +92,9 @@
         // TODO: limit parallelization?
         if (ar.length === 0)
             return void cb(null, [])
-        var left = ar.filter(function(){ return true }).length; // only count items processed by forEach
+        var left = ar.filter(function () {
+            return true
+        }).length; // only count items processed by forEach
         var resultArray = [];
         var failed = false;
         var processorCb = function (idx, err, result) {
@@ -162,7 +165,7 @@
         if (additionalArgs) {
             invariant(isPropSchema(propSchema), "expected a propSchema");
             var argNames = ["beforeDeserialize", "afterDeserialize"];
-            argNames.forEach(function(argName) {
+            argNames.forEach(function (argName) {
                 if (typeof additionalArgs[argName] === "function") {
                     propSchema[argName] = additionalArgs[argName];
                 }
@@ -234,7 +237,7 @@
         invariant(typeof clazz === "function", "expected constructor function");
         var model = {
             targetClass: clazz,
-            factory: factory || function() {
+            factory: factory || function () {
                 return new clazz()
             },
             props: props
@@ -296,7 +299,9 @@
      * t.deepEqual(_.serialize(s, { a: 4 }), { });
      * t.deepEqual(_.deserialize(s, { a: 4 }), { a: 4 });
      */
-    var SKIP = typeof Symbol !== "undefined" ? Symbol("SKIP") : { SKIP: true };
+    var SKIP = typeof Symbol !== "undefined" ? Symbol("SKIP") : {
+        SKIP: true
+    };
 
     var _defaultPrimitiveProp = primitive();
 
@@ -306,8 +311,8 @@
 
     function getParamNames(func) {
         var fnStr = func.toString().replace(STRIP_COMMENTS, "");
-        var result = fnStr.slice(fnStr.indexOf("(")+1, fnStr.indexOf(")")).match(ARGUMENT_NAMES);
-        if(result === null)
+        var result = fnStr.slice(fnStr.indexOf("(") + 1, fnStr.indexOf(")")).match(ARGUMENT_NAMES);
+        if (result === null)
             result = [];
         return result
     }
@@ -316,9 +321,9 @@
         invariant(arguments.length >= 2, "too few arguments. Please use @serializable as property decorator");
         // Fix for @serializable used in class constructor params (typescript)
         var factory;
-        if (propName === undefined && typeof target === "function"
-            && target.prototype
-            && descriptor !== undefined && typeof descriptor === "number") {
+        if (propName === undefined && typeof target === "function" &&
+            target.prototype &&
+            descriptor !== undefined && typeof descriptor === "number") {
             invariant(isPropSchema(propSchema), "Constructor params must use alias(name)");
             invariant(propSchema.jsonname, "Constructor params must use alias(name)");
             var paramNames = getParamNames(target);
@@ -328,7 +333,7 @@
                 descriptor = undefined;
                 target = target.prototype;
                 // Create a factory so the constructor is called properly
-                factory = function(context) {
+                factory = function (context) {
                     var params = [];
                     for (var i = 0; i < target.constructor.length; i++) {
                         Object.keys(context.modelSchema.props).forEach(function (key) {
@@ -339,7 +344,7 @@
                         });
                     }
 
-                    return new (Function.prototype.bind.apply(target.constructor, [null].concat(params)))
+                    return new(Function.prototype.bind.apply(target.constructor, [null].concat(params)))
                 };
             }
         }
@@ -456,7 +461,7 @@
             if (propDef === false)
                 return
             var jsonValue = propDef.serializer(obj[key], key, obj);
-            if (jsonValue === SKIP){
+            if (jsonValue === SKIP) {
                 return
             }
             res[propDef.jsonname || key] = jsonValue;
@@ -466,30 +471,32 @@
 
     function serializeStarProps(schema, propDef, obj, target) {
         checkStarSchemaInvariant(propDef);
-        for (var key in obj) if (obj.hasOwnProperty(key)) if (!(key in schema.props)) {
-            if ((propDef === true) || (propDef.pattern && propDef.pattern.test(key))) {
-                var value = obj[key];
-                if (propDef === true) {
-                    if (isPrimitive(value)) {
-                        target[key] = value;
+        for (var key in obj)
+            if (obj.hasOwnProperty(key))
+                if (!(key in schema.props)) {
+                    if ((propDef === true) || (propDef.pattern && propDef.pattern.test(key))) {
+                        var value = obj[key];
+                        if (propDef === true) {
+                            if (isPrimitive(value)) {
+                                target[key] = value;
+                            }
+                        } else if (propDef.props) {
+                            var jsonValue = serialize(propDef, value);
+                            if (jsonValue === SKIP) {
+                                return
+                            }
+                            // todo: propDef.jsonname could be a transform function on key
+                            target[key] = jsonValue;
+                        } else {
+                            var jsonValue = propDef.serializer(value, key, obj);
+                            if (jsonValue === SKIP) {
+                                return
+                            }
+                            // todo: propDef.jsonname could be a transform function on key
+                            target[key] = jsonValue;
+                        }
                     }
-                } else if (propDef.props) {
-                    var jsonValue = serialize(propDef, value);
-                    if (jsonValue === SKIP){
-                        return
-                    }
-                    // todo: propDef.jsonname could be a transform function on key
-                    target[key] = jsonValue;
-                } else {
-                    var jsonValue = propDef.serializer(value, key, obj);
-                    if (jsonValue === SKIP){
-                        return
-                    }
-                    // todo: propDef.jsonname could be a transform function on key
-                    target[key] = jsonValue;
                 }
-            }
-        }
     }
 
     var rootContextCache = new WeakMap();
@@ -574,7 +581,8 @@
         if (!this.resolvedRefs[uuid])
             this.resolvedRefs[uuid] = [];
         this.resolvedRefs[uuid].push({
-            modelSchema: modelSchema, value: value
+            modelSchema: modelSchema,
+            value: value
         });
         if (uuid in this.pendingRefs) {
             for (var i = this.pendingRefs[uuid].length - 1; i >= 0; i--) {
@@ -628,37 +636,38 @@
 
     function deserializeStarProps(context, schema, propDef, obj, json) {
         checkStarSchemaInvariant(propDef);
-        for (var key in json) if (!(key in schema.props) && !schemaHasAlias(schema, key)) {
-            var jsonValue = json[key];
-            if (propDef === true) {
-                // when deserializing we don't want to silently ignore 'unparseable data' to avoid
-                // confusing bugs
-                invariant(isPrimitive(jsonValue),
-                    "encountered non primitive value while deserializing '*' properties in property '" +
-                    key + "': " + jsonValue);
-                obj[key] = jsonValue;
-            } else if (propDef.pattern.test(key)) {
-                if (propDef.factory) {
-                    var resultValue = deserializeObjectWithSchema(context, propDef, jsonValue, context.callback || GUARDED_NOOP, {});
-                    // deserializeObjectWithSchema returns undefined on error
-                    if (resultValue !== undefined) {
-                        obj[key] = resultValue;
-                    }
-                } else {
-                    function setValue(resultValue) {
-                        if (resultValue !== SKIP) {
+        for (var key in json)
+            if (!(key in schema.props) && !schemaHasAlias(schema, key)) {
+                var jsonValue = json[key];
+                if (propDef === true) {
+                    // when deserializing we don't want to silently ignore 'unparseable data' to avoid
+                    // confusing bugs
+                    invariant(isPrimitive(jsonValue),
+                        "encountered non primitive value while deserializing '*' properties in property '" +
+                        key + "': " + jsonValue);
+                    obj[key] = jsonValue;
+                } else if (propDef.pattern.test(key)) {
+                    if (propDef.factory) {
+                        var resultValue = deserializeObjectWithSchema(context, propDef, jsonValue, context.callback || GUARDED_NOOP, {});
+                        // deserializeObjectWithSchema returns undefined on error
+                        if (resultValue !== undefined) {
                             obj[key] = resultValue;
                         }
+                    } else {
+                        function setValue(resultValue) {
+                            if (resultValue !== SKIP) {
+                                obj[key] = resultValue;
+                            }
+                        }
+                        propDef.deserializer(jsonValue,
+                            // for individual props, use root context based callbacks
+                            // this allows props to complete after completing the object itself
+                            // enabling reference resolving and such
+                            context.rootContext.createCallback(setValue),
+                            context);
                     }
-                    propDef.deserializer(jsonValue,
-                        // for individual props, use root context based callbacks
-                        // this allows props to complete after completing the object itself
-                        // enabling reference resolving and such
-                        context.rootContext.createCallback(setValue),
-                        context);
                 }
             }
-        }
     }
 
     /**
@@ -894,15 +903,17 @@
             invariant(typeof targetOrPattern === "function", "@serializeAll can only be used as class decorator");
             propSchema = true;
             invokeImmediately = true;
-        }
-        else {
+        } else {
             invariant(typeof targetOrPattern === "object" && targetOrPattern.test, "@serializeAll pattern doesn't have test");
             if (typeof clazzOrSchema === "function") {
                 clazzOrSchema = object(clazzOrSchema);
             }
             invariant(typeof clazzOrSchema === "object" && clazzOrSchema.serializer, "couldn't resolve schema");
-            propSchema = Object.assign({}, clazzOrSchema, {pattern: targetOrPattern});
+            propSchema = Object.assign({}, clazzOrSchema, {
+                pattern: targetOrPattern
+            });
         }
+
         function result(target) {
             var info = getDefaultModelSchema(target);
             if (!info || !target.hasOwnProperty("serializeInfo")) {
@@ -954,7 +965,8 @@
     function update(modelSchema, target, json, callback, customArgs) {
         var inferModelSchema =
             arguments.length === 2 // only target and json
-            || typeof arguments[2] === "function"; // callback as third arg
+            ||
+            typeof arguments[2] === "function"; // callback as third arg
 
         if (inferModelSchema) {
             target = arguments[0];
@@ -1027,7 +1039,7 @@
             identifier: true,
             serializer: _defaultPrimitiveProp.serializer,
             deserializer: function (jsonValue, done, context) {
-                _defaultPrimitiveProp.deserializer(jsonValue, function(err, id) {
+                _defaultPrimitiveProp.deserializer(jsonValue, function (err, id) {
                     defaultRegisterFunction(id, context.target, context);
                     if (registerFn)
                         registerFn(id, context.target, context);
@@ -1048,7 +1060,7 @@
     function date(additionalArgs) {
         // TODO: add format option?
         var result = {
-            serializer: function(value) {
+            serializer: function (value) {
                 if (value === null || value === undefined)
                     return value
                 invariant(value instanceof Date, "Expected Date object");
@@ -1082,7 +1094,7 @@
      */
     function alias(name, propSchema) {
         invariant(name && typeof name === "string", "expected prop name as first argument");
-        propSchema = (!propSchema || propSchema === true)  ? _defaultPrimitiveProp : propSchema;
+        propSchema = (!propSchema || propSchema === true) ? _defaultPrimitiveProp : propSchema;
         invariant(isPropSchema(propSchema), "expected prop schema as second argument");
         invariant(!isAliasedPropSchema(propSchema), "provided prop is already aliased");
         return {
@@ -1184,10 +1196,11 @@
      * @returns {PropSchema}
      */
     function optional(name, propSchema) {
-        propSchema = (!propSchema || propSchema === true)  ? _defaultPrimitiveProp : propSchema;
+        propSchema = (!propSchema || propSchema === true) ? _defaultPrimitiveProp : propSchema;
         invariant(isPropSchema(propSchema), "expected prop schema as second argument");
         const propSerializer = propSchema.serializer;
         invariant(typeof propSerializer === "function", "expected prop schema to have a callable serializer");
+
         function serializer(...args) {
             const result = propSerializer(...args);
             if (result === undefined) {
@@ -1195,7 +1208,9 @@
             }
             return result
         }
-        return Object.assign({}, propSchema, {serializer})
+        return Object.assign({}, propSchema, {
+            serializer
+        })
     }
 
     function createDefaultRefLookup(modelSchema) {
@@ -1268,6 +1283,7 @@
             additionalArgs = lookupFn;
             lookupFn = undefined;
         }
+
         function initialize() {
             initialized = true;
             invariant(typeof target !== "string" || lookupFn && typeof lookupFn === "function", "if the reference target is specified by attribute name, a lookup function is required");
@@ -1288,7 +1304,7 @@
                     initialize();
                 return item ? item[childIdentifierAttribute] : null
             },
-            deserializer: function(identifierValue, done, context) {
+            deserializer: function (identifierValue, done, context) {
                 if (!initialized)
                     initialize();
                 if (identifierValue === null || identifierValue === undefined)
@@ -1417,8 +1433,9 @@
                     m.forEach(function (value, key) {
                         result[key] = propSchema.serializer(value);
                     });
-                else for (var key in m)
-                    result[key] = propSchema.serializer(m[key]);
+                else
+                    for (var key in m)
+                        result[key] = propSchema.serializer(m[key]);
                 return result
             },
             deserializer: function (jsonObject, done, context, oldValue) {
@@ -1485,10 +1502,11 @@
                     m.forEach(function (value) {
                         result.push(propSchema.serializer(value));
                     });
-                } else for (var key in m) {
-                    result.push(propSchema.serializer(m[key]));
-                    // result[key] = propSchema.serializer(m[key])
-                }
+                } else
+                    for (var key in m) {
+                        result.push(propSchema.serializer(m[key]));
+                        // result[key] = propSchema.serializer(m[key])
+                    }
                 return result
             },
             deserializer: function (jsonArray, done, context, oldValue) {
@@ -1579,6 +1597,8 @@
     exports.raw = raw;
     exports.SKIP = SKIP;
 
-    Object.defineProperty(exports, '__esModule', { value: true });
+    Object.defineProperty(exports, '__esModule', {
+        value: true
+    });
 
 }));

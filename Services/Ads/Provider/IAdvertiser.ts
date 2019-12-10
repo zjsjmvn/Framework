@@ -1,11 +1,9 @@
 import { RewardVideoCallBackMsg } from '../AdsManager';
 export interface IAdProvider {
 
-
-    // init();
     showRewardVideo(): Promise<RewardVideoCallBackMsg>;
     showInterstitial();
-    showBanner(style?);
+    showBanner(style): Promise<boolean>;
     hideBanner();
     hasRewardVideo(): boolean;
     preloadRewardVideo(): Promise<boolean>;

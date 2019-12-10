@@ -15,15 +15,9 @@ const { ccclass, property } = cc._decorator;
             `_on${name}TouchEnd`,
             `_on${name}TouchCancel`,
       并且节点下添加$属性。$值为其后面的数字。   
-
- * 
- * 
  * @class Thor
  * @extends {cc.Component}
  */
-
-
-
 @ccclass
 // @executeInEditMode
 export default class Thor extends cc.Component {
@@ -49,12 +43,13 @@ export default class Thor extends cc.Component {
                 const element = this[key];
                 if (typeof element !== 'function') {
                     if (element instanceof cc.Node)
-                        cc.log(key)
+                        cc.log('key', key)
                 }
                 if (key[0] == '_' && element instanceof cc.Node) {
                     let comInfo = '';
                     for (const key$ in element) {
                         const val = element[key$];
+
                         if (key$[0] == '$') {
                             let index = val.name.indexOf('<');
                             let name = val.name.slice(index + 1, -1);
@@ -67,6 +62,32 @@ export default class Thor extends cc.Component {
                             }
                         }
                     }
+
+                    element.children.forEach(element => {
+                        if (element instanceof cc.Node) {
+                            // 检查合法名。
+                            function isValidVariableName(str) {
+                                if (typeof str !== 'string') {
+                                    return false;
+                                }
+                                if (str.trim() !== str) {
+                                    return false;
+                                }
+                                try {
+                                    new Function(str, 'var ' + str);
+                                } catch (_) {
+                                    return false;
+                                }
+                                return true;
+                            }
+
+                            if (isValidVariableName(element.name)) {
+                                cc.log('element', element.name)
+                                comInfo += element.name + ':cc.Node,';
+
+                            }
+                        }
+                    });
 
                     if (comInfo.length > 0) {
                         comInfo = '&{' + comInfo + '}';
@@ -123,3 +144,20 @@ export default class Thor extends cc.Component {
 }
 window.Thor = Thor
 
+
+// function isValidVariableName(str) {
+//     if (typeof str !== 'string') {
+//         return false;
+//     }
+//     if (str.trim() !== str) {
+//         return false;
+//     }
+//     try {
+//         new Function(str, 'var ' + str);
+//     } catch (_) {
+//         return false;
+//     }
+//     return true;
+// }
+
+// cc.log(isValidVariableName('New Label'))

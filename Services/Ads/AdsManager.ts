@@ -328,24 +328,9 @@ export class AdsManager {
     defaultBannerStyle() {
         let width = cc.view.getFrameSize().width;
         let height = cc.view.getFrameSize().height;
+        return { left: width / 4, top: height - (width / 2 * 9 / 16), width: width / 2 };
+    }
 
-        let style = null;
-        if (width > height) {
-            // 广告高度是屏幕高度的一半。
-            let adWidth = height / 2;
-            //横屏 
-            //居中下面
-            style = { left: width / 2 - adWidth / 2, top: height - (adWidth * 9 / 16), width: adWidth };
-            //左下角
-            //window.wxStyle = {left: 0, top: 0, width: adWidth};
-        }
-        else {
-            //竖屏
-            //屏幕中间底部位置
-            style = { left: width / 4, top: height - (width / 2 * 9 / 16), width: width / 2 };
-        }
-        return style;
-    };
 
 
 

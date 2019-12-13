@@ -1,4 +1,5 @@
 import UIKiller from "./uikiller";
+import Utils from '../../Tools/Utils';
 const { ccclass, property } = cc._decorator;
 /**
  * @description 
@@ -6,7 +7,11 @@ const { ccclass, property } = cc._decorator;
  * ### 绑定规则。
  * 被bindComponent绑定的组件，
  * - 自身会绑定触摸事件。为_onTouchStart,_onTouchMove,_onTouchEnd,_onTouchCancel。
- * - 其子节点按顺序绑定其node上。如nodeA.nodeB.nodeC.nodeD。可以链式访问。
+ * - 其子所有子节点会绑定其node上。如下面节点层级结构，可以使用如下方式访问nodeA.nodeB.nodeC.nodeD。可以链式访问。
+ * nodeA
+ *  nodeB
+ *   nodeC
+ *    nodeD
  * - 特别的:
  *  - 如果子节点是下划线_开头，则会监听触摸事件。并且直接绑定到脚本上。可以使用脚本直接访问。
  *  - 如果子节点是下划线+名字+$+数字。如：_image$1，则为其绑定触摸事件。事件类型为           
@@ -27,24 +32,51 @@ export default class Thor extends cc.Component {
     _binding: Boolean = false;
     $controller: Object = null;
 
-    _copyUikiller: boolean = false;
-    @property({ displayName: "勾选拷贝uikiller信息", tooltip: "勾选后自动存储在剪切板里。" })
-    get copyUikiller() {
-        return this._copyUikiller;
+    _copyBindNodeName: boolean = false;
+    @property({ displayName: "勾选拷贝绑定节点信息", tooltip: "勾选后自动存储在剪切板里。主要用于编辑器智能提示" })
+    get copyBindNodeName() {
+        return this._copyBindNodeName;
     }
     // @property
-    set copyUikiller(val) {
-        cc.log("ccccc");
+    set copyBindNodeName(val) {
 
         if (CC_EDITOR) {
             this.bind();
             var text = '';
+            // 读取node上绑定的节点信息，node上绑定的是所有子节点和下划线开头的节点。   
+            for (const key in this.node) {
+                const element = this.node[key];
+                if (element instanceof cc.Node) {
+                    let comInfo = '';
+                    for (const key$ in element) {
+                        const val = element[key$];
+                        if (key$[0] == '$') {
+                            let index = val.name.indexOf('<');
+                            let name = val.name.slice(index + 1, -1);
+                            if (cc[name] != undefined && Utils.isValidVariableName(name)) {
+                                comInfo += '$' + name + ':cc.' + name + ',';
+                            }
+                            else {
+                                comInfo += '$' + name + ':any,';
+                            }
+                        }
+                    }
+                    if (comInfo.length > 0) {
+                        comInfo = '&{' + comInfo + '}';
+                    }
+                    if (Utils.isValidVariableName(key)) {
+                        text += '\n\t' + key + `: cc.Node${comInfo};` + '\n';
+                    }
+                }
+            }
+            if (text.length > 0) {
+                text = `node:cc.Node &{${text}};`
+            }
+
+            // 读取脚本上绑定的node，脚本上绑定的是下划线开头的节点。
             for (const key in this) {
                 const element = this[key];
-                if (typeof element !== 'function') {
-                    if (element instanceof cc.Node)
-                        cc.log('key', key)
-                }
+
                 if (key[0] == '_' && element instanceof cc.Node) {
                     let comInfo = '';
                     for (const key$ in element) {
@@ -65,26 +97,9 @@ export default class Thor extends cc.Component {
 
                     element.children.forEach(element => {
                         if (element instanceof cc.Node) {
-                            // 检查合法名。
-                            function isValidVariableName(str) {
-                                if (typeof str !== 'string') {
-                                    return false;
-                                }
-                                if (str.trim() !== str) {
-                                    return false;
-                                }
-                                try {
-                                    new Function(str, 'var ' + str);
-                                } catch (_) {
-                                    return false;
-                                }
-                                return true;
-                            }
-
-                            if (isValidVariableName(element.name)) {
+                            if (Utils.isValidVariableName(element.name)) {
                                 cc.log('element', element.name)
                                 comInfo += element.name + ':cc.Node,';
-
                             }
                         }
                     });

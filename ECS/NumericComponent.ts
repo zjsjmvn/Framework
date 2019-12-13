@@ -1,4 +1,3 @@
-import Dictionary from '../Collections/Dictionary';
 
 
 export enum NumericType {
@@ -12,16 +11,20 @@ export enum NumericType {
 
 
 export class NumericComponent {
-    protected numericDic = new Dictionary<NumericType, number>();
+    protected numericDic = new Map<NumericType, number>();
+    public final: number = 0;
 
     public addByKey(key: NumericType, value: number) {
+        if (key === NumericType.Base || key === NumericType.Final) {
+            cc.error(`NumericType.Base and NumericType.Final 不允许直接加`);
+        }
         let oldValue = this.getByKey(key);
         let newValue = oldValue + value;
         this.setByKey(key, newValue);
     }
 
     public getByKey(key: number) {
-        let value = this.numericDic.getValue(key);
+        let value = this.numericDic.get(key);
         if (!value) {
             return 0;
         }
@@ -41,32 +44,17 @@ export class NumericComponent {
         if (value === this.getByKey(type)) {
             return;
         }
-        this.numericDic.setValue(type, value);
+        this.numericDic.set(type, value);
         this.update();
     }
 
     public update() {
         // 一个数值可能会多种情况影响，比如速度,加个buff可能增加基础速度100，也有些buff增加10%速度，还有些装备如时装等会增加最终速度10点，最终百分百提升20%等。
-        let f = ((this.getByKey(NumericType.Base) + this.getByKey(NumericType.BaseAddValue)) * (100 + this.getByKey(NumericType.BaseAddPercent)) / 100 + this.getByKey(NumericType.FinalAddValue)) * (100 + this.getByKey(NumericType.FinalAddPercent)) / 100;
-        this.numericDic.setValue(NumericType.Final, f);
+        this.final = ((this.getByKey(NumericType.Base) + this.getByKey(NumericType.BaseAddValue)) * (100 + this.getByKey(NumericType.BaseAddPercent)) / 100 + this.getByKey(NumericType.FinalAddValue)) * (100 + this.getByKey(NumericType.FinalAddPercent)) / 100;
+        this.numericDic.set(NumericType.Final, this.final);
     }
 
 
-    /**
-     * @description 倒推base.如玩家扣血，newFinalHp = currentFinalHp-damage。newFinalHp是由base控制的，需要修改base才行
-     * @memberof NumericComponent
-     */
-    public getBaseByFinal(final: number): number {
-
-
-        let base = 0;
-        let finalAddPercent = (100 + this.getByKey(NumericType.FinalAddPercent)) / 100;
-        let finalAdd = this.getByKey(NumericType.FinalAddValue)
-        let baseAddPercent = (100 + this.getByKey(NumericType.BaseAddPercent)) / 100;
-        let baseAdd = this.getByKey(NumericType.BaseAddValue);
-        base = (final / finalAddPercent - finalAdd) / baseAddPercent - baseAdd;
-        return base;
-    }
 }
 
 /**

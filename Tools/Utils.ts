@@ -368,6 +368,24 @@ export default class Utils {
         }
     }
 
+    // 检查合法名。
+    public static isValidVariableName(str) {
+        if (typeof str !== 'string') {
+            return false;
+        }
+        if (str.trim() !== str) {
+            return false;
+        }
+        try {
+            new Function(str, 'var ' + str);
+        } catch (_) {
+            return false;
+        }
+        return true;
+    }
+
+
+
 }
 
 

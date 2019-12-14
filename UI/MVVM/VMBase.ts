@@ -1,4 +1,4 @@
-import { VM } from './ViewModel';
+import { VM } from './VMManager';
 
 
 //用来处理通知数据的层级

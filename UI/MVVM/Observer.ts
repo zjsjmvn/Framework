@@ -6,14 +6,12 @@ import { Entity } from '../../ECS/Entitas/Entity';
  * 每次修改属性值，都会调用对应函数，并且获取值的路径
  */
 
-const OP = Object.prototype;
 const types = {
     obj: '[object Object]',
     array: '[object Array]'
 }
-const OAM = ['push', 'pop', 'shift', 'unshift', 'short', 'reverse', 'splice'];
+const ArrayMethodName = ['push', 'pop', 'shift', 'unshift', 'short', 'reverse', 'splice'];
 
-let arr = new Array<number>();
 
 
 
@@ -23,28 +21,27 @@ let arr = new Array<number>();
  * @description 对对象属性拦截
  * @date 2019-09-03
  * @export
- * @class JsonOb
+ * @class Observer
  * @template T
  */
-//TODO: 名字不太对
-export class JsonOb<T> {
+export class Observer<T> {
     /**
      * @description 搜索路径深度限制。
      * @private
      * @type {number}
-     * @memberof JsonOb
+     * @memberof Observer
      */
     private pathDepth: number = 5;
     private _callback: (newVal: any, oldVal: any, pathArray: string[]) => void = null;
     /**
-     *Creates an instance of JsonOb.
+     *Creates an instance of Observer.
      * @date 2019-09-03
      * @param {T} obj
      * @param {(newVal: any, oldVal: any, pathArray: string[]) => void} callback
-     * @memberof JsonOb
+     * @memberof Observer
      */
     constructor(obj: T, callback: (newVal: any, oldVal: any, pathArray: string[]) => void) {
-        if (OP.toString.call(obj) !== types.obj && OP.toString.call(obj) !== types.array) {
+        if (Object.prototype.toString.call(obj) !== types.obj && Object.prototype.toString.call(obj) !== types.array) {
             console.error('请传入一个对象或数组');
         }
         this._callback = callback;
@@ -68,10 +65,10 @@ export class JsonOb<T> {
      * @template T
      * @param {T} obj
      * @param {*} [path]
-     * @memberof JsonOb
+     * @memberof Observer
      */
     private observe<T>(obj: T, path?: Array<string>) {
-        if (OP.toString.call(obj) === types.array) {
+        if (Object.prototype.toString.call(obj) === types.array) {
             this.overrideArrayProto(obj, path);
         }
         Object.keys(obj).forEach((key) => {
@@ -90,7 +87,7 @@ export class JsonOb<T> {
                 },
                 set: (newVal) => {
                     if (oldVal !== newVal) {
-                        if (OP.toString.call(newVal) === types.obj) {
+                        if (Object.prototype.toString.call(newVal) === types.obj) {
                             // TODO: there is some error 
                             //  self.observe(newVal, pathArray);
                         }
@@ -101,7 +98,7 @@ export class JsonOb<T> {
                 }
             })
 
-            if ((OP.toString.call(obj[key]) === types.obj || OP.toString.call(obj[key]) === types.array) && (path.length <= this.pathDepth)) {
+            if ((Object.prototype.toString.call(obj[key]) === types.obj || Object.prototype.toString.call(obj[key]) === types.array) && (path.length <= this.pathDepth)) {
                 this.observe(obj[key], pathArray)
             }
             // console.log("observe ----", obj, "pathArray: ", pathArray);
@@ -124,7 +121,7 @@ export class JsonOb<T> {
 
 
         // 遍历要重写的数组方法  
-        OAM.forEach((method) => {
+        ArrayMethodName.forEach((method) => {
             Object.defineProperty(overrideProto, method, {
                 value: function () {
                     var oldVal = this.slice();

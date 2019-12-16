@@ -1,5 +1,7 @@
 import UIKiller from "./uikiller";
 import Utils from '../../Tools/Utils';
+import { toString } from '../../Collections/arrays';
+import { namespace } from '../../ECS/Entitas/viewer/VisualDebugging';
 const { ccclass, property } = cc._decorator;
 /**
  * @description 
@@ -43,75 +45,89 @@ export default class Thor extends cc.Component {
         if (CC_EDITOR) {
             this.bind();
             var text = '';
-            // 读取node上绑定的节点信息，node上绑定的是所有子节点和下划线开头的节点。   
-            for (const key in this.node) {
-                const element = this.node[key];
-                if (element instanceof cc.Node) {
-                    let comInfo = '';
-                    for (const key$ in element) {
-                        const val = element[key$];
-                        if (key$[0] == '$') {
-                            let index = val.name.indexOf('<');
-                            let name = val.name.slice(index + 1, -1);
-                            if (cc[name] != undefined && Utils.isValidVariableName(name)) {
-                                comInfo += '$' + name + ':cc.' + name + ',';
-                            }
-                            else {
-                                comInfo += '$' + name + ':any,';
+
+
+            try {
+                // 读取node上绑定的节点信息，node上绑定的是所有子节点和下划线开头的节点。   
+                for (const key in this.node) {
+                    const element = this.node[key];
+                    if (element instanceof cc.Node) {
+                        let comInfo = '';
+                        for (const key$ in element) {
+                            const val = element[key$];
+                            if (key$[0] == '$' && val instanceof cc.Component) {
+                                cc.log('val', key$[0], val.name)
+
+                                let index = val.name.indexOf('<');
+                                let name = val.name.slice(index + 1, -1);
+                                if (cc[name] != undefined && Utils.isValidVariableName(name)) {
+                                    comInfo += '$' + name + ':cc.' + name + ',';
+                                }
+                                else {
+                                    comInfo += '$' + name + ':any,';
+                                }
                             }
                         }
+                        if (comInfo.length > 0) {
+                            comInfo = '&{' + comInfo + '}';
+                        }
+                        if (Utils.isValidVariableName(key)) {
+                            text += '\n\t' + key + `: cc.Node${comInfo};` + '\n';
+                        }
                     }
-                    if (comInfo.length > 0) {
-                        comInfo = '&{' + comInfo + '}';
-                    }
-                    if (Utils.isValidVariableName(key)) {
+                }
+                if (text.length > 0) {
+                    text = `node:cc.Node &{${text}};`
+                }
+                // 读取脚本上绑定的node，脚本上绑定的是下划线开头的节点。
+                for (const key in this) {
+                    const element = this[key];
+                    // cc.log('key', key)
+
+                    if (key[0] == '_' && element instanceof cc.Node) {
+                        let comInfo = '';
+                        for (const key$ in element) {
+                            const val = element[key$];
+
+                            if (key$[0] == '$' && val instanceof cc.Component) {
+                                // cc.log('val', key, key$, val.name, val instanceof cc.Component)
+
+                                let index = val.name.indexOf('<');
+                                let name = val.name.slice(index + 1, -1);
+
+                                if (cc[name] != undefined) {
+                                    comInfo += '$' + name + ':cc.' + name + ',';
+                                }
+                                else {
+                                    comInfo += '$' + name + ':any,';
+                                }
+                            }
+                        }
+
+                        element.children.forEach(element => {
+                            if (element instanceof cc.Node) {
+                                if (Utils.isValidVariableName(element.name)) {
+                                    cc.log('element', element.name)
+                                    comInfo += element.name + ':cc.Node,';
+                                }
+                            }
+                        });
+
+                        if (comInfo.length > 0) {
+                            comInfo = '&{' + comInfo + '}';
+                        }
                         text += '\n\t' + key + `: cc.Node${comInfo};` + '\n';
+
                     }
                 }
-            }
-            if (text.length > 0) {
-                text = `node:cc.Node &{${text}};`
-            }
 
-            // 读取脚本上绑定的node，脚本上绑定的是下划线开头的节点。
-            for (const key in this) {
-                const element = this[key];
 
-                if (key[0] == '_' && element instanceof cc.Node) {
-                    let comInfo = '';
-                    for (const key$ in element) {
-                        const val = element[key$];
-
-                        if (key$[0] == '$') {
-                            let index = val.name.indexOf('<');
-                            let name = val.name.slice(index + 1, -1);
-
-                            if (cc[name] != undefined) {
-                                comInfo += '$' + name + ':cc.' + name + ',';
-                            }
-                            else {
-                                comInfo += '$' + name + ':any,';
-                            }
-                        }
-                    }
-
-                    element.children.forEach(element => {
-                        if (element instanceof cc.Node) {
-                            if (Utils.isValidVariableName(element.name)) {
-                                cc.log('element', element.name)
-                                comInfo += element.name + ':cc.Node,';
-                            }
-                        }
-                    });
-
-                    if (comInfo.length > 0) {
-                        comInfo = '&{' + comInfo + '}';
-                    }
-                    text += '\n\t' + key + `: cc.Node${comInfo};` + '\n';
-
-                }
+            } catch (error) {
+                cc.log(error);
             }
 
+
+            cc.log("text");
 
             cc.log("text", text);
             var tag = document.createElement('input');
@@ -123,9 +139,6 @@ export default class Thor extends cc.Component {
             document.getElementById('cp_hgz_input').remove();
         }
     }
-
-
-
 
     __preload() {
         this.bind();

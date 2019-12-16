@@ -81,13 +81,14 @@ export default class UIManager {
                 console.error(`${uiClass.PrefabPath}没有绑定UI脚本!!!`);
                 return;
             }
-            uiInstance.init(args);
             let uiRoot = cc.director.getScene();
             if (!uiRoot) {
                 console.error(`当前场景${cc.director.getScene().name}Canvas!!!`);
                 return;
             }
             uiNode.parent = uiRoot;
+            uiInstance.init(args);
+
             uiNode.zIndex = zOrder;
             uiInstance.show();
             this.uiStack.push(uiInstance);

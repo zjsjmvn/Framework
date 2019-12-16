@@ -95,6 +95,7 @@ export default class UIKiller {
                     cc.warn(`${rootNodeScript.name}.${name} property is already exists`);
                 } else {
                     this._bindTouchEvent(child, rootNodeScript);
+                    cc.log('name', name)
                     rootNodeScript[name] = child;
                 }
             }
@@ -216,6 +217,7 @@ export default class UIKiller {
     private static _bindTouchLongEvent(nodeObject, rootNodeScript) {
         const node = nodeObject;
         const eventName = this._getTouchEventName(node, 'TouchLong');
+        cc.log('eventNamm=e', eventName)
         const touchLong = rootNodeScript[eventName];
         if (!this.isFunction(touchLong)) {
             return;

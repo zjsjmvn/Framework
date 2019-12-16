@@ -16,6 +16,7 @@ export default abstract class UIBase extends Thor {
      * 得到prefab的路径，相对于resources目录
      */
     public static get PrefabPath(): string {
+        if (!this.prefabPath) console.error('prefabPath is undefined')
         return PREFAB_UI_DIR + this.prefabPath;
     }
 

@@ -38,11 +38,6 @@ export default class UIPopup extends UIBase {
     }
 
 
-    onLoad() {
-
-        cc.log("show")
-        this.show();
-    }
 
 
     show() {

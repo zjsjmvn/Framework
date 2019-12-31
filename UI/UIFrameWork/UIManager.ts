@@ -1,5 +1,6 @@
 import UIBase from './UIBase';
 import { singleton } from '../../Tools/Decorator/Singleton';
+import { dynamicAtlasManager } from '../../../../../creator';
 
 export class ViewZOrder {
     /**场景层 */
@@ -26,6 +27,9 @@ export interface DialogParams {
     content: string,
     okCallback?: Function,
     cancelCallback?: Function
+}
+export interface PopupParams {
+    closeCallback?: Function;
 }
 
 
@@ -58,7 +62,7 @@ export default class UIManager {
      */
     private cachedUI: Map<string, UIBase> = new Map();
 
-    public openUI<T extends UIBase>(uiClass: { new(): T }, zOrder: number = ViewZOrder.UI, callback?: Function, onProgress?: Function, ...args: any[]) {
+    public openUI<T extends UIBase>(uiClass: { new(): T }, zOrder: number = ViewZOrder.UI, callback?: Function, onProgress?: Function, data?: any) {
         if (this.hasUI(uiClass)) {
             console.error(`UIManager OpenUI 1: ui ${cc.js.getClassName(uiClass)} is already exist, please check`);
             return;
@@ -87,7 +91,7 @@ export default class UIManager {
                 return;
             }
             uiNode.parent = uiRoot;
-            uiInstance.init(args);
+            uiInstance.init(data);
 
             uiNode.zIndex = zOrder;
             uiInstance.show();
@@ -180,8 +184,8 @@ export default class UIManager {
         return ui.node.active;
     }
 
-    public showUI<T extends UIBase>(uiClass: { new(): T }, callback?: Function, ...args: any[]) {
-        this.openUI(uiClass, ViewZOrder.UI, callback, null, ...args);
+    public showUI<T extends UIBase>(uiClass: { new(): T }, callback?: Function, data?: any) {
+        this.openUI(uiClass, ViewZOrder.UI, callback, null, data);
     }
 
     // public showTips(message: string, ...param: any[]) {
@@ -195,8 +199,8 @@ export default class UIManager {
     //     }
     // }
 
-    public static showPopup(uiClass, data?: DialogParams) {
-        UIManager.instance.openUI(uiClass, ViewZOrder.Popup, null, null, data);
+    public showPopup(uiClass, data?: any) {
+        this.openUI(uiClass, ViewZOrder.Popup, null, null, data);
     }
 
     // public showUI<T extends UIBase>(uiClass: UIClass<T>, callback?: Function) {
@@ -208,5 +212,7 @@ export default class UIManager {
     //     ui.node.active = true;
     // }
 
-
+    public ShowConfirmDialog(uiClass, data?: any) {
+        this.openUI(uiClass, ViewZOrder.Popup, null, null, data);
+    }
 }

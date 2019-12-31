@@ -7,10 +7,10 @@ const { ccclass, menu, property } = cc._decorator;
 @menu("UI/tips/UIConfirmDialog")
 export default class UIConfirmDialog extends UIBase {
     protected static prefabUrl = "tips/confirmDialog";
-    private _title: string;
-    private _content: string;
-    private _okCallback: Function;
-    private _cancelCallback: Function;
+    protected _title: string;
+    protected _content: string;
+    protected _okCallback: Function;
+    protected _cancelCallback: Function;
 
     init(...args) {
         let data = args[0] as DialogParams;
@@ -25,15 +25,6 @@ export default class UIConfirmDialog extends UIBase {
 
     }
 
-    public show() {
-
-    }
-    public hide() {
-
-    }
-    public close() {
-
-    }
 
     cancel() {
         this._cancelCallback && this._cancelCallback();

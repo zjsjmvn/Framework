@@ -1,5 +1,6 @@
 import UIBase from './UIBase';
 import UIManager from './UIManager';
+import { PopupParams } from './UIManager';
 const { property, ccclass } = cc._decorator
 @ccclass
 export default class UIPopup extends UIBase {
@@ -37,9 +38,15 @@ export default class UIPopup extends UIBase {
         this._touchAnyWhereToClose = value;
     }
 
+    private closeCallback: Function = null;
 
 
+    init(args: PopupParams) {
+        if (args) {
+            this.closeCallback = args.closeCallback;
+        }
 
+    }
     show() {
         super.show();
 
@@ -59,6 +66,9 @@ export default class UIPopup extends UIBase {
         }
         if (this.touchAnyWhereToClose) {
             this.node.off(cc.Node.EventType.TOUCH_END, this.onThisNodeTouchEnd_UsedFor_TouchAnyWhereToClose, this);
+        }
+        if (!!this.closeCallback) {
+            this.closeCallback();
         }
     }
 

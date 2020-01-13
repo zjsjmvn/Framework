@@ -47,7 +47,7 @@ export default class GameContext {
 
             }
             if (services.length === 0) {
-                throw new Error("can`t find service in all components");
+                cc.warn(`can not find service: ${s} in all components`);
             }
 
             console.log("registServices s", s);

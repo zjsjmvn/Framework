@@ -1,10 +1,10 @@
 import { BuffSkill } from "./BuffSkill";
-import EntityExt from "../../../GamePlay/ECS/extensions/EntityExt";
+import { Entity } from '../../ECS/Entitas/Entity';
 
 export default class TickTypeBuff extends BuffSkill {
     public lifeTime: number = 0;    //生命时长
 
-    constructor(caster: EntityExt, target: EntityExt, lifeTime: number) {
+    constructor(caster: Entity, target: Entity, lifeTime: number) {
         super(caster, target);
         this.lifeTime = lifeTime;
     }

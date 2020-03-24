@@ -12,15 +12,35 @@ MERCHANTABLITY OR NON-INFRINGEMENT.
 See the Apache Version 2.0 License for specific language governing permissions
 and limitations under the License.
 ***************************************************************************** */
+
+// mmgg 注意，这个地方和原版的不同，主要是解决了微信获得全局对象错误的问题。
+(function () {
+    if (typeof globalThis === 'object') return;
+    Object.defineProperty(Object.prototype, '__magic__', {
+        get: function () {
+            return this;
+        },
+        configurable: true // This makes it possible to `delete` the getter later.
+    });
+    cc.log('__magic__', __magic__)
+    __magic__.globalThis = __magic__; // lolwat
+    delete Object.prototype.__magic__;
+}());
+// Your code can use `globalThis` now.
+
 var Reflect;
 (function (Reflect) {
     // Metadata Proposal
     // https://rbuckton.github.io/reflect-metadata/
     (function (factory) {
-        var root = typeof global === "object" ? global :
-            typeof self === "object" ? self :
-            typeof this === "object" ? this :
-            Function("return this;")();
+        // mmgg 这个是修改过的地方
+        // var root = (typeof process === 'object' &&
+        //         typeof require === 'function' &&
+        //         typeof global === 'object') ? global :
+        //     typeof self === "object" ? self :
+        //     typeof this === "object" ? this :
+        //     Function("return this;")();
+        var root = globalThis;
         var exporter = makeExporter(Reflect);
         if (typeof root.Reflect === "undefined") {
             root.Reflect = Reflect;

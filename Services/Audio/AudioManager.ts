@@ -30,10 +30,6 @@ export default class AudioManager {
                     cc.log(error);
                 }
                 else {
-                    let fileSysMgr = null;
-                    if (window.wx && window.wx.getFileSystemManager) {
-                        fileSysMgr = wx.getFileSystemManager();
-                    }
                     str_arr.forEach((str, index) => {
                         let arr = str.split('/');
                         let name = arr[arr.length - 1];
@@ -43,15 +39,8 @@ export default class AudioManager {
                         if (cc.loader.md5Pipe) {
                             res_url = cc.loader.md5Pipe.transformURL(res_url);
                         }
-                        // md5 下载后 路径改变
-                        if (fileSysMgr) {
-                            //  if(!fileSysMgr.accessSync(res_url)){
-                            //     res_url = wx.env.USER_DATA_PATH + '/' + res_url;
-                            //  }
-                        }
                         self.audio_path_map[name] = res_url;//'resources/' + str + '.' + typeName;                        
                     });
-
                     if (self.playing_music) {
                         self.playMusic(self.playing_music_name);
                         // 激活音效
@@ -69,10 +58,16 @@ export default class AudioManager {
 
     public canPlayMusic() {
         let canPlayMusic = cc.sys.localStorage.getItem('canPlayMusic');// LocalDataManager.readBool();
+        if (canPlayMusic === null || canPlayMusic === undefined) {
+            canPlayMusic = true;
+        }
         return !!canPlayMusic;
     }
     public canPlayEffect() {
         let canPlayEffects = cc.sys.localStorage.getItem('canPlayEffect');
+        if (canPlayEffects === null || canPlayEffects === undefined) {
+            canPlayEffects = true;
+        }
         return !!canPlayEffects;
     }
     /**
@@ -203,7 +198,7 @@ export default class AudioManager {
     }
 
     public playEffect(filePath, loop = false, volume = 1) {
-        if (true || this.canPlayEffect()) {
+        if (this.canPlayEffect()) {
             return this.play(filePath, loop, volume);
         }
         return 0;

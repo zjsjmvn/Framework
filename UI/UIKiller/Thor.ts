@@ -161,7 +161,7 @@ export default class Thor extends cc.Component {
 
         if (CC_DEBUG) {
             let duration = Date.now() - start;
-            cc.log(`bindComponent ${this.node.name} duration ${duration}`);
+            // cc.log(`bindComponent ${this.node.name} duration ${duration}`);
         }
     }
 

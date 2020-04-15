@@ -1,6 +1,7 @@
 import UIBase from './UIBase';
 import { singleton } from '../../Tools/Decorator/Singleton';
 import { dynamicAtlasManager } from '../../../../../creator';
+import UITips from './UITips';
 
 export class ViewZOrder {
     /**场景层 */
@@ -85,7 +86,7 @@ export default class UIManager {
                 console.error(`${uiClass.PrefabPath}没有绑定UI脚本!!!`);
                 return;
             }
-            let uiRoot = cc.director.getScene();
+            let uiRoot = cc.director.getScene().getChildByName('Canvas');
             if (!uiRoot) {
                 console.error(`当前场景${cc.director.getScene().name}Canvas!!!`);
                 return;
@@ -188,16 +189,15 @@ export default class UIManager {
         this.openUI(uiClass, ViewZOrder.UI, callback, null, data);
     }
 
-    // public showTips(message: string, ...param: any[]) {
-    //     let tipUI = this.getUI(UITips) as UITips;
-    //     if (!tipUI) {
-    //         this.openUI(UITips, ViewZOrder.Tips, (ui) => {
-    //             this.showTips(message);
-    //         });
-    //     } else {
-    //         tipUI.showTip(message);
-    //     }
-    // }
+    public showTips(uiClass, message: string, pos: cc.Vec2, ...param: any[]) {
+        let tipUI = this.getUI(uiClass) as UITips;
+        if (!tipUI) {
+            this.openUI(uiClass, ViewZOrder.Tips, null, null, { message: message, pos: pos });
+        } else {
+            tipUI.init({ message: message, pos: pos });
+            tipUI.show();
+        }
+    }
 
     public showPopup(uiClass, data?: any) {
         this.openUI(uiClass, ViewZOrder.Popup, null, null, data);

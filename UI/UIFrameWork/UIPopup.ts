@@ -52,20 +52,20 @@ export default class UIPopup extends UIBase {
 
         cc.log('ss', this.touchMarginToClose, this.touchAnyWhereToClose)
         if (this._touchMarginToClose) {
-            this.node.on(cc.Node.EventType.TOUCH_END, this.onThisNodeTouchEnd_UsedFor_TouchMarginToClose, this);
+            this.node.on(cc.Node.EventType.TOUCH_END, this.onThisNodeTouchEnd_UsedFor_TouchMarginToClose, this, true);
         }
         if (this.touchAnyWhereToClose) {
-            this.node.on(cc.Node.EventType.TOUCH_END, this.onThisNodeTouchEnd_UsedFor_TouchAnyWhereToClose, this);
+            this.node.on(cc.Node.EventType.TOUCH_END, this.onThisNodeTouchEnd_UsedFor_TouchAnyWhereToClose, this, true);
         }
     }
 
     close() {
         super.close();
         if (this._touchMarginToClose) {
-            this.node.off(cc.Node.EventType.TOUCH_END, this.onThisNodeTouchEnd_UsedFor_TouchMarginToClose, this);
+            this.node.off(cc.Node.EventType.TOUCH_END, this.onThisNodeTouchEnd_UsedFor_TouchMarginToClose, this, true);
         }
         if (this.touchAnyWhereToClose) {
-            this.node.off(cc.Node.EventType.TOUCH_END, this.onThisNodeTouchEnd_UsedFor_TouchAnyWhereToClose, this);
+            this.node.off(cc.Node.EventType.TOUCH_END, this.onThisNodeTouchEnd_UsedFor_TouchAnyWhereToClose, this, true);
         }
         if (!!this.closeCallback) {
             this.closeCallback();
@@ -75,6 +75,7 @@ export default class UIPopup extends UIBase {
     onThisNodeTouchEnd_UsedFor_TouchMarginToClose(event) {
         // 判断是否点击的是外面,如果点击的是container外面。则关闭。
         let containerNode: cc.Node = this.node.getChildByName("Container");
+
         if (!!!containerNode) {
             cc.error("快速关闭需要container节点来判断是否点击ui外部。请参考其他弹框界面的层级结构。");
             return;

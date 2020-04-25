@@ -1,3 +1,4 @@
+import { length } from '../../../../../creator';
 export default class AudioManager {
     private static _instance: AudioManager;
     public static get instance() {
@@ -58,14 +59,14 @@ export default class AudioManager {
 
     public canPlayMusic() {
         let canPlayMusic = cc.sys.localStorage.getItem('canPlayMusic');// LocalDataManager.readBool();
-        if (canPlayMusic === null || canPlayMusic === undefined) {
+        if (canPlayMusic === null || canPlayMusic === undefined || canPlayMusic == '') {
             canPlayMusic = true;
         }
         return !!canPlayMusic;
     }
     public canPlayEffect() {
         let canPlayEffects = cc.sys.localStorage.getItem('canPlayEffect');
-        if (canPlayEffects === null || canPlayEffects === undefined) {
+        if (canPlayEffects === null || canPlayEffects === undefined || canPlayEffects == '') {
             canPlayEffects = true;
         }
         return !!canPlayEffects;
@@ -198,7 +199,9 @@ export default class AudioManager {
     }
 
     public playEffect(filePath, loop = false, volume = 1) {
+        cc.log('canPlayEffect', this.canPlayEffect());
         if (this.canPlayEffect()) {
+
             return this.play(filePath, loop, volume);
         }
         return 0;

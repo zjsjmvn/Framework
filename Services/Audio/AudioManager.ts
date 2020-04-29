@@ -1,9 +1,10 @@
-import { length } from '../../../../../creator';
 export default class AudioManager {
     private static _instance: AudioManager;
     public static get instance() {
         return this._instance || (this._instance = new AudioManager());
     }
+
+    public audioPath: string = null;
     lastPlayedMusicPath: string = ''
     playing_music = false;
     playing_music_name = undefined;
@@ -15,6 +16,9 @@ export default class AudioManager {
     playIntervalLimitSec = 0.03;
     wxAudioMap: any = null;
     loading: boolean = false;
+
+
+    private loadingAudioArr: Array<string> = new Array();
 
     volumeChangeFunc = null;
     constructor() {
@@ -119,10 +123,50 @@ export default class AudioManager {
             return true;
         }
         else {
-            cc.error("没有找到music", filePath);
+            if (!!!this.audioPath) {
+                cc.warn('audioPath is null');
+            } else {
+                this.loadAudio(this.audioPath + filePath, true, true, loop, volume);
+            }
         }
         return false;
     }
+
+    public loadAudio(src: string, playAfterLoaded: boolean, isMusic: boolean, loop, volume) {
+        let load_count = 0;
+        /** 加载失败时，重复加载 直到次数为 3 */
+        let index = this.loadingAudioArr.indexOf(src);
+        if (index > -1) return
+        this.loadingAudioArr.push(src);
+        let load = () => {
+            load_count += 1;
+            cc.loader.loadRes(src, cc.AudioClip, (err, res: cc.AudioClip) => {
+                if (err) {
+                    console.log(`音频${src}加载错误重复加载次数 >>`, load_count);
+                    load();
+                } else {
+                    let name = res.name
+                    let res_url = res.nativeUrl;
+                    this.audio_clip_map[name] = res;
+                    //带后缀地址
+                    if (cc.loader.md5Pipe) {
+                        res_url = cc.loader.md5Pipe.transformURL(res_url);
+                    }
+                    this.audio_path_map[name] = res_url;//'resources/' + str + '.' + typeName;             
+                    if (playAfterLoaded) {
+                        if (isMusic) {
+                            this.playMusic(name);
+                        } else {
+                            this.playEffect(name)
+                        }
+                    }
+
+                }
+            });
+        }
+        load();
+    }
+
 
     /**
      * @description 暂时不完善，先留着。
@@ -201,7 +245,6 @@ export default class AudioManager {
     public playEffect(filePath, loop = false, volume = 1) {
         cc.log('canPlayEffect', this.canPlayEffect());
         if (this.canPlayEffect()) {
-
             return this.play(filePath, loop, volume);
         }
         return 0;
@@ -212,7 +255,12 @@ export default class AudioManager {
             return cc.audioEngine.play(this.audio_clip_map[filePath], loop, volume);
         }
         else {
-            cc.error("没有正确加载到音效", filePath);
+            if (!!!this.audioPath) {
+                cc.warn('audioPath is null');
+            } else {
+                this.loadAudio(this.audioPath + filePath, true, false, loop, volume);
+            }
+            // cc.error("没有正确加载到音效", filePath);
         }
         return 0;
     }

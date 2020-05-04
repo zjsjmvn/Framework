@@ -155,12 +155,11 @@ export default class AudioManager {
                     this.audio_path_map[name] = res_url;//'resources/' + str + '.' + typeName;             
                     if (playAfterLoaded) {
                         if (isMusic) {
-                            this.playMusic(name);
+                            this.playMusic(name, volume);
                         } else {
-                            this.playEffect(name)
+                            this.playEffect(name, loop, volume)
                         }
                     }
-
                 }
             });
         }

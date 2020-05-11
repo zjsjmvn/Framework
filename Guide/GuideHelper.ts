@@ -140,8 +140,10 @@ export module GuideHelper {
                 guideController._exitCallback = exitCallback;
                 if (childIndex) {
                     cc.director.getScene().getChildByName('Canvas').addChild(guideNode, childIndex);
+                } else {
+                    cc.director.getScene().getChildByName('Canvas').addChild(guideNode);
+
                 }
-                cc.director.getScene().getChildByName('Canvas').addChild(guideNode);
             } else {
                 console.error("Guide create: " + error);
             }

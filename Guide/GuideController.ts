@@ -135,7 +135,7 @@ export class GuideController extends Thor {
 
         } else if (step instanceof GuideStepType_MoveAmongMultipleNodes) {
             if (step.showFinger)
-                this._guideView.fingerToNodeArray(this._locateNodes, step);
+                this._guideView.fingerToNodeArray(this._locateNodes, step, step.isMoveBackAndForth);
         } else if (step instanceof GuideStepType_DragToTarget) {
             if (step.showFinger) {
                 let targetNode = GuideHelper.Locator.locateNode(this._target, [step.targetName]);
@@ -195,27 +195,28 @@ export class GuideController extends Thor {
     _onTouchMove(event) {
         //设置点击位置显示
         let point = this.node.convertToNodeSpaceAR(event.getLocation());
-        // if (this._currentStep.listenTouchEventType === GuideHelper.TouchEvent.MOVE && this._currentStep.command === GuideHelper.GuideStepType.FINGER_GO_AND_BACK_COMMAND) {
-        //     //如果触摸的位置是结束的位置，那么就执行回调函数。
-        //     let rect = this._locateNodes[this._locateNodes.length - 1].getBoundingBoxToWorld();
-        //     let nodePos = this.node.convertToNodeSpaceAR(cc.v2(rect.x, rect.y));
-        //     rect.x = nodePos.x;
-        //     rect.y = nodePos.y;
-        //     let isContains = rect.contains(point);
-        //     if (isContains) {
-        //             this._currentStep.onStepFinished(this.node);
-        //         return true;
-        //     }
-        // }
+
         if (this._currentStep.listenTouchEventType === GuideHelper.TouchEvent.MOVE && this._currentStep instanceof GuideStepType_DragToDistance) {
             let dis = cc.v2(event.getLocation()).sub(event.getStartLocation()).mag();
             if (dis >= this._currentStep.touchMoveDis) {
                 this._currentStep.onStepFinished(this.node);
+                return true;
+            }
+            return false;
+        }
 
+        if (this._currentStep.listenTouchEventType === GuideHelper.TouchEvent.MOVE) {
+            //如果触摸的位置是结束的位置，那么就执行回调函数。
+            let rect = this._locateNodes[this._locateNodes.length - 1].getBoundingBoxToWorld();
+            let nodePos = this.node.convertToNodeSpaceAR(cc.v2(rect.x, rect.y));
+            rect.x = nodePos.x;
+            rect.y = nodePos.y;
+            let isContains = rect.contains(point);
+            if (isContains) {
+                this._currentStep.onStepFinished(this.node);
                 return true;
             }
         }
-
 
         // if(this._touchMoveIndex<this._locateNodes.length){
         //     let node  = this._locateNodes[this._touchMoveIndex];
@@ -249,6 +250,7 @@ export class GuideController extends Thor {
             // if (this._currentStep._touchLongTimer){
             clearTimeout(this._currentStep._touchLongTimer);
             this._currentStep.onStepFail(this.node, null);
+            return true;
             // }
         } else if (this._currentStep.listenTouchEventType === GuideHelper.TouchEvent.END) {
             let point = this.node.convertToNodeSpaceAR(event.getLocation());
@@ -324,5 +326,9 @@ export class GuideController extends Thor {
             this.progressIndex = parseInt(localStorage.getItem(this._guideConfig.guideName));
         }
         cc.log("_loadProgress", this.progressIndex);
+        // TODo
+
+        // this.progressIndex = -1
+
     }
 }

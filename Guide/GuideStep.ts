@@ -188,6 +188,12 @@ export class GuideStepType_DragToTarget extends GuideStep {
  */
 export class GuideStepType_MoveAmongMultipleNodes extends GuideStep {
 
+    /**
+     * @description 是否来回移动
+     * @type {boolean}
+     * @memberof GuideStepType_MoveAmongMultipleNodes
+     */
+    public isMoveBackAndForth: boolean = false;
 }
 
 /**

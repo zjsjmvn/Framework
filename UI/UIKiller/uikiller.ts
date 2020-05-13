@@ -1,3 +1,4 @@
+import { TouchEvent } from '../../Guide/GuideHelper';
 
 /**
  * 注意：
@@ -158,7 +159,7 @@ export default class UIKiller {
             }
 
 
-            node.on(eventTypes[index], (event) => {
+            node.on(eventTypes[index], (event: cc.Event.EventTouch) => {
                 //被禁用的node 节点不响应事件
                 let eventNode = event.currentTarget;
                 if (eventNode.interactable === false || eventNode.active === false) {
@@ -171,10 +172,13 @@ export default class UIKiller {
                     return;
                 }
                 const eventFunc = rootNodeScript[eventName];
+
                 //是否有效事件
                 const isValidEvent = eventFunc || (button && button.clickEvents.length);
                 if (isValidEvent) {
                     this._beforeHandleEventByPlugins(eventNode, event, !!eventFunc);
+                } else {
+                    cc.log('isValidEvent false')
                 }
 
                 //执行事件函数，获取返回值
@@ -185,11 +189,27 @@ export default class UIKiller {
                     //     event.type != cc.Node.EventType.TOUCH_START && eventNode._touchListener.swallowTouches
                     // )
                     {
+
+
                         eventResult = eventFunc.call(rootNodeScript, event);
                         //cc.log("target, eventNode, event"+target+eventNode+event);
                         //只要是触摸事件返回fasle，都使节点可穿透
                         //event.type === cc.Node.EventType.TOUCH_START &&
-                        if (eventResult === false) {
+
+
+
+
+                        let result = true;
+                        if (eventResult instanceof Promise) {
+                            eventResult.then((value) => {
+                                result = value;
+                            })
+                        } else if (typeof eventResult == "boolean") {
+                            result = eventResult;
+                        }
+
+
+                        if (result === false) {
                             eventNode._touchListener.setSwallowTouches(false);
                         } else {
                             eventNode._touchListener.setSwallowTouches(true);

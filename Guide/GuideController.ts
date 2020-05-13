@@ -214,7 +214,7 @@ export class GuideController extends Thor {
             let isContains = rect.contains(point);
             if (isContains) {
                 this._currentStep.onStepFinished(this.node);
-                return true;
+                return false;
             }
         }
 

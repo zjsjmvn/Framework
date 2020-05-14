@@ -97,11 +97,7 @@ export class AdsManager {
             return false;
         }
 
-        //
-        if (!this._isNative() || !this._isSdkboxValid()) {
 
-            return false;
-        }
 
         let showIndex = -1;
         //上个显示插页的id
@@ -154,97 +150,117 @@ export class AdsManager {
      * @returns 成功
      */
     showInterstitial(callback = null) {
-
-        this.interstitial_callback = callback;
-        if (this.isNoAds()) return false;
-
-        cc.log("QYAdsManager showInterstitial");
-
-        if (!this._checkInterstitialIntervalTimeValid()) {
-            return false;
-        }
-
-        if (CC_PREVIEW && plug && plug.DebugAds) {
-            plug.DebugAds.showInterstitial(this, this._interstitialEnd);
-            return;
-        }
-
-        //
-        if (!this._isNative() || !this._isSdkboxValid()) {
-            if (this.enable_qy_interstitial) {
-                this._stopMusic();
-                this.showQYInterstitial();
-                return true;
+        try {
+            cc.log("AdsManager showInterstitial");
+            if (CC_PREVIEW) {
+                DebugAds.showInterstitial();
+                return
             }
-            return false;
-        }
-
-        let showIndex = -1;
-        //上个显示插页的id
-        this.lastShowInterstitial = this.lastShowInterstitial || 0;
-        let showArr = [0, 1, 2, 3, 0, 1, 2, 3];
-        for (let i = 0; i < 4; i++) {
-            let index = showArr[this.lastShowInterstitial + i];
-            if (index == 0) {
-                if (sdkbox.PluginAdMob && sdkbox.PluginAdMob.isAvailable("interstitial") && this.enable_admob_interstitial) {
-                    this._stopMusic();
-                    sdkbox.PluginAdMob.show('interstitial');
-                    setTimeout(() => {
-                        cc.log('adcache admob interstitial2');
-                        sdkbox.PluginAdMob.cache("interstitial");
-                    }, 50000);
-
-                    showIndex = showArr[index];
-                    break;
-                } else if (this.enable_admob_interstitial) {
-
-                    cc.log('adcache admob interstitial3');
-                    sdkbox.PluginAdMob.cache("interstitial");
+            for (let i of this.adComponentsArr) {
+                if (i.hasInterstitial()) {
+                    return i.showInterstitial();
                 }
             }
-            else if (index == 1) {
-
-                if (sdkbox.PluginChartboost && sdkbox.PluginChartboost.isAvailable("Default") && this.enable_chartboost_interstitial) {
-                    cc.log("show Chartboost interstitial");
-                    this._stopMusic();
-                    sdkbox.PluginChartboost.show("Default");
-
-                    showIndex = showArr[index];
-                    break;
-                }
-            }
-            else if (index == 2) {
-                if (sdkbox.PluginUnityAds && sdkbox.PluginUnityAds.isReady("video") && this.enable_unity_interstitial) {
-                    cc.log("show Unity interstitial");
-                    this._stopMusic();
-                    sdkbox.PluginUnityAds.show("video");
-
-                    showIndex = showArr[index];
-                    break;
-                }
-            }
-            else if (index == 3) {
-
-                if (this.enable_qy_interstitial) {
-                    this.showQYInterstitial();
-
-                    showIndex = showArr[index];
-                    break;
-                }
-            }
+            // return new Promise<RewardVideoCallBackMsg>((resolve, reject) => {
+            //     let msg = new RewardVideoCallBackMsg();
+            //     msg.result = false;
+            //     msg.errMsg = "无可用广告";
+            //     resolve(msg);
+            // })
+        } catch (e) {
+            console.error(`showInterstitial: ${e}`);
         }
 
-        //显示成功
-        if (showIndex >= 0) {
-            this._resetIntersitialIntervalTime();
-            this.lastShowInterstitial = showIndex + 1;
+        // this.interstitial_callback = callback;
+        // if (this.isNoAds()) return false;
 
-            this._stopMusic();
-            return true;
-        }
+        // cc.log("QYAdsManager showInterstitial");
+
+        // if (!this._checkInterstitialIntervalTimeValid()) {
+        //     return false;
+        // }
+
+        // if (CC_PREVIEW && plug && plug.DebugAds) {
+        //     plug.DebugAds.showInterstitial(this, this._interstitialEnd);
+        //     return;
+        // }
+
+        // //
+        // if (!this._isNative() || !this._isSdkboxValid()) {
+        //     if (this.enable_qy_interstitial) {
+        //         this._stopMusic();
+        //         this.showQYInterstitial();
+        //         return true;
+        //     }
+        //     return false;
+        // }
+
+        // let showIndex = -1;
+        // //上个显示插页的id
+        // this.lastShowInterstitial = this.lastShowInterstitial || 0;
+        // let showArr = [0, 1, 2, 3, 0, 1, 2, 3];
+        // for (let i = 0; i < 4; i++) {
+        //     let index = showArr[this.lastShowInterstitial + i];
+        //     if (index == 0) {
+        //         if (sdkbox.PluginAdMob && sdkbox.PluginAdMob.isAvailable("interstitial") && this.enable_admob_interstitial) {
+        //             this._stopMusic();
+        //             sdkbox.PluginAdMob.show('interstitial');
+        //             setTimeout(() => {
+        //                 cc.log('adcache admob interstitial2');
+        //                 sdkbox.PluginAdMob.cache("interstitial");
+        //             }, 50000);
+
+        //             showIndex = showArr[index];
+        //             break;
+        //         } else if (this.enable_admob_interstitial) {
+
+        //             cc.log('adcache admob interstitial3');
+        //             sdkbox.PluginAdMob.cache("interstitial");
+        //         }
+        //     }
+        //     else if (index == 1) {
+
+        //         if (sdkbox.PluginChartboost && sdkbox.PluginChartboost.isAvailable("Default") && this.enable_chartboost_interstitial) {
+        //             cc.log("show Chartboost interstitial");
+        //             this._stopMusic();
+        //             sdkbox.PluginChartboost.show("Default");
+
+        //             showIndex = showArr[index];
+        //             break;
+        //         }
+        //     }
+        //     else if (index == 2) {
+        //         if (sdkbox.PluginUnityAds && sdkbox.PluginUnityAds.isReady("video") && this.enable_unity_interstitial) {
+        //             cc.log("show Unity interstitial");
+        //             this._stopMusic();
+        //             sdkbox.PluginUnityAds.show("video");
+
+        //             showIndex = showArr[index];
+        //             break;
+        //         }
+        //     }
+        //     else if (index == 3) {
+
+        //         if (this.enable_qy_interstitial) {
+        //             this.showQYInterstitial();
+
+        //             showIndex = showArr[index];
+        //             break;
+        //         }
+        //     }
+        // }
+
+        // //显示成功
+        // if (showIndex >= 0) {
+        //     this._resetIntersitialIntervalTime();
+        //     this.lastShowInterstitial = showIndex + 1;
+
+        //     this._stopMusic();
+        //     return true;
+        // }
 
 
-        return false;
+        // return false;
     }
 
     /**

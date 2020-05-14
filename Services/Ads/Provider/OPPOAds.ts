@@ -56,6 +56,12 @@ export default class OPPOAds implements IAdProvider {
         this.initRewardVideo(rewardVideoId);
         this.initBanner(bannerId)
     }
+    hasInterstitial(): boolean {
+        throw new Error("Method not implemented.");
+    }
+    preloadInterstitial(): Promise<boolean> {
+        throw new Error("Method not implemented.");
+    }
     private initRewardVideo(rewardVideoId) {
         if (!!window.qg && !!window.qg.createRewardedVideoAd) {
             //视频

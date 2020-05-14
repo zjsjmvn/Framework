@@ -7,5 +7,8 @@ export interface IAdProvider {
     hideBanner();
     hasRewardVideo(): boolean;
     preloadRewardVideo(): Promise<boolean>;
+    hasInterstitial(): boolean;
+    preloadInterstitial(): Promise<boolean>;
+
 
 }

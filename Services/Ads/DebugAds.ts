@@ -13,7 +13,7 @@ const { ccclass, property } = cc._decorator;
 
 export default class DebugAds extends cc.Component {
     private adsCallFunc: (pram: RewardVideoCallBackMsg) => {} = null;
-    public static showInterstitial(self, callback) {
+    public static showInterstitial(callback?) {
         let node = new cc.Node('DebugAds');
         let debugAds: DebugAds = node.addComponent('DebugAds');
         debugAds.initVideo(DebugAdsEnum.Interstitial, callback);

@@ -34,6 +34,12 @@ export default class QQAds implements IAdProvider {
         this.initRewardVideo(rewardVideoId);
         this.initBanner(bannerId)
     }
+    hasInterstitial(): boolean {
+        throw new Error("Method not implemented.");
+    }
+    preloadInterstitial(): Promise<boolean> {
+        throw new Error("Method not implemented.");
+    }
     private initRewardVideo(rewardVideoId) {
         if (!!window.qq && !!window.qq.createRewardedVideoAd) {
             //视频

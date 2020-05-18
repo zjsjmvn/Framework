@@ -3,8 +3,7 @@ import { RewardVideoCallBackMsg, AdsManager } from './AdsManager';
 enum DebugAdsEnum {
     Banner = 0,
     Interstitial = 1,
-    Video = 2,
-
+    Reward = 2,
 }
 
 
@@ -12,12 +11,17 @@ const { ccclass, property } = cc._decorator;
 @ccclass
 
 export default class DebugAds extends cc.Component {
-    private adsCallFunc: (pram: RewardVideoCallBackMsg) => {} = null;
-    public static showInterstitial(callback?) {
-        let node = new cc.Node('DebugAds');
-        let debugAds: DebugAds = node.addComponent('DebugAds');
-        debugAds.initVideo(DebugAdsEnum.Interstitial, callback);
-        //cc.director.getScene().addChild(node);
+    private rewardAdsCallFunc: (pram: RewardVideoCallBackMsg) => {} = null;
+    private interstitialCallFunc: (result: boolean) => {} = null;
+    public static showInterstitial(): Promise<boolean> {
+        return new Promise((resolve, reject) => {
+            let node = new cc.Node('DebugAds');
+            let debugAds: DebugAds = node.addComponent('DebugAds');
+            let callback = (result) => {
+                resolve(result);
+            }
+            debugAds.initInterstitialAds(callback);
+        })
     }
     public static showVideo(): Promise<RewardVideoCallBackMsg> {
         return new Promise((resolve, reject) => {
@@ -27,10 +31,9 @@ export default class DebugAds extends cc.Component {
             let callback = (result: RewardVideoCallBackMsg) => {
                 resolve(result);
             }
-            debugAds.initVideo(DebugAdsEnum.Video, callback);
+            debugAds.initRewardAds(callback);
         })
     }
-
 
     public static showBanner() {
         if (cc.director.getScene()) {
@@ -51,9 +54,6 @@ export default class DebugAds extends cc.Component {
             }
         }
     }
-
-
-
     initBanner(style) {
         this.node.zIndex = 9999;
         cc.game.addPersistRootNode(this.node);
@@ -78,15 +78,19 @@ export default class DebugAds extends cc.Component {
         this.node.x = style.left * scaleX;
         this.node.y = cc.view.getVisibleSize().height - style.top * scaleY;
     }
-    //init video Interstitial
-    initVideo(adsEnum: DebugAdsEnum, callFunc) {
-
-
-        cc.log("initvideo")
+    initInterstitialAds(callback) {
+        this.interstitialCallFunc = callback;
+        this.initUI(DebugAdsEnum.Interstitial)
+    }
+    initRewardAds(callFunc) {
         //cc.director.pause();
+        this.rewardAdsCallFunc = callFunc;
+        this.initUI(DebugAdsEnum.Reward);
+    }
+
+    initUI(adsEnum: DebugAdsEnum) {
         this.node.zIndex = 10000;
         cc.game.addPersistRootNode(this.node);
-        this.adsCallFunc = callFunc;
 
         let size = cc.view.getVisibleSize();
         this.node.width = size.width;
@@ -95,19 +99,17 @@ export default class DebugAds extends cc.Component {
         this.node.y = size.height / 2;
         this.node.addComponent(cc.BlockInputEvents);
         this.node.addComponent(cc.Sprite).sizeMode = cc.Sprite.SizeMode.CUSTOM;
-
         this.setFrame(this.node);
-
         switch (adsEnum) {
             case DebugAdsEnum.Banner: {
             } break;
             case DebugAdsEnum.Interstitial: {
                 this.addTitle('插页');
-                this.addBtn('关闭', this._onSuccessTouchEnd);
+                this.addBtn('关闭', this._onInterstitialSuccessTouchEnd);
             } break;
-            case DebugAdsEnum.Video: {
+            case DebugAdsEnum.Reward: {
                 this.addTitle('视频');
-                this.addBtn('成功播放', this._onSuccessTouchEnd).x = 100;
+                this.addBtn('成功播放', this._onRewardAdsSuccessTouchEnd).x = 100;
                 this.addBtn('失败播放', this._onFailTouchEnd).x = -100;
                 this.addBtn('wx&tt视频上限', this._onNonAdsTouchEnd).y = -50;
             } break;
@@ -115,6 +117,7 @@ export default class DebugAds extends cc.Component {
     }
 
     addBtn(desc, callFunc) {
+
         let node = new cc.Node(desc);
         node.color = cc.Color.BLACK;
         node.addComponent(cc.Label).string = desc;
@@ -146,32 +149,38 @@ export default class DebugAds extends cc.Component {
             });
         }
     }
-    _onSuccessTouchEnd() {
-        if (!!this.adsCallFunc) {
+    _onInterstitialSuccessTouchEnd() {
+        if (this.interstitialCallFunc) {
+            this.interstitialCallFunc(true);
+            this.close();
+        }
+    }
+    _onRewardAdsSuccessTouchEnd() {
+        if (!!this.rewardAdsCallFunc) {
             let res = new RewardVideoCallBackMsg()
             res.result = true;
-            this.adsCallFunc(res);
+            this.rewardAdsCallFunc(res);
         }
         this.close();
     }
 
     _onFailTouchEnd() {
-        if (!!this.adsCallFunc) {
+        if (!!this.rewardAdsCallFunc) {
             let res = new RewardVideoCallBackMsg()
             res.result = false;
             res.errMsg = "播放失败";
-            this.adsCallFunc(res);
+            this.rewardAdsCallFunc(res);
         }
         this.close();
     }
 
     _onNonAdsTouchEnd() {
-        if (!!this.adsCallFunc) {
+        if (!!this.rewardAdsCallFunc) {
             let res = new RewardVideoCallBackMsg()
 
             res.result = false;
             res.errMsg = "无广告";
-            this.adsCallFunc(res);
+            this.rewardAdsCallFunc(res);
         }
 
         this.close();

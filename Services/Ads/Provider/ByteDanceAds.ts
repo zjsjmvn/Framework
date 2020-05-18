@@ -24,6 +24,7 @@ export default class ByteDanceAds implements IAdProvider {
     private interstitialId: string = null;
     private rewardedVideoAd: tt.RewardedVideoAd = null;
     private rewardCallBack: Function = null;
+    private interstitialAdCallBack: Function = null;
     private hasRewardAdInCache: boolean = false;
     private hasInterstitialAdInCache: boolean = false;
     private interstitialAd = null;
@@ -92,8 +93,17 @@ export default class ByteDanceAds implements IAdProvider {
     private initInterstitial(interstitialId) {
         if (!!window.tt && !!window.tt.createRewardedVideoAd) {
             this.interstitialId = interstitialId;
+            this.createInterstitialAds();
+        }
+    }
+    private createInterstitialAds() {
+        if (!!window.tt && !!window.tt.createRewardedVideoAd) {
             const isToutiaio = tt.getSystemInfoSync().appName === "Toutiao";
             if (isToutiaio) {
+                if (this.interstitialAd) {
+                    this.interstitialAd.destroy();
+                    this.interstitialAd = null;
+                }
                 this.interstitialAd = tt.createInterstitialAd({
                     adUnitId: this.interstitialId
                 });
@@ -109,11 +119,12 @@ export default class ByteDanceAds implements IAdProvider {
                 });
                 this.interstitialAd.onClose(res => {
                     console.log('插页广告关闭')
+                    this.interstitialAdCallBack(true);
+                    this.interstitialAdCallBack = null;
 
                 });
             }
         }
-
     }
     showBanner(style: tt.RectanbleStyle): Promise<boolean> {
         return new Promise((resolve, reject) => {
@@ -148,19 +159,36 @@ export default class ByteDanceAds implements IAdProvider {
             };
         })
     }
-    showInterstitial() {
-        const isToutiaio = tt.getSystemInfoSync().appName === "Toutiao";
-        // 插屏广告仅今日头条安卓客户端支持
-        if (isToutiaio) {
-            this.interstitialAd
-                .load()
-                .then(() => {
-                    this.interstitialAd.show();
-                })
-                .catch(err => {
-                    console.log(err);
-                });
-        }
+
+    showInterstitial(): Promise<boolean> {
+        this.createInterstitialAds();
+        return new Promise((resolve, reject) => {
+            const isToutiaio = tt.getSystemInfoSync().appName === "Toutiao";
+            // 插屏广告仅今日头条安卓客户端支持
+            if (isToutiaio) {
+                this.interstitialAd
+                    .load()
+                    .then(() => {
+                        this.interstitialAd.show().then(() => {
+                            this.interstitialAdCallBack = (result) => {
+                                resolve(result);
+                            }
+                        }).catch(err => {
+                            console.log('show', err);
+                            resolve(false);
+                        })
+                    })
+                    .catch(err => {
+                        console.log('load', err);
+                        resolve(false);
+                    });
+            } else {
+                resolve(false);
+            }
+        })
+
+
+
     }
     showRewardVideo(): Promise<RewardVideoCallBackMsg> {
         return new Promise((resolve, reject) => {

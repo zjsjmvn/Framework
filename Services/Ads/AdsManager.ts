@@ -209,10 +209,8 @@ export class AdsManager {
     defaultBannerStyle() {
         let width = cc.view.getFrameSize().width;
         let height = cc.view.getFrameSize().height;
-        return { left: width / 4, top: height - (width / 2 * 9 / 16), width: width / 2 };
+        return { width: width };
     }
-
-
 
 
     /**

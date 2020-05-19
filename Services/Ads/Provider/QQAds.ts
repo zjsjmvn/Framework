@@ -22,6 +22,9 @@ export default class QQAds implements IAdProvider {
     private rewardCallBack: Function = null;
     private hasRewardAdInCache: boolean = false;
     private bannerId: string = null;
+    private interstitialId: string = null;
+    private interstitialAd = null;
+    private interstitialAdCallBack: Function = null;
 
 
     /**
@@ -30,16 +33,12 @@ export default class QQAds implements IAdProvider {
      * @param {*} bannerId
      * @memberof QQAds
      */
-    constructor(rewardVideoId, bannerId) {
+    constructor(rewardVideoId, bannerId, interstitialId) {
         this.initRewardVideo(rewardVideoId);
         this.initBanner(bannerId)
+        this.initInterstitial(interstitialId)
     }
-    hasInterstitial(): boolean {
-        throw new Error("Method not implemented.");
-    }
-    preloadInterstitial(): Promise<boolean> {
-        throw new Error("Method not implemented.");
-    }
+
     private initRewardVideo(rewardVideoId) {
         if (!!window.qq && !!window.qq.createRewardedVideoAd) {
             //视频
@@ -79,7 +78,13 @@ export default class QQAds implements IAdProvider {
     private initBanner(bannerId) {
         this.bannerId = bannerId;
     }
-
+    private initInterstitial(interstitialId) {
+        if (!!window.qq && !!window.qq.createRewardedVideoAd) {
+            this.interstitialId = interstitialId;
+            this.createInterstitialAds();
+        }
+    }
+    //------------------------ banner
     showBanner(style: qq.RectanbleStyle): Promise<boolean> {
         return new Promise((resolve, reject) => {
             if (window.qq && window.qq.createBannerAd) {
@@ -89,62 +94,92 @@ export default class QQAds implements IAdProvider {
                     style: style
                 };
                 this.bannerAd = window.qq.createBannerAd(param);
-                this.bannerAd.style.left = style.left;
-                this.bannerAd.style.top = style.top;
-                this.bannerAd.style.width = style.width;
-
                 this.bannerAd.onError(err => {
                     console.log("QQ banner error: ", err);
                     resolve(false)
                 });
                 this.bannerAd.onLoad(() => {
                     console.log('QQ banner 加载成功')
-                    resolve(true);
                     this.bannerAd.show();
-                    this.bannerAd.style.width = style.width + 1;
+                    resolve(true);
+
+                    // this.bannerAd.style.width = style.width + 1;
+                });
+                this.bannerAd.onResize(size => {
+                    console.log('Resize后正式宽高:', size.width, size.height);
+                    let width = cc.view.getFrameSize().width;
+                    let height = cc.view.getFrameSize().height;
+                    this.bannerAd.style.top = height - size.height;
+                    this.bannerAd.style.left = (width - size.width) / 2;
                 });
             };
         })
 
-    }
-    showInterstitial() {
-
-    }
-    showRewardVideo(): Promise<RewardVideoCallBackMsg> {
-        return new Promise((resolve, reject) => {
-            cc.log("QQ showRewardVideo");
-            this.rewardCallBack = (result: boolean) => {
-                let msg = new RewardVideoCallBackMsg();
-                if (result == true) {
-                    msg.result = true;
-                } else {
-                    msg.errMsg = "广告被关闭，奖励失败";
-                }
-                cc.log("showRewardVideo msg", msg.errMsg);
-                resolve(msg);
-                this.rewardCallBack = null;
-            }
-            if (!!this.rewardedVideoAd) {
-                this.rewardedVideoAd.show().then(() => {
-                    console.log('广告显示成功');
-                }).catch((err) => {
-                    console.log('广告组件出现问题', err);
-                    let msg = new RewardVideoCallBackMsg();
-                    msg.result = false;
-                    msg.errMsg = QQRewardVideoErrMsg[err.errCode] || '广告播放失败';
-                    resolve(msg);
-                });
-            } else {
-                cc.error("rewardedVideoAd 无效");
-            }
-
-        })
     }
     hideBanner() {
         if (!!this.bannerAd) {
             this.bannerAd.destroy();
         }
     }
+
+
+    //------------------------ interstitial
+    private createInterstitialAds() {
+
+        // if (this.interstitialAd) {
+        //     this.interstitialAd.destroy();
+        //     this.interstitialAd = null;
+        // }
+        this.interstitialAd = qq.createInterstitialAd({
+            adUnitId: this.interstitialId
+        });
+        this.interstitialAd.onLoad(() => {
+            console.log('插页广告加载成功')
+
+        });
+        this.interstitialAd.onError(err => {
+            console.log('插页广告 播放失败', err)
+
+        });
+        this.interstitialAd.onClose(res => {
+            console.log('插页广告关闭')
+            this.interstitialAdCallBack(true);
+            this.interstitialAdCallBack = null;
+        });
+
+    }
+
+    preloadInterstitial(): Promise<boolean> {
+        throw new Error("Method not implemented.");
+    }
+
+    hasInterstitial(): boolean {
+        return true;
+    }
+    showInterstitial(): Promise<boolean> {
+        // this.createInterstitialAds();
+        return new Promise((resolve, reject) => {
+            // 插屏广告仅今日头条安卓客户端支持
+            this.interstitialAd
+                .load()
+                .then(() => {
+                    this.interstitialAd.show().then(() => {
+                        this.interstitialAdCallBack = (result) => {
+                            resolve(result);
+                        }
+                    }).catch(err => {
+                        console.log('show', err);
+                        resolve(false);
+                    })
+                })
+                .catch(err => {
+                    console.log('load', err);
+                    resolve(false);
+                });
+        })
+    }
+
+    //------------------------ reward
 
     /**
      * @description 预加载广告
@@ -177,5 +212,36 @@ export default class QQAds implements IAdProvider {
 
     hasRewardVideo(): boolean {
         return this.hasRewardAdInCache;
+    }
+
+    showRewardVideo(): Promise<RewardVideoCallBackMsg> {
+        return new Promise((resolve, reject) => {
+            cc.log("QQ showRewardVideo");
+            this.rewardCallBack = (result: boolean) => {
+                let msg = new RewardVideoCallBackMsg();
+                if (result == true) {
+                    msg.result = true;
+                } else {
+                    msg.errMsg = "广告被关闭，奖励失败";
+                }
+                cc.log("showRewardVideo msg", msg.errMsg);
+                resolve(msg);
+                this.rewardCallBack = null;
+            }
+            if (!!this.rewardedVideoAd) {
+                this.rewardedVideoAd.show().then(() => {
+                    console.log('广告显示成功');
+                }).catch((err) => {
+                    console.log('广告组件出现问题', err);
+                    let msg = new RewardVideoCallBackMsg();
+                    msg.result = false;
+                    msg.errMsg = QQRewardVideoErrMsg[err.errCode] || '广告播放失败';
+                    resolve(msg);
+                });
+            } else {
+                cc.error("rewardedVideoAd 无效");
+            }
+
+        })
     }
 }

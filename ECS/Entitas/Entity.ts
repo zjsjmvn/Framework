@@ -108,7 +108,6 @@ export class Entity {
   public _componentIndicesCache: number[] = null
   public _toStringCache: string = ''
   public _refCount: number = 0
-  private _pool: Pool = null
   private _componentsEnum: {} = null
 
   /**
@@ -126,7 +125,6 @@ export class Entity {
     this.onComponentRemoved = new Signal<EntityChanged>(this)
     this.onComponentReplaced = new Signal<ComponentReplaced>(this)
     this._componentsEnum = componentsEnum
-    this._pool = Pool.instance
     this._components = this.initialize(totalComponents)
   }
 

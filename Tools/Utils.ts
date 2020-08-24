@@ -1,3 +1,4 @@
+import { Widget } from '../../../../creator';
 
 export default class Utils {
     constructor() { }
@@ -263,7 +264,7 @@ export default class Utils {
     loadPrefab(name, callback = null) {
         this.loading_box.active = true;
         this.loading_text.string = '0%';
-        cc.loader.loadRes('prefab/' + name, cc.Prefab, (count, total, item) => {
+        cc.resources.load('prefab/' + name, cc.Prefab, (count, total, item) => {
             let val = count / total;
             this.loading_text.string = Math.floor(val * 100) + '%';
             // console.log(val);
@@ -285,7 +286,7 @@ export default class Utils {
         /** 加载失败时，重复加载 直到次数为 3 */
         let load = () => {
             load_count += 1;
-            cc.loader.loadRes(src, cc.SpriteFrame, (err, res) => {
+            cc.resources.load(src, cc.SpriteFrame, (err, res: cc.SpriteFrame) => {
                 if (err) {
                     console.log(`图片${src}加载错误重复加载次数 >>`, load_count);
                     if (load_count < 3) {
@@ -306,7 +307,7 @@ export default class Utils {
             /** 加载失败时，重复加载 直到次数为 3 */
             let load = () => {
                 load_count += 1;
-                cc.loader.loadRes(src, cc.SpriteFrame, (err, res) => {
+                cc.resources.load(src, cc.SpriteFrame, (err, res: cc.SpriteFrame) => {
                     if (err) {
                         console.log(`图片${src}加载错误重复加载次数 >>`, load_count);
                         if (load_count < 3) {
@@ -329,7 +330,7 @@ export default class Utils {
      * @param {string} type 加载图片类型
      */
     public static loadNetImg(node, src, type = 'jpg') {
-        cc.loader.load({ url: src, type: type }, (err, res) => {
+        cc.assetManager.loadRemote(src, (err, res) => {
             node.getComponent(cc.Sprite).spriteFrame = new cc.SpriteFrame(res);
         });
     }
@@ -354,12 +355,12 @@ export default class Utils {
     }
 
     public static autoAdapt() {
-        let size = null;
-        {
-            size = cc.v2(750, 1334);
-        }
+
+        let size = cc.find('Canvas').getComponent(cc.Canvas).designResolution;
+
+
         let frameRatio = cc.view.getFrameSize().height / cc.view.getFrameSize().width;
-        let designRation = size.y / size.x;
+        let designRation = size.height / size.width;
 
         if (frameRatio >= designRation) {
             cc.Canvas.instance.fitWidth = true;
@@ -386,7 +387,14 @@ export default class Utils {
         }
         return true;
     }
-
+    public static delay(delayTime): Promise<void> {
+        if (delayTime === 0) { delayTime = 100; }
+        return new Promise(function (resolve, reject) {
+            setTimeout(function () {
+                resolve();
+            }, delayTime);
+        });
+    }
 
 
 }

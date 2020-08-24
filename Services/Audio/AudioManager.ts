@@ -28,7 +28,7 @@ export default class AudioManager {
         if (!this.loading && Object.keys(this.audio_clip_map).length == 0) {
             let self = this;
             this.loading = true;
-            cc.loader.loadResDir(path, cc.AudioClip, null, (error, res_arr, str_arr) => {
+            cc.resources.loadDir(path, cc.AudioClip, null, (error, res_arr, str_arr) => {
 
                 self.loading = false;
                 if (error) {

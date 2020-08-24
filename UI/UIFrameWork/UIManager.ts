@@ -68,7 +68,7 @@ export default class UIManager {
             console.error(`UIManager OpenUI 1: ui ${cc.js.getClassName(uiClass)} is already exist, please check`);
             return;
         }
-        cc.loader.loadRes(uiClass.PrefabPath, (completedCount: number, totalCount: number, item: any) => {
+        cc.resources.load(uiClass.PrefabPath, (completedCount: number, totalCount: number, item: any) => {
             onProgress && onProgress(completedCount, totalCount, item);
         }, (error, prefab) => {
             if (error) {

@@ -1,6 +1,5 @@
 import UIBase from './UIBase';
 import { singleton } from '../../Tools/Decorator/Singleton';
-import { dynamicAtlasManager } from '../../../../../creator';
 import UITips from './UITips';
 
 export class ViewZOrder {
@@ -61,14 +60,42 @@ export default class UIManager {
      * @type {UIBase[]}
      * @memberof UIManager
      */
-    private cachedUI: Map<string, UIBase> = new Map();
+    private cachedUI: Map<string, Array<UIBase>> = new Map();
 
     public openUI<T extends UIBase>(uiClass: { new(): T }, zOrder: number = ViewZOrder.UI, callback?: Function, onProgress?: Function, data?: any) {
         if (this.hasUI(uiClass)) {
-            console.error(`UIManager OpenUI 1: ui ${cc.js.getClassName(uiClass)} is already exist, please check`);
+            if (!this.getUI(uiClass).allowMultiThisUI) {
+                console.error(`UIManager OpenUI 1: ui ${cc.js.getClassName(uiClass)} is already exist, please check`);
+                return;
+            }
+        }
+
+        let initUI = (uiInstance: UIBase) => {
+            if (!uiInstance) {
+                console.error(`${uiClass.PrefabPath}没有绑定UI脚本!!!`);
+                return;
+            }
+            let uiRoot = cc.director.getScene().getChildByName('Canvas');
+            if (!uiRoot) {
+                console.error(`当前场景没有${cc.director.getScene().name}Canvas!!!`);
+                return;
+            }
+            uiInstance.node.parent = uiRoot;
+            uiInstance.init(data);
+
+            uiInstance.node.zIndex = zOrder;
+            uiInstance.show();
+            this.uiStack.push(uiInstance);
+            callback && callback(uiInstance);
+
+        }
+
+        let uiInstance = this.getUIFromCachedList(uiClass);
+        if (uiInstance) {
+            initUI(uiInstance);
             return;
         }
-        cc.resources.load(uiClass.PrefabPath, (completedCount: number, totalCount: number, item: any) => {
+        cc.loader.loadRes(uiClass.PrefabPath, (completedCount: number, totalCount: number, item: any) => {
             onProgress && onProgress(completedCount, totalCount, item);
         }, (error, prefab) => {
             if (error) {
@@ -76,29 +103,17 @@ export default class UIManager {
                 return;
             }
             if (this.hasUI(uiClass)) {
-                console.error(`UIManager OpenUI 2: ui ${cc.js.getClassName(uiClass)} is already exist, please check`);
-                return;
+                if (!this.getUI(uiClass).allowMultiThisUI) {
+                    console.error(`UIManager OpenUI 1: ui ${cc.js.getClassName(uiClass)} is already exist, please check`);
+                    return;
+                }
             }
-
             let uiNode: cc.Node = cc.instantiate(prefab);
             let uiInstance = uiNode.getComponent(uiClass) as UIBase;
-            if (!uiInstance) {
-                console.error(`${uiClass.PrefabPath}没有绑定UI脚本!!!`);
-                return;
-            }
-            let uiRoot = cc.director.getScene().getChildByName('Canvas');
-            if (!uiRoot) {
-                console.error(`当前场景${cc.director.getScene().name}Canvas!!!`);
-                return;
-            }
-            uiNode.parent = uiRoot;
-            uiInstance.init(data);
-
-            uiNode.zIndex = zOrder;
-            uiInstance.show();
-            this.uiStack.push(uiInstance);
-
-            callback && callback(uiInstance);
+            initUI(uiInstance);
+            // if (uiInstance.needCache) {
+            //     this.setUIToCachedList(uiInstance);
+            // }
         });
     }
 
@@ -108,14 +123,27 @@ export default class UIManager {
         let ui = null;
         let uiName = cc.js.getClassName(uiClass);
         if (this.cachedUI.has(uiName)) {
-            ui = this.cachedUI.get(uiName);
+            let uiArr = this.cachedUI.get(uiName);
+            if (uiArr) {
+                cc.log('cachedUI ', uiName, this.cachedUI.get(uiName).length);
+                ui = uiArr.pop();
+            }
         }
         return ui;
     }
 
-    private setUIToCachedList(ui: UIBase) {
+    private setUIToCachedMap(ui: UIBase) {
         let uiName = cc.js.getClassName(ui);
-        this.cachedUI.set(uiName, ui);
+        if (this.cachedUI.has(uiName)) {
+            let uiArr = this.cachedUI.get(uiName);
+            uiArr.push(ui);
+        } else {
+            let arr = new Array();
+            arr.push(ui);
+            this.cachedUI.set(uiName, arr);
+        }
+
+        cc.log('cachedUI ', uiName, this.cachedUI.get(uiName).length);
     }
 
 
@@ -132,7 +160,12 @@ export default class UIManager {
     }
     public closeUI(ui: UIBase) {
         if (cc.isValid(ui)) {
-            ui.close();
+            if (ui.needCache) {
+                ui.hide();
+                this.setUIToCachedMap(ui);
+            } else {
+                ui.close();
+            }
         }
         let index = this.uiStack.indexOf(ui);
         if (index >= 0) {
@@ -150,6 +183,13 @@ export default class UIManager {
     }
 
 
+    /**
+     * @description 当一个界面关闭的时候。其附带的子界面都要关闭。
+     * @memberof UIManager
+     */
+    public closeToUI() {
+
+    }
 
     public hideUI<T extends UIBase>(uiClass: { new(): T }) {
         let ui = this.getUI(uiClass);
@@ -185,7 +225,8 @@ export default class UIManager {
         return ui.node.active;
     }
 
-    public showUI<T extends UIBase>(uiClass: { new(): T }, callback?: Function, data?: any) {
+    // 暂时没用到。先private 这个地方需要处理缓存ui
+    private showUI<T extends UIBase>(uiClass: { new(): T }, callback?: Function, data?: any) {
         this.openUI(uiClass, ViewZOrder.UI, callback, null, data);
     }
 

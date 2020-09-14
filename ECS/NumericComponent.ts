@@ -12,6 +12,9 @@ export enum NumericType {
 
 export class NumericComponent {
     protected numericDic = new Map<NumericType, number>();
+    public getNumericDic() {
+        return this.numericDic;
+    }
     public final: number = 0;
 
     public addByKey(key: NumericType, value: number) {
@@ -53,6 +56,7 @@ export class NumericComponent {
         this.final = ((this.getByKey(NumericType.Base) + this.getByKey(NumericType.BaseAddValue)) * (100 + this.getByKey(NumericType.BaseAddPercent)) / 100 + this.getByKey(NumericType.FinalAddValue)) * (100 + this.getByKey(NumericType.FinalAddPercent)) / 100;
         this.numericDic.set(NumericType.Final, this.final);
     }
+
     public reset() {
         this.numericDic.clear();
         this.update();
@@ -73,4 +77,8 @@ cc.log(a.getByKey(NumericType.Final));
 cc.log(a.getBaseByFinal(a.getByKey(NumericType.Final)));
 
  */
+
+
+
+
 

@@ -136,6 +136,7 @@ export default abstract class UIPopup extends UIBase {
         // 判断是否点击的是外面,如果点击的是container外面。则关闭。
         let containerNode: cc.Node = this.node.getChildByName("Container");
 
+        cc.log('onThisNodeTouchEnd_UsedFor_TouchMarginToClose');
         if (!!!containerNode) {
             cc.error("快速关闭需要container节点来判断是否点击ui外部。请参考其他弹框界面的层级结构。");
             return;

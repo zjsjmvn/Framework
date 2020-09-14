@@ -1,6 +1,8 @@
 import UIBase from './UIBase';
 import { singleton } from '../../Tools/Decorator/Singleton';
 import UITips from './UITips';
+import { setPoints } from '../../../../../creator';
+import UIPopup from './UIPopup';
 
 export class ViewZOrder {
     /**场景层 */
@@ -62,7 +64,7 @@ export default class UIManager {
      */
     private cachedUI: Map<string, Array<UIBase>> = new Map();
 
-    public openUI<T extends UIBase>(uiClass: { new(): T }, zOrder: number = ViewZOrder.UI, callback?: Function, onProgress?: Function, data?: any) {
+    public openUIClass<T extends UIBase>(uiClass: { new(): T }, zOrder: number = ViewZOrder.UI, callback?: Function, onProgress?: Function, data?: any) {
         if (this.hasUI(uiClass)) {
             if (!this.getUI(uiClass).allowMultiThisUI) {
                 console.error(`UIManager OpenUI 1: ui ${cc.js.getClassName(uiClass)} is already exist, please check`);
@@ -81,6 +83,7 @@ export default class UIManager {
                 return;
             }
             uiInstance.node.parent = uiRoot;
+            uiInstance.node.setPosition(0, 0);
             uiInstance.init(data);
 
             uiInstance.node.zIndex = zOrder;
@@ -111,12 +114,29 @@ export default class UIManager {
             let uiNode: cc.Node = cc.instantiate(prefab);
             let uiInstance = uiNode.getComponent(uiClass) as UIBase;
             initUI(uiInstance);
-            // if (uiInstance.needCache) {
-            //     this.setUIToCachedList(uiInstance);
-            // }
+
         });
     }
 
+
+
+
+
+    /**
+     * @description 按节点打开，传过来要打开的弹窗的节点，然后控制其显示关闭
+     * @param {cc.Node} uiNode
+     * @param {number} [zOrder=ViewZOrder.UI]
+     * @param {Function} [callback]
+     * @memberof UIManager
+     */
+    public openUINode(uiNode: cc.Node, zOrder: number = ViewZOrder.UI, callback?: Function) {
+        if (!uiNode.active) {
+            uiNode.active = true;
+        }
+        uiNode.setPosition(0, 0);
+        uiNode.zIndex = zOrder;
+        uiNode.getComponent(UIBase).show();
+    }
 
 
     public getUIFromCachedList<T extends UIBase>(uiClass: { new(): T }): UIBase {
@@ -142,7 +162,6 @@ export default class UIManager {
             arr.push(ui);
             this.cachedUI.set(uiName, arr);
         }
-
         cc.log('cachedUI ', uiName, this.cachedUI.get(uiName).length);
     }
 
@@ -158,20 +177,31 @@ export default class UIManager {
             }
         }
     }
-    public closeUI(ui: UIBase) {
-        if (cc.isValid(ui)) {
-            if (ui.needCache) {
-                ui.hide();
-                this.setUIToCachedMap(ui);
-            } else {
-                ui.close();
+    public closeUI(ui: UIBase | cc.Node) {
+        cc.log('closeUI');
+        if (ui instanceof cc.Node) {
+            ui.getComponent(UIBase).close();
+        }
+        else {
+            let index = this.uiStack.indexOf(ui);
+            if (index < 0) {
+
+            }
+            if (cc.isValid(ui)) {
+                if (ui.needCache) {
+                    ui.hide();
+                    this.setUIToCachedMap(ui);
+                } else {
+                    ui.close();
+                }
+            }
+            if (index >= 0) {
+                this.uiStack.splice(index, 1);
             }
         }
-        let index = this.uiStack.indexOf(ui);
-        if (index >= 0) {
-            this.uiStack.splice(index, 1);
-        }
+
     }
+
     public closeAllUI() {
         if (this.uiStack.length == 0) {
             return;
@@ -227,13 +257,13 @@ export default class UIManager {
 
     // 暂时没用到。先private 这个地方需要处理缓存ui
     private showUI<T extends UIBase>(uiClass: { new(): T }, callback?: Function, data?: any) {
-        this.openUI(uiClass, ViewZOrder.UI, callback, null, data);
+        this.openUIClass(uiClass, ViewZOrder.UI, callback, null, data);
     }
 
     public showTips(uiClass, message: string, pos: cc.Vec2, ...param: any[]) {
         let tipUI = this.getUI(uiClass) as UITips;
         if (!tipUI) {
-            this.openUI(uiClass, ViewZOrder.Tips, null, null, { message: message, pos: pos });
+            this.openUIClass(uiClass, ViewZOrder.Tips, null, null, { message: message, pos: pos });
         } else {
             tipUI.init({ message: message, pos: pos });
             tipUI.show();
@@ -241,8 +271,13 @@ export default class UIManager {
     }
 
     public showPopup(uiClass, data?: any) {
-        this.openUI(uiClass, ViewZOrder.Popup, null, null, data);
+        if (uiClass instanceof cc.Node) {
+            this.openUINode(uiClass, ViewZOrder.Popup, null);
+        } else {
+            this.openUIClass(uiClass, ViewZOrder.Popup, null, null, data);
+        }
     }
+
 
     // public showUI<T extends UIBase>(uiClass: UIClass<T>, callback?: Function) {
     //     let ui = this.getUI(uiClass);
@@ -254,6 +289,6 @@ export default class UIManager {
     // }
 
     public ShowConfirmDialog(uiClass, data?: any) {
-        this.openUI(uiClass, ViewZOrder.Popup, null, null, data);
+        this.openUIClass(uiClass, ViewZOrder.Popup, null, null, data);
     }
 }

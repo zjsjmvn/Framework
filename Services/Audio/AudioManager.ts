@@ -10,8 +10,8 @@ export default class AudioManager {
     playing_music_name = undefined;
     maxVolume = 1;
     file_path_map = new Map();
-    audio_clip_map = {};
-    audio_path_map = {};
+    audio_clip_map: Map<string, cc.AudioClip> = new Map()
+    audio_path_map: Map<string, string> = new Map()
     //时间播放间隔限制 秒
     playIntervalLimitSec = 0.03;
     wxAudioMap: any = null;
@@ -25,27 +25,32 @@ export default class AudioManager {
     }
 
     public preloadAudio(path) {
+        cc.error('暂时没实现。需要修改cc.loader');
         if (!this.loading && Object.keys(this.audio_clip_map).length == 0) {
             let self = this;
             this.loading = true;
-            cc.resources.loadDir(path, cc.AudioClip, null, (error, res_arr, str_arr) => {
+            cc.resources.loadDir(path, cc.AudioClip, null, (error, res_arr) => {
 
                 self.loading = false;
                 if (error) {
                     cc.log(error);
                 }
                 else {
-                    str_arr.forEach((str, index) => {
-                        let arr = str.split('/');
-                        let name = arr[arr.length - 1];
-                        let res_url = res_arr[index].nativeUrl;
-                        self.audio_clip_map[name] = res_arr[index];
-                        //带后缀地址
-                        if (cc.loader.md5Pipe) {
-                            res_url = cc.loader.md5Pipe.transformURL(res_url);
-                        }
-                        self.audio_path_map[name] = res_url;//'resources/' + str + '.' + typeName;                        
-                    });
+
+                    cc.log('res_arr', res_arr)
+                    // str_arr.forEach((str, index) => {
+                    //     let arr = str.split('/');
+                    //     let name = arr[arr.length - 1];
+                    //     let res_url = res_arr[index].nativeUrl;
+                    //     self.audio_clip_map[name] = res_arr[index];
+                    //     //带后缀地址
+                    //     if (cc.loader.md5Pipe) {
+                    //         res_url = cc.loader.md5Pipe.transformURL(res_url);
+                    //     }
+                    //     self.audio_path_map[name] = res_url;//'resources/' + str + '.' + typeName;                        
+                    // });
+
+
                     if (self.playing_music) {
                         self.playMusic(self.playing_music_name);
                         // 激活音效
@@ -132,25 +137,26 @@ export default class AudioManager {
         return false;
     }
 
-    public loadAudio(src: string, playAfterLoaded: boolean, isMusic: boolean, loop, volume) {
+    public loadAudio(path: string, playAfterLoaded: boolean, isMusic: boolean, loop, volume) {
+
+        cc.log('loadAudio');
         let load_count = 0;
         /** 加载失败时，重复加载 直到次数为 3 */
-        let index = this.loadingAudioArr.indexOf(src);
+        let index = this.loadingAudioArr.indexOf(path);
         if (index > -1) return
-        this.loadingAudioArr.push(src);
+        this.loadingAudioArr.push(path);
         let load = () => {
             load_count += 1;
-            cc.loader.loadRes(src, cc.AudioClip, (err, res: cc.AudioClip) => {
+            cc.resources.load(path, cc.AudioClip, (err, res: cc.AudioClip) => {
                 if (err) {
-                    console.log(`音频${src}加载错误重复加载次数 >>`, load_count);
+                    console.log(`音频${path}加载错误重复加载次数 >>`, load_count);
                     load();
                 } else {
                     let name = res.name
                     let res_url = res.nativeUrl;
                     this.audio_clip_map[name] = res;
-                    //带后缀地址
-                    if (cc.loader.md5Pipe) {
-                        res_url = cc.loader.md5Pipe.transformURL(res_url);
+                    if (cc.assetManager.md5Pipe) {
+                        res_url = cc.assetManager.md5Pipe.transformURL(res_url);
                     }
                     this.audio_path_map[name] = res_url;//'resources/' + str + '.' + typeName;             
                     if (playAfterLoaded) {

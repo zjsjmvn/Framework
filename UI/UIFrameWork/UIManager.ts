@@ -1,8 +1,8 @@
 import UIBase from './UIBase';
 import { singleton } from '../../Tools/Decorator/Singleton';
 import UITips from './UITips';
-import { setPoints } from '../../../../../creator';
 import UIPopup from './UIPopup';
+import AttackAnimation from '../../../GamePlay/View/Game/Animations/AttackAnimation';
 
 export class ViewZOrder {
     /**场景层 */
@@ -93,12 +93,12 @@ export default class UIManager {
 
         }
 
-        let uiInstance = this.getUIFromCachedList(uiClass);
+        let uiInstance = this.getUIFromCachedMap(uiClass);
         if (uiInstance) {
             initUI(uiInstance);
             return;
         }
-        cc.loader.loadRes(uiClass.PrefabPath, (completedCount: number, totalCount: number, item: any) => {
+        cc.resources.load(uiClass.PrefabPath, (completedCount: number, totalCount: number, item: any) => {
             onProgress && onProgress(completedCount, totalCount, item);
         }, (error, prefab) => {
             if (error) {
@@ -118,10 +118,6 @@ export default class UIManager {
         });
     }
 
-
-
-
-
     /**
      * @description 按节点打开，传过来要打开的弹窗的节点，然后控制其显示关闭
      * @param {cc.Node} uiNode
@@ -139,7 +135,7 @@ export default class UIManager {
     }
 
 
-    public getUIFromCachedList<T extends UIBase>(uiClass: { new(): T }): UIBase {
+    public getUIFromCachedMap<T extends UIBase>(uiClass: { new(): T }): UIBase {
         let ui = null;
         let uiName = cc.js.getClassName(uiClass);
         if (this.cachedUI.has(uiName)) {
@@ -178,27 +174,29 @@ export default class UIManager {
         }
     }
     public closeUI(ui: UIBase | cc.Node) {
-        cc.log('closeUI');
+
         if (ui instanceof cc.Node) {
-            ui.getComponent(UIBase).close();
-        }
-        else {
+            ui.getComponent(UIBase).hide();
+        } else {
+            // 不在uiStack的ui都是由节点自己管理。
             let index = this.uiStack.indexOf(ui);
             if (index < 0) {
-
-            }
-            if (cc.isValid(ui)) {
-                if (ui.needCache) {
-                    ui.hide();
-                    this.setUIToCachedMap(ui);
-                } else {
-                    ui.close();
+                ui.hide();
+            } else {
+                if (index >= 0) {
+                    this.uiStack.splice(index, 1);
+                }
+                if (cc.isValid(ui)) {
+                    if (ui.needCache) {
+                        ui.hide();
+                        this.setUIToCachedMap(ui);
+                    } else {
+                        ui.close();
+                    }
                 }
             }
-            if (index >= 0) {
-                this.uiStack.splice(index, 1);
-            }
         }
+
 
     }
 

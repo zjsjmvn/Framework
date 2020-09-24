@@ -15,8 +15,8 @@ export default class QQShareProvider implements IShareProvider {
         let imageUrl = null;
         if (this.defaultShareImage) {
             imageUrl = cc.url.raw(this.defaultShareImage);
-            if (cc.loader.md5Pipe) {
-                imageUrl = cc.loader.md5Pipe.transformURL(imageUrl);
+            if (cc.assetManager.md5Pipe) {
+                imageUrl = cc.assetManager.md5Pipe.transformURL(imageUrl);
             }
         }
 
@@ -53,8 +53,8 @@ export default class QQShareProvider implements IShareProvider {
             let imageUrl = null;
             if (image) {
                 imageUrl = cc.url.raw(image);
-                if (cc.loader.md5Pipe) {
-                    imageUrl = cc.loader.md5Pipe.transformURL(imageUrl);
+                if (cc.assetManager.md5Pipe) {
+                    imageUrl = cc.assetManager.md5Pipe.transformURL(imageUrl);
                 }
             }
             console.log('url', imageUrl);

@@ -142,7 +142,7 @@ export default class DebugAds extends cc.Component {
     setFrame(node) {
         let sp = node.getComponent(cc.Sprite);
         if (sp) {
-            cc.assetManager.loadAny({ uuid: 'a23235d1-15db-4b95-8439-a2e005bfff91', type: cc.SpriteFrame }, function (e, r) {
+            cc.resources.load({ uuid: 'a23235d1-15db-4b95-8439-a2e005bfff91', type: cc.SpriteFrame }, function (e, r) {
                 if (!e) {
                     sp.spriteFrame = r;
                 }

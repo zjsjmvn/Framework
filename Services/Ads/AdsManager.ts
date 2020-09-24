@@ -10,7 +10,18 @@ import { resolve } from '../../Tools/IOC/resolution/resolver';
  * @class RewardVideoCallBackMsg
  */
 export class RewardVideoCallBackMsg {
+    /**
+     * @description 成功或失败
+     * @type {boolean}
+     * @memberof RewardVideoCallBackMsg
+     */
     result: boolean = false;
+
+    /**
+     * @description 失败描述
+     * @type {string}
+     * @memberof RewardVideoCallBackMsg
+     */
     errMsg: string = "";
 }
 

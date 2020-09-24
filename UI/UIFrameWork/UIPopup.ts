@@ -73,7 +73,7 @@ export default abstract class UIPopup extends UIBase {
         this.node.addChild(node);
         let sp = node.addComponent(cc.Sprite);
         if (sp) {
-            cc.loader.load({ uuid: 'a23235d1-15db-4b95-8439-a2e005bfff91', type: cc.SpriteFrame }, (e, r) => {
+            cc.resources.load({ uuid: 'a23235d1-15db-4b95-8439-a2e005bfff91', type: cc.SpriteFrame }, (e, r) => {
                 if (!e) {
                     sp.spriteFrame = r;
                     node.setContentSize(rect.width, rect.height);
@@ -102,37 +102,47 @@ export default abstract class UIPopup extends UIBase {
     set touchAnyWhereToClose(value) {
         this._touchAnyWhereToClose = value;
     }
-
-
-
     private closeCallback: Function = null;
 
-
     abstract init(args: any);
+
 
     show() {
         super.show();
         cc.log('ss', this.touchBlankToClose, this.touchAnyWhereToClose)
         if (this._touchBlankToClose) {
-            this.node.on(cc.Node.EventType.TOUCH_END, this.onThisNodeTouchEnd_UsedFor_TouchMarginToClose, this, true);
+            this.node.on(cc.Node.EventType.TOUCH_END, this.onThisNodeTouchEnd_UsedFor_TouchMarginToClose, this, false);
         }
         if (this.touchAnyWhereToClose) {
-            this.node.on(cc.Node.EventType.TOUCH_END, this.onThisNodeTouchEnd_UsedFor_TouchAnyWhereToClose, this, true);
+            this.node.on(cc.Node.EventType.TOUCH_END, this.onThisNodeTouchEnd_UsedFor_TouchAnyWhereToClose, this, false);
         }
     }
+
+    // TODO: 解决show频繁注册的问题。解决之后hide就不用关闭注册的事件了。
+    hide() {
+        cc.log('hidehidehidehidehidehidehidehidehidehidehidehidehidehidehidehidehidehidehidehidehidehidehidehidehidehidehidehidehidehidehidehide')
+        super.hide();
+        if (this._touchBlankToClose) {
+            this.node.off(cc.Node.EventType.TOUCH_END, this.onThisNodeTouchEnd_UsedFor_TouchMarginToClose, this, false);
+        }
+        if (this.touchAnyWhereToClose) {
+            this.node.off(cc.Node.EventType.TOUCH_END, this.onThisNodeTouchEnd_UsedFor_TouchAnyWhereToClose, this, false);
+        }
+    }
+
 
     close() {
         super.close();
         if (this._touchBlankToClose) {
-            this.node.off(cc.Node.EventType.TOUCH_END, this.onThisNodeTouchEnd_UsedFor_TouchMarginToClose, this, true);
+            this.node.off(cc.Node.EventType.TOUCH_END, this.onThisNodeTouchEnd_UsedFor_TouchMarginToClose, this, false);
         }
         if (this.touchAnyWhereToClose) {
-            this.node.off(cc.Node.EventType.TOUCH_END, this.onThisNodeTouchEnd_UsedFor_TouchAnyWhereToClose, this, true);
+            this.node.off(cc.Node.EventType.TOUCH_END, this.onThisNodeTouchEnd_UsedFor_TouchAnyWhereToClose, this, false);
         }
-
     }
 
     onThisNodeTouchEnd_UsedFor_TouchMarginToClose(event) {
+        event.stopPropagation();
         // 判断是否点击的是外面,如果点击的是container外面。则关闭。
         let containerNode: cc.Node = this.node.getChildByName("Container");
 
@@ -141,6 +151,7 @@ export default abstract class UIPopup extends UIBase {
             cc.error("快速关闭需要container节点来判断是否点击ui外部。请参考其他弹框界面的层级结构。");
             return;
         }
+
         let rect: cc.Rect = null;
         if (this.blankJudgeType == BlankJudgeType.BoundingBoxToWorld) {
             rect = containerNode.getBoundingBoxToWorld();
@@ -160,6 +171,7 @@ export default abstract class UIPopup extends UIBase {
     }
 
     onThisNodeTouchEnd_UsedFor_TouchAnyWhereToClose(event) {
+        event.stopPropagation();
         cc.log('onThisNodeTouchEnd_UsedFor_TouchAnyWhereToClose');
         UIManager.instance.closeUI(this);
     }

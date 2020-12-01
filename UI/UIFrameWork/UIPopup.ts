@@ -109,24 +109,22 @@ export default abstract class UIPopup extends UIBase {
 
     show() {
         super.show();
-        cc.log('ss', this.touchBlankToClose, this.touchAnyWhereToClose)
         if (this._touchBlankToClose) {
-            this.node.on(cc.Node.EventType.TOUCH_END, this.onThisNodeTouchEnd_UsedFor_TouchMarginToClose, this, false);
+            this.node.on(cc.Node.EventType.TOUCH_END, this.onThisNodeTouchEnd_UsedFor_TouchMarginToClose, this, true);
         }
         if (this.touchAnyWhereToClose) {
-            this.node.on(cc.Node.EventType.TOUCH_END, this.onThisNodeTouchEnd_UsedFor_TouchAnyWhereToClose, this, false);
+            this.node.on(cc.Node.EventType.TOUCH_END, this.onThisNodeTouchEnd_UsedFor_TouchAnyWhereToClose, this, true);
         }
     }
 
     // TODO: 解决show频繁注册的问题。解决之后hide就不用关闭注册的事件了。
     hide() {
-        cc.log('hidehidehidehidehidehidehidehidehidehidehidehidehidehidehidehidehidehidehidehidehidehidehidehidehidehidehidehidehidehidehidehide')
         super.hide();
         if (this._touchBlankToClose) {
-            this.node.off(cc.Node.EventType.TOUCH_END, this.onThisNodeTouchEnd_UsedFor_TouchMarginToClose, this, false);
+            this.node.off(cc.Node.EventType.TOUCH_END, this.onThisNodeTouchEnd_UsedFor_TouchMarginToClose, this, true);
         }
         if (this.touchAnyWhereToClose) {
-            this.node.off(cc.Node.EventType.TOUCH_END, this.onThisNodeTouchEnd_UsedFor_TouchAnyWhereToClose, this, false);
+            this.node.off(cc.Node.EventType.TOUCH_END, this.onThisNodeTouchEnd_UsedFor_TouchAnyWhereToClose, this, true);
         }
     }
 
@@ -134,15 +132,15 @@ export default abstract class UIPopup extends UIBase {
     close() {
         super.close();
         if (this._touchBlankToClose) {
-            this.node.off(cc.Node.EventType.TOUCH_END, this.onThisNodeTouchEnd_UsedFor_TouchMarginToClose, this, false);
+            this.node.off(cc.Node.EventType.TOUCH_END, this.onThisNodeTouchEnd_UsedFor_TouchMarginToClose, this, true);
         }
         if (this.touchAnyWhereToClose) {
-            this.node.off(cc.Node.EventType.TOUCH_END, this.onThisNodeTouchEnd_UsedFor_TouchAnyWhereToClose, this, false);
+            this.node.off(cc.Node.EventType.TOUCH_END, this.onThisNodeTouchEnd_UsedFor_TouchAnyWhereToClose, this, true);
         }
     }
 
     onThisNodeTouchEnd_UsedFor_TouchMarginToClose(event) {
-        event.stopPropagation();
+        // event.stopPropagation();
         // 判断是否点击的是外面,如果点击的是container外面。则关闭。
         let containerNode: cc.Node = this.node.getChildByName("Container");
 
@@ -164,7 +162,7 @@ export default abstract class UIPopup extends UIBase {
         }
         let contains = rect.contains(this.node.convertToNodeSpaceAR(event.getLocation()));
         if (contains) {
-            return;
+            return true;
         } else {
             UIManager.instance.closeUI(this);
         }

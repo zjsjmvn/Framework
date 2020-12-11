@@ -1,4 +1,4 @@
-import { Widget } from '../../../../creator';
+import { Widget, Scheduler, delayTime } from '../../../../creator';
 
 export default class Utils {
     constructor() { }
@@ -387,16 +387,40 @@ export default class Utils {
         }
         return true;
     }
+    /**
+     * @description ms
+     * @static
+     * @param {*} delayTime ms
+     * @returns {Promise<void>}
+     * @memberof Utils
+     */
     public static delay(delayTime): Promise<void> {
         if (delayTime === 0) { delayTime = 100; }
         return new Promise(function (resolve, reject) {
-            setTimeout(function () {
+            // cc.delayTime(delayTime);
+            let a = {};
+            cc.tween(a).delay(delayTime / 1000).call(() => {
+                cc.log('delayTime', delayTime)
                 resolve();
-            }, delayTime);
+            }).start();
+            // cc.director.getScheduler().scheduleOnce()l
+            // setTimeout(function () {
+            // }, delayTime);
         });
     }
-
-
+    /**
+     * @description 
+     * @static
+     * @param {*} delayTime ms
+     * @param {function} callback
+     * @memberof Utils
+     */
+    public static delayWithCallBack(delayTime, callback) {
+        let a = {};
+        cc.tween(a).delay(delayTime / 1000).call(() => {
+            callback();
+        }).start();
+    }
 }
 
 

@@ -1,8 +1,6 @@
-import UIBase from './UIBase';
 import { singleton } from '../../Tools/Decorator/Singleton';
+import UIBase from './UIBase';
 import UITips from './UITips';
-import UIPopup from './UIPopup';
-import AttackAnimation from '../../../GamePlay/View/Game/Animations/AttackAnimation';
 
 export class ViewZOrder {
     /**场景层 */

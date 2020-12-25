@@ -1,5 +1,6 @@
 import UIBase from './UIBase';
 import UIManager from './UIManager';
+import { object } from '../../Tools/Serializer/Serializr/serializr';
 const { property, ccclass } = cc._decorator
 
 /**
@@ -108,6 +109,7 @@ export default abstract class UIPopup extends UIBase {
 
 
     show() {
+        cc.log('_getCapturingTargets')
         super.show();
         if (this._touchBlankToClose) {
             this.node.on(cc.Node.EventType.TOUCH_END, this.onThisNodeTouchEnd_UsedFor_TouchMarginToClose, this, true);
@@ -128,7 +130,6 @@ export default abstract class UIPopup extends UIBase {
         }
     }
 
-
     close() {
         super.close();
         if (this._touchBlankToClose) {
@@ -140,11 +141,11 @@ export default abstract class UIPopup extends UIBase {
     }
 
     onThisNodeTouchEnd_UsedFor_TouchMarginToClose(event) {
-        // event.stopPropagation();
+        // let pop = this.node.getComponentsInChildren(UIPopup);
+        // cc.log('onThisNodeTouchEnd_UsedFor_TouchMarginToClose', pop)
         // 判断是否点击的是外面,如果点击的是container外面。则关闭。
         let containerNode: cc.Node = this.node.getChildByName("Container");
 
-        cc.log('onThisNodeTouchEnd_UsedFor_TouchMarginToClose');
         if (!!!containerNode) {
             cc.error("快速关闭需要container节点来判断是否点击ui外部。请参考其他弹框界面的层级结构。");
             return;
@@ -164,6 +165,8 @@ export default abstract class UIPopup extends UIBase {
         if (contains) {
             return true;
         } else {
+            cc.log('onThisNodeTouchEnd_UsedFor_TouchMarginToClose');
+            event.stopPropagation();
             UIManager.instance.closeUI(this);
         }
     }
@@ -176,3 +179,7 @@ export default abstract class UIPopup extends UIBase {
 
 
 }
+
+
+
+

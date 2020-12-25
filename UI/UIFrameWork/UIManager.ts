@@ -123,12 +123,13 @@ export default class UIManager {
      * @param {Function} [callback]
      * @memberof UIManager
      */
-    public openUINode(uiNode: cc.Node, zOrder: number = ViewZOrder.UI, callback?: Function) {
+    public openUINode(uiNode: cc.Node, zOrder: number = ViewZOrder.UI, callback?: Function, data?: any) {
         if (!uiNode.active) {
             uiNode.active = true;
         }
         uiNode.setPosition(0, 0);
         uiNode.zIndex = zOrder;
+        uiNode.getComponent(UIBase).init(data);
         uiNode.getComponent(UIBase).show();
     }
 
@@ -266,11 +267,11 @@ export default class UIManager {
         }
     }
 
-    public showPopup(uiClass, data?: any) {
-        if (uiClass instanceof cc.Node) {
-            this.openUINode(uiClass, ViewZOrder.Popup, null);
+    public showPopup(ui, data?: any) {
+        if (ui instanceof cc.Node) {
+            this.openUINode(ui, ViewZOrder.Popup, null, data);
         } else {
-            this.openUIClass(uiClass, ViewZOrder.Popup, null, null, data);
+            this.openUIClass(ui, ViewZOrder.Popup, null, null, data);
         }
     }
 

@@ -9,6 +9,8 @@ export class GuideView extends Thor {
     _index = 0;                                     //引导序号
     _finger = null;                                 //手型精灵 通过thor赋值 直接使用
     _clipper = null;                                //遮罩层 通过thor赋值 直接使用
+
+    _text: cc.Node = null;
     _textBg: cc.Node = null;
     _textLabel: cc.Node = null;
     onLoad() {
@@ -222,18 +224,21 @@ export class GuideView extends Thor {
         }
         if (!step.hintText) {
             cc.log('setDescriptTextHint', step.hintText);
-            this._textBg.active = false;
+            this._text.active = false;
             return;
         }
 
         if (!!step.customTextAction) {
-            step.customTextAction(this._textBg);
-
+            step.customTextAction(this._text);
         }
-        this._textBg.active = true;
+        this._textBg.scaleX = Math.abs(this._textBg.scaleX);
+        if (step.textBgFlip) {
+            this._textBg.scaleX *= -1;
+        }
+        this._text.active = true;
         this._textLabel.getComponent(cc.RichText).string = step.hintText;
         if (step.textPos) {
-            this._textBg.setPosition(step.textPos.x, step.textPos.y);
+            this._text.setPosition(step.textPos.x, step.textPos.y);
         }
 
     }
@@ -244,20 +249,20 @@ export class GuideView extends Thor {
             return;
         }
         if (!step.completeText) {
-            this._textBg.active = false;
+            this._text.active = false;
             return;
         }
-        this._textBg.active = true;
+        this._text.active = true;
         cc.log('_showCompleteTextHint', step.completeText)
         this._textLabel.getComponent(cc.RichText).string = step.completeText;
         if (step.textPos) {
-            this._textBg.setPosition(step.textPos.x, step.textPos.y);
+            this._text.setPosition(step.textPos.x, step.textPos.y);
         }
     }
 
     _closeTextHint() {
-        if (this._textBg) {
-            this._textBg.active = false;
+        if (this._text) {
+            this._text.active = false;
         }
     }
 

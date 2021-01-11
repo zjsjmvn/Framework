@@ -323,6 +323,39 @@ export default class Utils {
     }
 
 
+
+    /**
+     * 从Bundle中获取资源
+     * @param bundleName Bundle名字(resources也是Bundle,加载resources里面的资源也可以将Bundle的名字赋值resources即可)
+     * @param assetPath 资源相对路径
+     * @param assetType 资源类型
+     * @param onComplete 获取后的回调
+     */
+    public static getAssetFromBundle(bundleName, assetPath, assetType, onComplete) {
+        let bundle = cc.assetManager.getBundle(bundleName);
+        let fun = (bundle) => {
+            bundle.load(assetPath, assetType, (err, asset) => {
+                if (err) {
+                    console.log(`加载Bundle资源错误！`, assetPath, err);
+                } else
+                    onComplete(asset);
+            })
+        };
+        if (bundle) {
+            fun(bundle);
+        }
+        else {
+            cc.assetManager.loadBundle(bundleName, (err, bundle) => {
+                if (err) {
+                    console.log(`加载Bundle错误！`, bundleName, err);
+                } else {
+                    fun(bundle);
+                }
+            })
+        }
+    }
+
+
     /**
      * 加载网络图片
      * @param {cc.Node} node 节点

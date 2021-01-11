@@ -70,6 +70,7 @@ export class AdsManager {
      */
     async showBanner(style?) {
         if (this.isNoAds()) return;
+
         if (CC_PREVIEW) {
             DebugAds.showBanner();
             return
@@ -220,6 +221,7 @@ export class AdsManager {
     defaultBannerStyle() {
         let width = cc.view.getFrameSize().width;
         let height = cc.view.getFrameSize().height;
+
         return { width: width };
     }
 

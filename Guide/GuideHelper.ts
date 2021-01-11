@@ -128,7 +128,7 @@ export module GuideHelper {
      * @param guidePrePath 引导层预制体路径
      */
     export function createGuide(target, guidConfig: GuideConfig, guidePrePath, exitCallback = null, childIndex = 0) {
-        cc.resources.loadRes(guidePrePath, cc.Prefab, (error, data) => {
+        cc.resources.load(guidePrePath, cc.Prefab, (error, data) => {
             if (!error) {
                 let guideNode: cc.Node = cc.instantiate(data);
                 guideNode.position = cc.v2(0, 0);

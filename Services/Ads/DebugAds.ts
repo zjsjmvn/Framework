@@ -36,13 +36,15 @@ export default class DebugAds extends cc.Component {
     }
 
     public static showBanner() {
+        // cc.log('showBanner');
         if (cc.director.getScene()) {
             let banner = cc.director.getScene().getChildByName('Banner');
             if (!banner) {
                 let node = new cc.Node('Banner');
                 let debugAds = node.addComponent('DebugAds');
                 debugAds.initBanner();
-                //cc.director.getScene().addChild(node);                    
+                cc.log('showBanner', node.parent);
+                cc.director.getScene().addChild(node);
             }
         }
     }
@@ -56,10 +58,10 @@ export default class DebugAds extends cc.Component {
     }
     initBanner(style) {
         this.node.zIndex = 9999;
-        cc.game.addPersistRootNode(this.node);
+        // cc.game.addPersistRootNode(this.node);
         this.node.addComponent(cc.BlockInputEvents);
         this.node.addComponent(cc.Sprite).sizeMode = cc.Sprite.SizeMode.CUSTOM;
-        this.setFrame(this.node);
+        this.setSpriteFrame(this.node);
 
         this.node.anchorX = 0;
         this.node.anchorY = 1;
@@ -67,16 +69,18 @@ export default class DebugAds extends cc.Component {
         style = style || AdsManager.instance.defaultBannerStyle();
         let scaleX = cc.view.getVisibleSize().width / cc.view.getFrameSize().width;
         let scaleY = cc.view.getVisibleSize().height / cc.view.getFrameSize().height;
-        this.node.width = style.width * scaleX;
+        cc.log('scalex', scaleX)
+        this.node.width = style.width / 2 * scaleX;
         this.node.height = this.node.width / 16 * 9;
 
+        cc.log('getVisibleSize', cc.view.getVisibleSize().width, cc.view.getFrameSize().width;)
         //百度
-        let title = this.addTitle('小游戏广告\n当前wx&tt\n百度仅宽度增加\n可用WxAdsView自定义');
+        let title = this.addTitle('banner');
         title.position = cc.v2(this.node.width / 2, -this.node.height / 2);
         title.scale = 0.7;
 
-        this.node.x = style.left * scaleX;
-        this.node.y = cc.view.getVisibleSize().height - style.top * scaleY;
+        this.node.x = (cc.view.getVisibleSize().width - this.node.width) / 2
+        this.node.y = this.node.height + 1;
     }
     initInterstitialAds(callback) {
         this.interstitialCallFunc = callback;
@@ -99,7 +103,7 @@ export default class DebugAds extends cc.Component {
         this.node.y = size.height / 2;
         this.node.addComponent(cc.BlockInputEvents);
         this.node.addComponent(cc.Sprite).sizeMode = cc.Sprite.SizeMode.CUSTOM;
-        this.setFrame(this.node);
+        this.setSpriteFrame(this.node);
         switch (adsEnum) {
             case DebugAdsEnum.Banner: {
             } break;
@@ -139,12 +143,16 @@ export default class DebugAds extends cc.Component {
         return node;
     }
     /**单色 */
-    setFrame(node) {
+    setSpriteFrame(node) {
         let sp = node.getComponent(cc.Sprite);
         if (sp) {
             cc.resources.load({ uuid: 'a23235d1-15db-4b95-8439-a2e005bfff91', type: cc.SpriteFrame }, function (e, r) {
                 if (!e) {
+                    cc.log('load success');
+
                     sp.spriteFrame = r;
+                } else {
+                    cc.error('load fail');
                 }
             });
         }

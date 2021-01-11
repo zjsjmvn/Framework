@@ -76,6 +76,7 @@ export class GuideStep implements IGuideStep {
     public fingerMoveSpeed: number = 500;                         //手指动画移动速度
     public repeatAction = true;                                 //手指动画是否repeat
     public textPos: cc.Vec2 = cc.v2(0, 0);                      //文本位置
+    public textBgFlip: boolean = false;                          // 背景翻转，目的是让对话框的箭头翻转。
     public fingerPosOffset: cc.Vec2 = cc.v2(0, 0);
     public customFingerAction = null;                           //自定义引导动画
     public customTextAction = null;

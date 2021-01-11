@@ -9,7 +9,8 @@ import { Bag } from '../../ECS/Entitas/utils/Bag';
 
 const types = {
     obj: '[object Object]',
-    array: '[object Array]'
+    array: '[object Array]',
+    function: '[object Function]'
 }
 const ArrayMethodName = ['push', 'pop', 'shift', 'unshift', 'short', 'reverse', 'splice'];
 
@@ -42,7 +43,8 @@ export class Observer<T> {
      * @memberof Observer
      */
     constructor(obj: T, callback: (newVal: any, oldVal: any, pathArray: string[]) => void) {
-        if (Object.prototype.toString.call(obj) !== types.obj && Object.prototype.toString.call(obj) !== types.array) {
+        let d = Object.prototype.toString.call(obj);
+        if (Object.prototype.toString.call(obj) !== types.obj && Object.prototype.toString.call(obj) !== types.array && Object.prototype.toString.call(obj) !== types.function) {
             console.error('请传入一个对象或数组');
         }
         this._callback = callback;

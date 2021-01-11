@@ -257,12 +257,12 @@ export default class UIManager {
         this.openUIClass(uiClass, ViewZOrder.UI, callback, null, data);
     }
 
-    public showTips(uiClass, message: string, pos: cc.Vec2, ...param: any[]) {
+    public showTips(uiClass, data: any) {
         let tipUI = this.getUI(uiClass) as UITips;
         if (!tipUI) {
-            this.openUIClass(uiClass, ViewZOrder.Tips, null, null, { message: message, pos: pos });
+            this.openUIClass(uiClass, ViewZOrder.Tips, null, null, data);
         } else {
-            tipUI.init({ message: message, pos: pos });
+            tipUI.init(data);
             tipUI.show();
         }
     }

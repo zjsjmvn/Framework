@@ -97,9 +97,9 @@ export default class ByteDanceAds implements IAdProvider {
         }
     }
     private createInterstitialAds() {
-        if (!!window.tt && !!window.tt.createRewardedVideoAd) {
-            const isToutiaio = tt.getSystemInfoSync().appName === "Toutiao";
-            if (isToutiaio) {
+        if (!!window.tt && !!window.tt.createInterstitialAd) {
+            const isDouyin = tt.getSystemInfoSync().appName === "Douyin";
+            if (isDouyin) {
                 if (this.interstitialAd) {
                     this.interstitialAd.destroy();
                     this.interstitialAd = null;
@@ -163,9 +163,9 @@ export default class ByteDanceAds implements IAdProvider {
     showInterstitial(): Promise<boolean> {
         this.createInterstitialAds();
         return new Promise((resolve, reject) => {
-            const isToutiaio = tt.getSystemInfoSync().appName === "Toutiao";
+            const isDouyin = tt.getSystemInfoSync().appName === "Douyin";
             // 插屏广告仅今日头条安卓客户端支持
-            if (isToutiaio) {
+            if (isDouyin) {
                 this.interstitialAd
                     .load()
                     .then(() => {

@@ -23,10 +23,10 @@ export default class RecordVideoManager {
     private _videoPath: string = null;
 
     private _shareParams: ShareParams = {
-        title: "分享标题",
-        desc: "分享描述",
-        templateId: "分享模版ID",
-        videoTopicList: ["话题1", "话题2", "话题3", "话题4"]
+        title: "",
+        desc: "",
+        templateId: "",
+        videoTopicList: []
     };
 
     get videoPath() {

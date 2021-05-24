@@ -3,19 +3,19 @@ import { PassiveCondition } from "./PassiveCondition";
 /**
  * 随机条件
  */
-export class PassiveConditionRamdom extends PassiveCondition{
+export class PassiveCondition_Random extends PassiveCondition {
     private probabilityValue = 0;
-    constructor(prob:number){
+    constructor(prob: number) {
         super()
         this.probabilityValue = prob;
     }
 
-    init(){
+    init() {
 
     }
-    meet(){
-        let random = Math.random()*100;
-        if(random<this.probabilityValue){
+    meet() {
+        let random = Math.random() * 100;
+        if (random < this.probabilityValue) {
             return true;
         }
         return false;

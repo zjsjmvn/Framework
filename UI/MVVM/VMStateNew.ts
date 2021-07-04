@@ -196,7 +196,6 @@ export default class VMStateNew extends VMBase {
     protected onValueChanged(newVar: any, oldVar: any, pathArr: any[]) {
 
         let path = pathArr.join('.');
-        cc.log('onValueChanged', path)
         //寻找缓存位置
         let index = this.watchPathArr.findIndex(v => v === path);
 
@@ -230,8 +229,6 @@ export default class VMStateNew extends VMBase {
         }
 
         let check = this.conditionCheck(this.templateValueArr[0], destValue1, destValue2);
-        cc.log('aaaa', this.templateValueArr[0], destValue1, destValue2, check)
-
         this.setNodesStates(check);
     }
 

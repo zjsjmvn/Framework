@@ -49,7 +49,7 @@ export default class VMStateNew extends VMBase {
     protected templateValueArr: Array<any> = new Array<any>();
 
     @property({
-        tooltip: '如比较两个数A与B，那么我们定义A是source value, B为dest value1.如果三个数如判断A是否在B-C之间，那么定义B为dest value1,C为dest value2',
+        tooltip: '如比较两个数A与B，那么我们定义A是source value, B为dest value1.如果比较三个数，判断A是否在B-C之间，那么定义B为dest value1,C为dest value2',
     })
     sourceValuePath: string = '';
     sourceValue: number;

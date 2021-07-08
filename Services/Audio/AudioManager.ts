@@ -128,7 +128,6 @@ export default class AudioManager {
 
 
     public loadAudio(path: string, playAfterLoaded: boolean, isMusic: boolean, loop, volume) {
-        cc.log('loadAudio');
         let load_count = 0;
         /** 加载失败时，重复加载 直到次数为 3 */
         let index = this.loadingAudioArr.indexOf(path);

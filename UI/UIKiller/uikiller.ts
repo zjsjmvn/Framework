@@ -178,7 +178,7 @@ export default class UIKiller {
                 if (isValidEvent) {
                     this._beforeHandleEventByPlugins(eventNode, event, !!eventFunc);
                 } else {
-                    cc.log('isValidEvent false')
+                    // cc.log('isValidEvent false')
                 }
 
                 //执行事件函数，获取返回值

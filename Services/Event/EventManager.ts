@@ -1,6 +1,6 @@
 import { singleton } from '../../Tools/Decorator/Singleton';
 interface EventListener {
-    callBack: EventManagerCallFunc,
+    callBack: Function,
     target: any,
 }
 @singleton
@@ -68,7 +68,7 @@ export class EventManager {
      * @description 
      * @param {string} eventName
      * @param {*} [eventData]
-     * @param {number} [pickTimes]
+     * @param {number} [pickTimes]  被拾取的次数。
      * @memberof EventManager
      */
     fireEvent(eventName: string, eventData?: any, pickTimes?: number) {
@@ -90,6 +90,14 @@ export class EventManager {
         }
     }
 
+    /** 
+    主动拾取事件，主要用途：如玩家在游戏内获得金币，回到主界面时，主界面的金币Label要显示一些动画。这时，在回到主界面时，先注册事件，然后在主动拾取事件。
+    eg:
+        // 注册事件。
+        EventManager.instance.addEventListener(EventNames.MainCoin, this.coinUpdate, this);
+        // 主动拾取事件
+        EventManager.instance.pickAndFireEvent(EventNames.MainCoin);
+    */
     pickAndFireEvent(eventName: string) {
         let event = this._unattendedEventsMap.get(eventName);
         if (event) {

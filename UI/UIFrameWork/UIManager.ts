@@ -258,13 +258,7 @@ export default class UIManager {
     }
 
     public showTips(uiClass, data: any) {
-        let tipUI = this.getUI(uiClass) as UITips;
-        if (!tipUI) {
-            this.openUIClass(uiClass, ViewZOrder.Tips, null, null, data);
-        } else {
-            tipUI.init(data);
-            tipUI.show();
-        }
+        this.openUIClass(uiClass, ViewZOrder.Tips, null, null, data);
     }
 
     public showPopup(ui, data?: any) {

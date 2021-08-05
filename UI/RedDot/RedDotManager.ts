@@ -26,6 +26,7 @@ export default class RedDotManager {
     }
 
     public addPathAndBindListener(path: string, callback) {
+        cc.log('addPathAndBindListener', path);
         this.addPath(path);
         this.bindListenerToPath(path, callback);
     }

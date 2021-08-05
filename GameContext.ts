@@ -29,7 +29,7 @@ export default class GameContext {
         })
 
 
-        let canvas = cc.director.getScene().getChildByName("Canvas");
+        let canvas = cc.director.getScene()?.getChildByName("Canvas");
 
         for (let s of GameContext.serviceNameArr) {
 

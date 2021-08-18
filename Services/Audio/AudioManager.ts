@@ -13,6 +13,26 @@ export default class AudioManager {
     loading: boolean = false;
     private loadingAudioArr: Array<string> = new Array();
     volumeChangeFunc = null;
+    _canPlayMusic: boolean = true;
+    _canPlayEffect: boolean = true;
+    public get canPlayMusic() {
+        return this._canPlayMusic;
+    }
+    public set canPlayMusic(val) {
+        this._canPlayMusic = val;
+        if (!!val == false) {
+            this.stopMusic();
+        }
+    }
+    public get canPlayEffect() {
+        return this._canPlayEffect;
+    }
+    public set canPlayEffect(val) {
+        this._canPlayEffect = val;
+        if (!!val == false) {
+            this.stopAllEffects();
+        }
+    }
     constructor() {
     }
 
@@ -51,51 +71,11 @@ export default class AudioManager {
             });
         }
     }
-    public switchoverAudioMusicOnOff() {
-        this.setPlayMusic(!this.canPlayMusic());
-    }
-    public switchoverAudioEffectOnOff() {
-        this.setPlayEffects(!this.canPlayEffect());
-    }
 
-    public canPlayMusic() {
-        let canPlayMusic = cc.sys.localStorage.getItem('canPlayMusic');// LocalDataManager.readBool();
-        if (canPlayMusic === null || canPlayMusic === undefined || canPlayMusic == '') {
-            canPlayMusic = true;
-        }
-        return !!canPlayMusic;
-    }
-    public canPlayEffect() {
-        let canPlayEffects = cc.sys.localStorage.getItem('canPlayEffect');
-        if (canPlayEffects === null || canPlayEffects === undefined || canPlayEffects == '') {
-            canPlayEffects = true;
-        }
-        return !!canPlayEffects;
-    }
-    /**
-     * @description
-     * @param {*} bPlayMusic
-     * @memberof AudioManager
-     */
-    public setPlayMusic(canPlayMusic: boolean) {
-        if (this.canPlayMusic() != canPlayMusic) {
-            cc.sys.localStorage.setItem('canPlayMusic', canPlayMusic);
-            this.playMusic(null);
-        }
-    }
-
-    public setPlayEffects(canPlayEffect: boolean) {
-        if (this.canPlayEffect() != canPlayEffect) {
-            cc.sys.localStorage.setItem('canPlayEffect', canPlayEffect);
-            if (!canPlayEffect) {
-                this.stopAllEffects();
-            }
-        }
-    }
 
 
     public playMusic(filePath, volume = 1) {
-        if (!this.canPlayMusic()) {
+        if (!this.canPlayMusic) {
             if (filePath && filePath.length != 0) {
                 this.lastPlayedMusicPath = filePath;
             }
@@ -214,10 +194,10 @@ export default class AudioManager {
     /**
      * Stop playing background music.
      *
-     * @param {boolean} [isGradually=false] 逐渐停止
+     * @param {boolean} [stopGradually=false] 逐渐停止
      */
-    public stopMusic(isGradually = false, internalMS = 100) {
-        if (isGradually) {
+    public stopMusic(stopGradually = false, internalMS = 100) {
+        if (stopGradually) {
             let clear_func = (interval) => {
                 clearInterval(interval);
             }
@@ -238,7 +218,7 @@ export default class AudioManager {
     }
 
     public playEffect(filePath, loop = false, volume = 1) {
-        if (this.canPlayEffect()) {
+        if (this.canPlayEffect) {
             if (this.audio_clip_map[filePath]) {
                 return cc.audioEngine.play(this.audio_clip_map[filePath], loop, volume);
             }

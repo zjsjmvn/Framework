@@ -82,7 +82,7 @@ export default class RecordVideoManager {
      */
     startRecord(callback?: (res) => void, stopCallback?: (res) => void) {
         console.warn("调用开始录屏");
-        this.recorder && this.recorder.onStart(res => {
+        this.recorder?.onStart(res => {
             console.warn("录屏开始", res);
             this.recorder._recording = true;
             this.recorder._st = new Date().getTime();
@@ -90,7 +90,7 @@ export default class RecordVideoManager {
             this.recorder.resume();
         });
         // 需要考虑录屏超时自动结束的问题
-        this.recorder.onStop(res => {
+        this.recorder?.onStop(res => {
             console.warn("录屏结束(自动)", res);
             this.recorder._recording = false;
             this.recorder._st = 0;
@@ -101,7 +101,7 @@ export default class RecordVideoManager {
             });
         });
         // 默认使用最大支持时长 300s
-        this.recorder && this.recorder.start({ duration: 300 });
+        this.recorder?.start({ duration: 300 });
     }
 
 

@@ -1,6 +1,7 @@
 import { EncryptUtil } from '../../../Tools/Encrypt/EncryptUtil';
 import { md5 } from '../../../Tools/Encrypt/Md5';
 import { IStorageProvider } from './IStorageProvider';
+import { toString } from '../../../Collections/arrays';
 
 
 export default class LocalDataProvider implements IStorageProvider {
@@ -91,21 +92,22 @@ export default class LocalDataProvider implements IStorageProvider {
             return Number(str) || 0;
         }
         if (typeof defaultValue === 'boolean') {
-            return "true" == str; // 不要使用Boolean("false");
-        }
-        if (typeof defaultValue === 'object') {
-            try {
-                return JSON.parse(str);
-            } catch (e) {
-                console.error("解析数据失败,str=" + str);
-                return defaultValue;
-            }
-
+            return "true" == str;
         }
         return str;
     }
     readObj<T>(key: string, def?: T): T {
-        return this.read(key, def);
+        let str = this.read(key);
+        try {
+            if (str != null) {
+                return JSON.parse(str);
+            } else {
+                return def;
+            }
+        } catch (e) {
+            console.error("解析数据失败,key,", key + " str=" + str.toString());
+            return def;
+        }
     }
     /**
      * 移除某个值

@@ -1,31 +1,28 @@
+
 import RedDotManager from './RedDotManager';
 
-/// <summary>
-/// 树节点
-/// </summary>
+
+
+/**
+ * @description 
+ *              RedDotManager会根据节点的类型进行删除。比如动态节点不需要展示红点时，会将动态部分删除，以节约内存。
+ *              而静态部分是经常变化的，不需要删除，否则会频繁删除增加。
+ * @export
+ * @enum {number}
+ */
+export enum NodeType {
+    Static, // 静态节点，比如打开背包的按钮。打开装备界面的按钮。这些不会变化
+    Dynamic,   // 动态节点，比如背包内的物品，这些都是会变化的，不会一直存在，动态节点的特点是多。
+}
 export default class TreeNode {
-
-    /// <summary>
-    /// 子节点
-    /// </summary>
-    private children: Map<string, TreeNode>;
-
-    /// <summary>
-    /// 节点值改变回调
-    /// </summary>
-    private changeCallback: Function;
-
-    /// <summary>
-    /// 节点名
-    /// </summary>
-    public name: string
-
-
-    /// <summary>
-    /// 完整路径
-    /// </summary>
-    public _fullPath: string
-
+    private _childrenMap: Map<string, TreeNode> = new Map();
+    public get childrenMap() {
+        return this._childrenMap;
+    }
+    private onValueChangeCallback: Function = null;
+    public name: string = ''
+    public _fullPath: string = ''
+    public nodeType: NodeType;
     get fullPath() {
         if (!!!this._fullPath) {
             if (this.parent == null || this.parent == RedDotManager.instance.root) {
@@ -38,149 +35,100 @@ export default class TreeNode {
         return this._fullPath;
     }
 
-    /// <summary>
-    /// 节点值
-    /// </summary>
-    public value: number
-
-    /// <summary>
-    /// 父节点
-    /// </summary>
-    public parent: TreeNode
-
-
-    constructor(name: string, parent?) {
+    public value: number = 0
+    public parent: TreeNode = null;
+    constructor(name: string, fullPath?: string, parent?: TreeNode, nodeType: NodeType = NodeType.Static) {
         this.name = name;
         this.value = 0;
-        this.changeCallback = null;
+        this.nodeType = nodeType;
+        this.onValueChangeCallback = null;
         if (parent) {
             this.parent = parent;
         }
     }
 
-
-    /// <summary>
-    /// 添加节点值监听
-    /// </summary>
-    public addListener(callback) {
-        this.changeCallback = callback;
+    public setListener(callback) {
+        this.onValueChangeCallback = callback;
     }
 
-    /// <summary>
-    /// 移除节点值监听
-    /// </summary>
-    public removeListener(callback) {
-        this.changeCallback = callback;
+    public getListener() {
+        return this.onValueChangeCallback;
     }
 
-    /// <summary>
-    /// 移除所有节点值监听
-    /// </summary>
+    public removeListener() {
+        this.onValueChangeCallback = null;
+    }
+
     public removeAllListener() {
-        this.changeCallback = null;
+        this.onValueChangeCallback = null;
     }
 
-    public changeValue(newValue?) {
+    public updateValue(newValue?) {
         if (newValue !== undefined && newValue !== null) {
-            if (this.children != null && this.children.size != 0) {
+            if (this._childrenMap != null && this._childrenMap.size != 0) {
                 cc.error("不允许直接改变非叶子节点的值：" + this.fullPath);
             }
+
         } else {
             newValue = 0;
-            if (this.children != null && this.children.size != 0) {
-                this.children.forEach((value, key) => {
+            if (this._childrenMap != null && this._childrenMap.size != 0) {
+                this._childrenMap.forEach((value, key) => {
                     newValue += value.value;
                 })
             }
         }
-
         if (this.value == newValue) {
             return;
         }
-        this.value = newValue;
-        this.changeCallback && this.changeCallback(newValue);
-        this.parent && this.parent.changeValue();
+        this.value = newValue > 0 ? newValue : 0;
+        cc.log('updateValue', this.fullPath, this.value);
+        this.onValueChangeCallback && this.onValueChangeCallback(newValue);
+        this.parent && this.parent.updateValue();
+        if (this.value == 0 && this.nodeType == NodeType.Dynamic) {
+            RedDotManager.instance.clean(this.fullPath);
+        }
     }
 
+    public addValue(value: number) {
+        this.updateValue(value + this.value)
+    }
 
-    /// <summary>
-    /// 获取子节点，如果不存在则添加
-    /// </summary>
-    public getOrAddChild(key: string): TreeNode {
-        let child = this.getChild(key);
-        if (child == null) {
-            child = this.addChild(key);
-        }
+    public getChildByName(key: string) {
+        let child = this._childrenMap.get(key);
         return child;
     }
 
-    /// <summary>
-    /// 获取子节点
-    /// </summary>
-    public getChild(key: string) {
-        if (this.children == null) {
-            return null;
+
+    public addChild(node: TreeNode, name) {
+        if (this._childrenMap.has(name)) {
+            cc.error("子节点" + name + "添加失败，不允许重复添加：");
+        } else {
+            this._childrenMap.set(name, node);
         }
-        let child = this.children.get(key);
-        return child;
     }
 
-    /// <summary>
-    /// 添加子节点
-    /// </summary>
-    public addChild(key: string) {
-        if (this.children == null) {
-            this.children = new Map<string, TreeNode>();
-        }
-        else if (this.children.has(key)) {
-            cc.error("子节点添加失败，不允许重复添加：" + this.fullPath);
-        }
-
-        let lastIndex = key.lastIndexOf(RedDotManager.instance.splitChar);
-
-        let child = new TreeNode(key.substring(lastIndex + 1, key.length), this);
-        this.children.set(key, child);
-        RedDotManager.instance.addNodeToAllNodes(key, child);
-        RedDotManager.instance.nodeNumChangeCallback?.Invoke();
-        return child;
+    public removeFromParent() {
+        this.parent?.removeChild(this.name);
     }
 
-    /// <summary>
-    /// 移除子节点
-    /// </summary>
     public removeChild(key: string) {
-        if (this.children == null || this.children.size == 0) {
+        if (this._childrenMap == null || this._childrenMap.size == 0) {
             return false;
         }
-        let child = this.getChild(key);
+        let child = this.getChildByName(key);
         if (child != null) {
-            this.children.delete(key);
+            this._childrenMap.delete(key);
             child.parent = null;
-            this.changeValue();
+            this.updateValue();
             return true;
         }
         return false;
-    }
-
-    /// <summary>
-    /// 移除所有子节点
-    /// </summary>
-    public removeAllChild() {
-        if (this.children == null || this.children.size == 0) {
-            return;
-        }
-        this.children.clear();
-        RedDotManager.instance.markDirtyNode(this);
-        RedDotManager.instance.nodeNumChangeCallback?.Invoke();
     }
 
     public toString() {
         return this.fullPath;
     }
 
-    /// <summary>
-    /// 改变节点值
-    /// </summary>
     private internalChangeValue(newValue) {
 
     }

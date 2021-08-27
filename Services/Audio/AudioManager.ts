@@ -3,24 +3,36 @@ export default class AudioManager {
     public static get instance() {
         return this._instance || (this._instance = new AudioManager());
     }
-
     public audioPath: string = null;
     lastPlayedMusicPath: string = ''
     playing_music = false;
     playing_music_name = undefined;
     maxVolume = 1;
-    file_path_map = new Map();
     audio_clip_map: Map<string, cc.AudioClip> = new Map()
     audio_path_map: Map<string, string> = new Map()
-    //时间播放间隔限制 秒
-    playIntervalLimitSec = 0.03;
-    wxAudioMap: any = null;
     loading: boolean = false;
-
-
     private loadingAudioArr: Array<string> = new Array();
-
     volumeChangeFunc = null;
+    _canPlayMusic: boolean = true;
+    _canPlayEffect: boolean = true;
+    public get canPlayMusic() {
+        return this._canPlayMusic;
+    }
+    public set canPlayMusic(val) {
+        this._canPlayMusic = val;
+        if (!!val == false) {
+            this.stopMusic();
+        }
+    }
+    public get canPlayEffect() {
+        return this._canPlayEffect;
+    }
+    public set canPlayEffect(val) {
+        this._canPlayEffect = val;
+        if (!!val == false) {
+            this.stopAllEffects();
+        }
+    }
     constructor() {
     }
 
@@ -59,51 +71,11 @@ export default class AudioManager {
             });
         }
     }
-    public switchoverAudioMusicOnOff() {
-        this.setPlayMusic(!this.canPlayMusic());
-    }
-    public switchoverAudioEffectOnOff() {
-        this.setPlayEffects(!this.canPlayEffect());
-    }
 
-    public canPlayMusic() {
-        let canPlayMusic = cc.sys.localStorage.getItem('canPlayMusic');// LocalDataManager.readBool();
-        if (canPlayMusic === null || canPlayMusic === undefined || canPlayMusic == '') {
-            canPlayMusic = true;
-        }
-        return !!canPlayMusic;
-    }
-    public canPlayEffect() {
-        let canPlayEffects = cc.sys.localStorage.getItem('canPlayEffect');
-        if (canPlayEffects === null || canPlayEffects === undefined || canPlayEffects == '') {
-            canPlayEffects = true;
-        }
-        return !!canPlayEffects;
-    }
-    /**
-     * @description
-     * @param {*} bPlayMusic
-     * @memberof AudioManager
-     */
-    public setPlayMusic(canPlayMusic: boolean) {
-        if (this.canPlayMusic() != canPlayMusic) {
-            cc.sys.localStorage.setItem('canPlayMusic', canPlayMusic);
-            this.playMusic(null);
-        }
-    }
-
-    public setPlayEffects(canPlayEffect: boolean) {
-        if (this.canPlayEffect() != canPlayEffect) {
-            cc.sys.localStorage.setItem('canPlayEffect', canPlayEffect);
-            if (!canPlayEffect) {
-                this.stopAllEffects();
-            }
-        }
-    }
 
 
     public playMusic(filePath, volume = 1) {
-        if (!this.canPlayMusic()) {
+        if (!this.canPlayMusic) {
             if (filePath && filePath.length != 0) {
                 this.lastPlayedMusicPath = filePath;
             }
@@ -117,40 +89,38 @@ export default class AudioManager {
             this.playing_music = true;
             this.lastPlayedMusicPath = filePath;
             this.playing_music_name = filePath;
-            return this._playMusic(filePath, true, volume);
-        }
-        return false;
-    }
-    private _playMusic(filePath, loop = false, volume = 1) {
-        if (this.audio_clip_map[filePath]) {
-            this._setMusicVolume(volume);
-            cc.audioEngine.playMusic(this.audio_clip_map[filePath], loop);
-            return true;
-        }
-        else {
-            if (!!!this.audioPath) {
-                cc.warn('audioPath is null');
-            } else {
-                this.loadAudio(this.audioPath + filePath, true, true, loop, volume);
+            if (this.audio_clip_map[filePath]) {
+                this._setMusicVolume(volume);
+                cc.audioEngine.playMusic(this.audio_clip_map[filePath], true);
+                return true;
             }
+            else {
+                if (!!!this.audioPath) {
+                    cc.warn('audioPath is null');
+                } else {
+                    this.loadAudio(this.audioPath + filePath, true, true, true, volume);
+                }
+            }
+            return false;
         }
         return false;
     }
+
 
     public loadAudio(path: string, playAfterLoaded: boolean, isMusic: boolean, loop, volume) {
-
-        cc.log('loadAudio');
         let load_count = 0;
         /** 加载失败时，重复加载 直到次数为 3 */
         let index = this.loadingAudioArr.indexOf(path);
-        if (index > -1) return
+        if (index > -1) return;
         this.loadingAudioArr.push(path);
         let load = () => {
             load_count += 1;
             cc.resources.load(path, cc.AudioClip, (err, res: cc.AudioClip) => {
                 if (err) {
                     console.log(`音频${path}加载错误重复加载次数 >>`, load_count);
-                    load();
+                    if (load_count <= 3) {
+                        load();
+                    }
                 } else {
                     let name = res.name
                     let res_url = res.nativeUrl;
@@ -224,10 +194,10 @@ export default class AudioManager {
     /**
      * Stop playing background music.
      *
-     * @param {boolean} [isGradually=false] 逐渐停止
+     * @param {boolean} [stopGradually=false] 逐渐停止
      */
-    public stopMusic(isGradually = false, internalMS = 100) {
-        if (isGradually) {
+    public stopMusic(stopGradually = false, internalMS = 100) {
+        if (stopGradually) {
             let clear_func = (interval) => {
                 clearInterval(interval);
             }
@@ -248,27 +218,22 @@ export default class AudioManager {
     }
 
     public playEffect(filePath, loop = false, volume = 1) {
-        cc.log('canPlayEffect', this.canPlayEffect());
-        if (this.canPlayEffect()) {
-            return this.play(filePath, loop, volume);
+        if (this.canPlayEffect) {
+            if (this.audio_clip_map[filePath]) {
+                return cc.audioEngine.play(this.audio_clip_map[filePath], loop, volume);
+            }
+            else {
+                if (!!!this.audioPath) {
+                    cc.warn('audioPath is null');
+                } else {
+                    this.loadAudio(this.audioPath + filePath, true, false, loop, volume);
+                }
+            }
+            return 0;
         }
         return 0;
     }
 
-    private play(filePath, loop = false, volume = 1) {
-        if (this.audio_clip_map[filePath]) {
-            return cc.audioEngine.play(this.audio_clip_map[filePath], loop, volume);
-        }
-        else {
-            if (!!!this.audioPath) {
-                cc.warn('audioPath is null');
-            } else {
-                this.loadAudio(this.audioPath + filePath, true, false, loop, volume);
-            }
-            // cc.error("没有正确加载到音效", filePath);
-        }
-        return 0;
-    }
     /**
     * Pause playing background music.
     */

@@ -30,21 +30,22 @@ export class GuideView extends Thor {
      * @private
      */
     fingerToNode(locateNodes: Array<cc.Node>, step: GuideStep, assignedAction = null) {
-        let locateNode: cc.Node = locateNodes[0];
-        let rect = locateNode.getBoundingBoxToWorld();
-        let nodePos = this.node.convertToNodeSpaceAR(cc.v2(rect.x, rect.y));
-        rect.x = nodePos.x;
-        rect.y = nodePos.y;
-        if (assignedAction) {
-            this._finger.active = false;
-            assignedAction(this.node, cc.v2(rect.x + rect.width * 0.5, rect.y + rect.height * 0.5));
-        } else {
-            this._fingerToPointAction(cc.v2(rect.x + rect.width * 0.5, rect.y + rect.height * 0.5), step.repeatAction, step.fingerPosOffset);
+        if (locateNodes.length > 0) {
+            let locateNode: cc.Node = locateNodes[0];
+            let rect = locateNode.getBoundingBoxToWorld();
+            let nodePos = this.node.convertToNodeSpaceAR(cc.v2(rect.x, rect.y));
+            rect.x = nodePos.x;
+            rect.y = nodePos.y;
+            if (assignedAction) {
+                this._finger.active = false;
+                assignedAction(this.node, cc.v2(rect.x + rect.width * 0.5, rect.y + rect.height * 0.5));
+            } else {
+                this._fingerToPointAction(cc.v2(rect.x + rect.width * 0.5, rect.y + rect.height * 0.5), step.repeatAction, step.fingerPosOffset);
+            }
+            if (step.showMask) {
+                this.showMask(rect);
+            }
         }
-        if (step.showMask) {
-            this.showMask(rect);
-        }
-
     }
     /**
      * 

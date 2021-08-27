@@ -319,6 +319,7 @@ export class GuideController extends Thor {
      * @memberof GuideController
      */
     private _loadProgress() {
+        return;
         var localStorage = localStorage || cc.sys.localStorage;
         if (!!!localStorage.getItem(this._guideConfig.guideName)) {
             this.progressIndex = - 1;

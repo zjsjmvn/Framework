@@ -1,197 +1,173 @@
-import TreeNode from './TreeNode';
+import TreeNode, { NodeType } from './TreeNode';
 import { singleton } from '../../Tools/Decorator/Singleton';
-/// <summary>
-/// 红点管理器
-/// </summary>
+
+
+/**
+ * @description 文档请看同目录下readme.md
+ * @export
+ * @class RedDotManager
+ */
 @singleton
 export default class RedDotManager {
+    // 此变量单纯为了提示用的，可以不写。在singleton里已经存在。
     public static instance: RedDotManager;
-    /// <summary>
-    /// 所有节点集合
-    /// </summary>
-    private allNodes: Map<string, TreeNode>;
-
-    /// <summary>
-    /// 脏节点集合
-    /// </summary>
-    private dirtyNodes: Array<TreeNode>;
-
-    /// <summary>
-    /// 临时脏节点集合
-    /// </summary>
-    private tempDirtyNodes: Array<TreeNode>;
-
-    /// <summary>
-    /// 节点数量改变回调
-    /// </summary>
-    public nodeNumChangeCallback;
-
-    /// <summary>
-    /// 节点值改变回调
-    /// </summary>
-    public nodeValueChangeCallback;//Action<TreeNode, int> NodeValueChangeCallback;
-
-    /// <summary>
-    /// 路径分隔字符
-    /// </summary>
-    public splitChar: string;
-
-
-    /// <summary>
-    /// 缓存的StringBuild
-    /// </summary>
-    public cachedSb: string;
-
-
-    /// <summary>
-    /// 红点树根节点
-    /// </summary>
+    private allNodesMap: Map<string, TreeNode>;
+    public nodeValueChangeCallback;
+    public splitChar: string = '_';
     public root: TreeNode;
-
-
-
+    /**
+     * @description 携带这个字符串的节点，将视为动态节点，动态节点会被RedDotManager清楚，而非动态节点
+     * @memberof RedDotManager
+     */
+    public dynamicRedDotNodeFlag = '----540ec1b6-61fe-4a0f-bcc8-8ee7ad4bbc3f----';
     constructor() {
-        this.splitChar = '/';
-        this.allNodes = new Map<string, TreeNode>();
+        this.allNodesMap = new Map<string, TreeNode>();
         this.root = new TreeNode("Root");
-        this.dirtyNodes = new Array<TreeNode>();
-        this.tempDirtyNodes = new Array<TreeNode>();
     }
 
-
-    /// <summary>
-    /// 移除所有节点值监听
-    /// </summary>
-    public removeAllListener(path) {
-        let node = this.getTreeNode(path);
-        node.removeAllListener();
+    public addPathAndBindListener(path: string, callback) {
+        cc.log('addPathAndBindListener', path);
+        this.addPath(path);
+        this.bindListenerToPath(path, callback);
     }
 
-    addTreeNodeAndCallback(path: string, callback) {
+    public addPath(path: string) {
+        cc.log('addPath', path);
         if (!!!path) {
             cc.error("路径不合法，不能为空");
         }
-        let node = this.allNodes.get(path);
+        let node = this.allNodesMap.get(path);
         if (node) {
-            cc.error('已经存在路径');
+            // 路径已经存在的话，那么就是计算过了、没必要在执行一次了。
+            return;
         }
-        let cur = this.root;
-        let length = path.length;
-        let startIndex = 0;
-        for (let i = 0; i < length; i++) {
-            if (path[i] == this.splitChar) {
-                if (i == length - 1) {
-                    cc.error("路径不合法，不能以路径分隔符结尾：" + path);
-                }
-                let endIndex = i - 1;
-                if (endIndex < startIndex) {
-                    cc.error("路径不合法，不能存在连续的路径分隔符或以路径分隔符开头：" + path);
-                }
-                let child = cur.getOrAddChild(path.substring(0, endIndex + 1));
-                //更新startIndex
-                startIndex = i + 1;
-                cur = child;
+        let theSplitPathArr = path.split(this.splitChar);
+        cc.log('path', theSplitPathArr);
+        let hasEmptyString = theSplitPathArr.find((str) => {
+            return str == '';
+        });
+        if (hasEmptyString) {
+            cc.error('path 定义错误，含有非法字符。');
+        }
+        // 指针，指向root
+        let pointer = this.root;
+        let nodePath = ''
+        let forEachIndex = 0;
+        theSplitPathArr.forEach((str) => {
+            if (forEachIndex == 0) {
+                nodePath += str;
+            } else {
+                nodePath += ('_' + str);
             }
+            forEachIndex++;
+            cc.log('nodePath', nodePath)
+            let child = pointer.getChildByName(str);
+            if (!child) {
+                if (str.match(this.dynamicRedDotNodeFlag)) {
+                    //表示这个节点是动态节点。 
+                    child = new TreeNode(str, nodePath, pointer, NodeType.Dynamic);
+                } else {
+                    child = new TreeNode(str, nodePath, pointer);
+                }
+                pointer.addChild(child, str);
+                this.addNodeToNodesMap(nodePath, child);
+            }
+            // 指针更换指向。
+            pointer = child;
+        })
+        return pointer;
+    }
+
+    public bindListenerToPath(path: string, listener: Function) {
+        let finalNode = this.getTreeNode(path);
+        if (!finalNode) {
+            finalNode = this.addPath(path);
         }
-        let target = cur.getOrAddChild(path);
-        target.addListener(callback);
-        return target;
-    }
-
-    /// <summary>
-    /// 移除节点
-    /// </summary>
-    public removeTreeNode(path) {
-        if (!this.allNodes.has(path)) {
-            cc.error('removeTreeNode fail');
+        finalNode.setListener(listener);
+        if (this.getValue(path) > 0) {
+            listener && listener(this.getValue(path));
         }
+    }
+
+    public addValue(path, addValue: number) {
+        cc.log('addValue', path, addValue);
         let node = this.getTreeNode(path);
-        node.removeAllListener();
-        this.removeNodeFromAllNodes(path);
-        return node.parent.removeChild(path);
+        node.addValue(addValue);
     }
 
 
-    /// <summary>
-    /// 改变节点值
-    /// </summary>
-    public changeValue(path, newValue) {
-        let node = this.getTreeNode(path);
-        node.changeValue(newValue);
+    public clean(path: string) {
+        let finalNode = this.getTreeNode(path, false);
+        if (!finalNode) {
+            return;
+        }
+        if (finalNode.nodeType == NodeType.Dynamic) {
+            finalNode.removeFromParent();
+            this.removeNodeFromNodesMap(path);
+        } else {
+            finalNode.removeListener();
+        }
     }
 
-    /// <summary>
-    /// 获取节点值
-    /// </summary>
-    public getValue(path) {
+    public removeListener(path: string) {
+        let finalNode = this.getTreeNode(path, false);
+        if (!finalNode) {
+            return;
+        }
+        finalNode.removeListener();
+
+    }
+
+    public changeValue(path: string, newValue: number) {
         let node = this.getTreeNode(path);
-        if (node == null) {
+        node.updateValue(newValue);
+    }
+
+    public getValue(path, createIfInexistence: boolean = true) {
+        let node = this.getTreeNode(path, createIfInexistence);
+        if (!node) {
             return 0;
         }
         return node.value;
     }
 
-    /// <summary>
-    /// 获取节点
-    /// </summary>
-    public getTreeNode(path: string) {
+    /**
+     * @description 
+     * @param {string} path
+     * @returns 
+     * @memberof RedDotManager
+     */
+    public getTreeNode(path: string, createIfInexistence: boolean = true) {
         if (!!!path) {
-            cc.error("路径不合法，不能为空");
+            cc.error("路径不能为空");
         }
-        let node = this.allNodes.get(path);
-        if (!!!node) {
-            cc.error('getTreeNode fail')
+        let node = this.allNodesMap.get(path);
+        if (!node && createIfInexistence) {
+            node = this.addPath(path);
         }
         return node;
     }
 
 
-
-    addNodeToAllNodes(key: string, value: TreeNode) {
-        this.allNodes.set(key, value);
-    }
-    removeNodeFromAllNodes(key: string) {
-        this.allNodes.delete(key);
+    public hasTreeNode(path: string) {
+        return this.allNodesMap.has(path);
     }
 
-
-
-    /// <summary>
-    /// 移除所有节点
-    /// </summary>
-    public removeAllTreeNode() {
-        this.root.removeAllChild();
-        this.allNodes.clear();
+    private addNodeToNodesMap(key: string, value: TreeNode) {
+        cc.log('addNodeToNodesMap', key);
+        this.allNodesMap.set(key, value);
     }
 
-    /// <summary>
-    /// 管理器轮询
-    /// </summary>
-    public update() {
-        if (this.dirtyNodes.length == 0) {
-            return;
-        }
-        this.tempDirtyNodes.splice(0);
-        this.dirtyNodes.forEach(element => {
-            this.tempDirtyNodes.push(element);
-        });
-        this.dirtyNodes.splice(0);
-        //处理所有脏节点
-        for (let i = 0; i < this.tempDirtyNodes.length; i++) {
-            this.tempDirtyNodes[i].changeValue();
-        }
+    public removeNodeFromNodesMap(key: string) {
+        this.allNodesMap.delete(key);
     }
 
-    /// <summary>
-    /// 标记脏节点
-    /// </summary>
-    public markDirtyNode(node) {
-        if (node == null || node.Name == this.root.name) {
-            return;
-        }
-        this.dirtyNodes.push(node);
+
+    public showValues() {
+        this.allNodesMap.forEach((value, key) => {
+            cc.log('showValues：', key, value.value);
+        })
     }
 
 }
-
 

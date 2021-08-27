@@ -4,11 +4,8 @@
  * 1:def(0)//显示一个默认值
  */
 class StringFormat {
-
-
     deal(value: number | string, format: string): string {
         if (format === '') return value as string;
-
         format = format.toLowerCase().trim();//不区分大小
         let match_func = format.match(/^[a-z|A-Z]+/gi);//匹配到 format 中的 函数名
         let match_num = format.match(/\d+$/gi);   //匹配到 format 中的参数
@@ -24,11 +21,12 @@ class StringFormat {
         if (typeof value == 'number') {
             switch (func) {
                 case 'int': res = this.int(value); break;
+                case 'floorint': res = this.floorInt(value); break;
+                case 'ceilint': res = this.ceilInt(value); break;
                 case 'fix': res = this.fix(value, num); break;
                 case 'kmbt': res = this.KMBT(value); break;
                 case 'per': res = this.per(value, num); break;
                 case 'sep': res = this.sep(value); break;
-
                 default:
                     break;
             }
@@ -52,6 +50,13 @@ class StringFormat {
     private sep(value: number) {
         let num = Math.round(value).toString();
         return num.replace(new RegExp('(\\d)(?=(\\d{3})+$)', 'ig'), "$1,");
+    }
+    private floorInt(value: number) {
+        cc.log('floorInt')
+        return Math.floor(value);
+    }
+    private ceilInt(value: number) {
+        return Math.ceil(value);
     }
 
     //将数字按分显示 00:00 显示 （ms制）

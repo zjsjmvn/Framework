@@ -8,15 +8,19 @@ export default class LocalDataProvider implements IStorageProvider {
 
     private _key: string | null = null;
     private _iv: string | null = null;
+    private encrypted: boolean = true;
 
     /**
      * 初始化密钥
      * @param key aes加密的key 
      * @param iv aes加密的iv
      */
-    constructor(key: string, iv: string) {
-        this._key = md5(key);
-        this._iv = md5(iv);
+    constructor(key: string = null, iv: string = null, encrypted = true) {
+        if (key)
+            this._key = md5(key);
+        if (iv)
+            this._iv = md5(iv);
+        this.encrypted = encrypted;
     }
 
     /**
@@ -30,7 +34,9 @@ export default class LocalDataProvider implements IStorageProvider {
             console.error("存储的key不能为空");
             return;
         }
-        key = md5(key);
+        if (this.encrypted) {
+            key = md5(key);
+        }
 
         if (null == value) {
             console.warn("存储的值为空，则直接移除该存储");
@@ -51,7 +57,7 @@ export default class LocalDataProvider implements IStorageProvider {
         } else if (typeof value === 'number') {
             value = value + "";
         }
-        if (null != this._key && null != this._iv) {
+        if (null != this._key && null != this._iv && this.encrypted) {
             try {
                 value = EncryptUtil.aesEncrypt(value, this._key, this._iv);
             } catch (e) {
@@ -73,9 +79,11 @@ export default class LocalDataProvider implements IStorageProvider {
             console.error("存储的key不能为空");
             return;
         }
-        key = md5(key);
+        if (this.encrypted) {
+            key = md5(key);
+        }
         let str: string | null = cc.sys.localStorage.getItem(key);
-        if (null != str && '' !== str && null != this._key && null != this._iv) {
+        if (null != str && '' !== str && null != this._key && null != this._iv && this.encrypted) {
             try {
                 str = EncryptUtil.aesDecrypt(str, this._key, this._iv);
             } catch (e) {

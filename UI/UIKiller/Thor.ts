@@ -1,7 +1,5 @@
 import UIKiller from "./uikiller";
 import Utils from '../../Tools/Utils';
-import { toString } from '../../Collections/arrays';
-import { namespace } from '../../ECS/Entitas/viewer/VisualDebugging';
 const { ccclass, property } = cc._decorator;
 /**
  * @description 

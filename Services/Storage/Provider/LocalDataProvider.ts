@@ -15,7 +15,7 @@ export default class LocalDataProvider implements IStorageProvider {
      * @param key aes加密的key 
      * @param iv aes加密的iv
      */
-    constructor(key: string = null, iv: string = null, encrypted = true) {
+    constructor(key: string = null, iv: string = null, encrypted = false) {
         if (key)
             this._key = md5(key);
         if (iv)

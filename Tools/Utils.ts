@@ -1,6 +1,3 @@
-import { Widget, Scheduler, delayTime } from '../../../../creator';
-import { resolve } from './IOC/resolution/resolver';
-
 export default class Utils {
     constructor() { }
 

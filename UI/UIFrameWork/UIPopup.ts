@@ -1,6 +1,5 @@
 import UIBase from './UIBase';
 import UIManager from './UIManager';
-import { object } from '../../Tools/Serializer/Serializr/serializr';
 const { property, ccclass } = cc._decorator
 
 /**
@@ -105,7 +104,9 @@ export default abstract class UIPopup extends UIBase {
     }
     private closeCallback: Function = null;
 
-    abstract init(args: any);
+    protected duration: number = 0.2
+
+    abstract init(args);
 
 
     show() {
@@ -117,26 +118,93 @@ export default abstract class UIPopup extends UIBase {
         if (this.touchAnyWhereToClose) {
             this.node.on(cc.Node.EventType.TOUCH_END, this.onThisNodeTouchEnd_UsedFor_TouchAnyWhereToClose, this, true);
         }
+        // 储存选项
+        // 初始化节点
+        const background = this.node.getChildByName('Bg')
+        if (background) {
+            background.active = true;
+            background.opacity = 0;
+            // 播放背景遮罩动画
+            cc.tween(background)
+                .to(this.duration * 0.8, { opacity: 200 })
+                .start();
+        }
+
+        const container = this.node.getChildByName('Container');
+        if (container) {
+            container.active = true;
+            container.scale = 0.5;
+            container.opacity = 0;
+            // 播放弹窗主体动画
+            cc.tween(container)
+                .to(this.duration, { scale: 1, opacity: 255 }, { easing: 'backOut' })
+                .call(() => {
+
+                })
+                .start();
+        }
+
+
     }
 
     // TODO: 解决show频繁注册的问题。解决之后hide就不用关闭注册的事件了。
     hide() {
-        super.hide();
         if (this._touchBlankToClose) {
             this.node.off(cc.Node.EventType.TOUCH_END, this.onThisNodeTouchEnd_UsedFor_TouchMarginToClose, this, true);
         }
         if (this.touchAnyWhereToClose) {
             this.node.off(cc.Node.EventType.TOUCH_END, this.onThisNodeTouchEnd_UsedFor_TouchAnyWhereToClose, this, true);
         }
+        // 动画时长不为 0 时拦截点击事件（避免误操作）
+        if (this.duration !== 0) {
+            let blocker = this.node.getChildByName('blocker');
+            if (!blocker) {
+                blocker = blocker = new cc.Node('blocker');
+                blocker.addComponent(cc.BlockInputEvents);
+                blocker.setParent(this.node);
+                blocker.setContentSize(this.node.getContentSize());
+            }
+            blocker.active = true;
+        }
+        this.disappearAction(() => {
+            super.hide();
+        })
+
     }
 
     close() {
-        super.close();
         if (this._touchBlankToClose) {
             this.node.off(cc.Node.EventType.TOUCH_END, this.onThisNodeTouchEnd_UsedFor_TouchMarginToClose, this, true);
         }
         if (this.touchAnyWhereToClose) {
             this.node.off(cc.Node.EventType.TOUCH_END, this.onThisNodeTouchEnd_UsedFor_TouchAnyWhereToClose, this, true);
+        }
+        this.disappearAction(() => {
+            super.close();
+        })
+
+    }
+
+    disappearAction(callback) {
+        const background = this.node.getChildByName('Bg')
+        if (background) {
+            cc.tween(background)
+                .delay(this.duration * 0.2)
+                .to(this.duration * 0.8, { opacity: 0 })
+                .start();
+        }
+
+        const container = this.node.getChildByName('Container');
+        if (container) {
+            // 播放弹窗主体动画
+            cc.tween(container)
+                .to(this.duration, { scale: 0.5, opacity: 0 }, { easing: 'backIn' })
+                .call(() => {
+                    let blocker = this.node.getChildByName('blocker');
+                    blocker && (blocker.active = false);
+                    callback && callback()
+                })
+                .start();
         }
     }
 

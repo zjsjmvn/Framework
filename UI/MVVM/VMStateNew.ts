@@ -5,7 +5,7 @@ import { VM } from './VMManager';
 const { ccclass, property, menu } = cc._decorator;
 
 /**比较条件 */
-enum CONDITION {
+export enum CONDITION {
     "==", //正常计算，比较 等于
     "!=", //正常计算，比较 不等于
     ">",  //正常计算，比较>
@@ -16,7 +16,7 @@ enum CONDITION {
 }
 
 
-enum ACTION {
+export enum ACTION {
     NODE_ACTIVE, //满足条件 的 节点激活 ，不满足的不激活
     NODE_VISIBLE, //满足条件 的节点显示，不满足的不显示
     NODE_OPACITY,  //满足条件的节点改变不透明度，不满足的还原255
@@ -25,17 +25,31 @@ enum ACTION {
 }
 
 
-enum CHILD_MODE_TYPE {
-    NODE_INDEX,
-    NODE_NAME
+export enum ChildModeType {
+    NodeIndex,
+    NodeName
 }
 
 // 要被比较的可能是数值，也可能是监控的路径的数值。
-enum DestValueType {
+export enum DestValueType {
+    Null,
     Path,
     Number,
 }
 
+
+export class VMStateDynamicConfig {
+    sourceValuePath: string = '';
+    foreachChildMode: boolean = false;
+    foreachChildType: ChildModeType = ChildModeType.NodeIndex;
+    condition: CONDITION = CONDITION["=="];
+    destValue1Type: DestValueType = DestValueType.Null;
+    destValue1_Number: number = 0;
+    destValue1_Path: string = '';
+    destValue2Type: DestValueType = DestValueType.Null;
+    destValue2_Number: number = 0;
+    destValue2_Path: string = '';
+}
 
 /**
  * [VM-State]
@@ -45,60 +59,70 @@ enum DestValueType {
 @menu('ModelViewer/VM-StateNew (VM状态控制新)')
 export default class VMStateNew extends VMBase {
 
+    //#region property
     protected watchPathArr: string[] = [];
-    protected templateValueArr: Array<any> = new Array<any>();
+    protected templateValueMap: Map<string, any> = new Map();
 
     @property({
         tooltip: '如比较两个数A与B，那么我们定义A是source value, B为dest value1.如果比较三个数，判断A是否在B-C之间，那么定义B为dest value1,C为dest value2',
+        visible: function () { return this.dynamicConfig == false }
     })
     sourceValuePath: string = '';
-    sourceValue: number;
+
+    @property({
+        tooltip: '遍历子节点,根据子节点的名字或名字转换为值，判断值满足条件 来激活',
+        visible: function () { return this.dynamicConfig == false }
+    })
+    foreachChildMode: boolean = false;
+
+    @property({
+        type: cc.Enum(ChildModeType),
+        tooltip: '遍历子节点,根据子节点的名字转换为值，判断值满足条件 来激活',
+        visible: function () { return this.dynamicConfig == false && this.foreachChildMode === true }
+    })
+    foreachChildType: ChildModeType = ChildModeType.NodeIndex;
 
     @property({
         type: cc.Enum(CONDITION),
+        visible: function () { return this.dynamicConfig == false }
     })
     condition: CONDITION = CONDITION["=="];
 
     @property({
-        type: cc.Enum(DestValueType)
+        type: cc.Enum(DestValueType),
+        visible: function () { return this.dynamicConfig == false && this.foreachChildMode === false }
     })
-    destValue1Type: DestValueType = DestValueType.Number;
+    destValue1Type: DestValueType = DestValueType.Null;
 
     @property({
-        visible: function () { return this.destValue1Type === DestValueType.Number }
-
+        visible: function () { return this.dynamicConfig == false && this.foreachChildMode === false && this.destValue1Type === DestValueType.Number }
     })
     destValue1_Number: number = 0;
 
     @property({
-        visible: function () { return this.destValue1Type === DestValueType.Path }
+        visible: function () { return this.dynamicConfig == false && this.foreachChildMode === false && this.destValue1Type === DestValueType.Path }
     })
     destValue1_Path: string = '';
 
-    destValue1: number = 0;
-
     @property({
         type: cc.Enum(DestValueType),
-        visible: function () { return this.condition === CONDITION.range }
+        visible: function () { return this.dynamicConfig == false && this.foreachChildMode === false && this.condition === CONDITION.range }
     })
-    destValue2Type: DestValueType = DestValueType.Number;
+    destValue2Type: DestValueType = DestValueType.Null;
 
     @property({
-        visible: function () { return this.destValue1Type === DestValueType.Number && this.condition === CONDITION.range }
+        visible: function () { return this.dynamicConfig == false && this.foreachChildMode === false && this.destValue1Type === DestValueType.Number && this.condition === CONDITION.range }
     })
     destValue2_Number: number = 0;
 
     @property({
-        visible: function () { return this.destValue1Type === DestValueType.Path && this.condition === CONDITION.range }
+        visible: function () { return this.dynamicConfig == false && this.foreachChildMode === false && this.destValue1Type === DestValueType.Path && this.condition === CONDITION.range }
     })
     destValue2_Path: string = '';
 
-    destValue2: number = 0;
-
-
     @property({
         type: cc.Enum(ACTION),
-        tooltip: '一旦满足条件就对节点执行操作'
+        tooltip: '一旦满足条件就对节点执行操作',
     })
     valueAction: ACTION = ACTION.NODE_ACTIVE;
 
@@ -139,57 +163,72 @@ export default class VMStateNew extends VMBase {
         visible: function () { return this.valueAction === ACTION.COMPONENT_CUSTOM },
         displayName: 'Action Value'
     })
-
     valueComponentActionValue: string = '';
+
     @property({
         type: [cc.Node],
         tooltip: '需要执行条件的节点，如果不填写则默认会执行本节点以及本节点的所有子节点 的状态'
     })
-
     watchNodes: cc.Node[] = [];
+    //#endregion
 
 
-    // LIFE-CYCLE CALLBACKS:
 
     onLoad() {
-
-        this.watchPathArr.push(this.sourceValuePath);
-        if (this.destValue1Type == DestValueType.Path) {
-            this.watchPathArr.push(this.destValue1_Path);
+        // 这样写的目的是，onload在dynamicConfig的情况下，还要手动调用一次，虽然调用2次但是只生效一次。
+        if (this.dynamicConfig) {
+            this.initPath();
+            this.initWatchNodes();
+            super.onLoad();
+        } else {
+            this.initPath();
+            this.initWatchNodes();
+            super.onLoad();
         }
+    }
+
+    //如果数组里没有监听值，那么默认把所有子节点给监听了
+    private initWatchNodes() {
+        // 当长度为0时，表示监听所有子节点。
+        if (this.watchNodes.length !== 0) return;
+        if (this.valueAction !== ACTION.NODE_ACTIVE && this.foreachChildMode === false) {
+            this.watchNodes.push(this.node);
+        }
+        this.watchNodes = this.watchNodes.concat(this.node.children);
+
+    }
+    private initPath() {
+        // 固定sourceValuePath是watchPathArr0
+        if (this.sourceValuePath != '') {
+            this.watchPathArr[0] = this.sourceValuePath;
+        }
+        // 固定sourceValuePath是watchPathArr1
+        if (this.destValue1Type == DestValueType.Path && this.destValue1_Path != '') {
+            this.watchPathArr[1] = this.destValue1_Path
+        }
+        // 固定sourceValuePath是watchPathArr2
         if (this.condition == CONDITION.range) {
-            if (this.destValue2Type == DestValueType.Path) {
-                this.watchPathArr.push(this.destValue2_Path);
+            if (this.destValue2Type == DestValueType.Path && this.destValue2_Path != '') {
+                this.watchPathArr[2] = this.destValue2_Path;
             }
         }
-        super.onLoad();
-        //如果数组里没有监听值，那么默认把所有子节点给监听了
-        if (this.watchNodes.length == 0) {
-            if (this.valueAction !== ACTION.NODE_ACTIVE) {
-                this.watchNodes.push(this.node);
-            }
-            //TODO:子节点貌似没太大必要
-            // this.watchNodes = this.watchNodes.concat(this.node.children);
-        }
-
-        if (this.enabled) this.onValueInit();
     }
 
     //当值初始化时
     protected onValueInit() {
         let sourceValue = VM.getValue(this.watchPathArr[0]);
-        this.templateValueArr[0] = sourceValue;
-        if (this.destValue1Type == DestValueType.Path) {
+        this.templateValueMap.set(this.watchPathArr[0], sourceValue);
+        if (this.destValue1Type == DestValueType.Path && this.destValue1_Path != '') {
             let destValue1 = VM.getValue(this.watchPathArr[1]);
-            this.templateValueArr[1] = destValue1;
+            this.templateValueMap.set(this.watchPathArr[1], destValue1);
         }
         if (this.condition == CONDITION.range) {
-            if (this.destValue2Type == DestValueType.Path) {
+            if (this.destValue2Type == DestValueType.Path && this.destValue2_Path != '') {
                 let destValue2 = VM.getValue(this.watchPathArr[2]);
-                this.templateValueArr[2] = destValue2;
+                this.templateValueMap.set(this.watchPathArr[2], destValue2);
             }
         }
-        this.checkNodeFromValue(sourceValue);
+        this.checkNode(sourceValue);
     }
 
     //当值被改变时
@@ -201,39 +240,47 @@ export default class VMStateNew extends VMBase {
 
         if (index >= 0) {
             //如果是所属的路径，就可以替换文本了
-            this.templateValueArr[index] = newVar; //缓存值
+            this.templateValueMap.set(path, newVar);
         }
-        this.checkNodeFromValue(newVar);
+        this.checkNode(newVar);
 
     }
 
     //检查节点值更新
-    private checkNodeFromValue(value) {
-
-        let destValue1 = 0;
-        let destValue2 = 0;
-        let index = 1;
-        if (this.destValue1Type == DestValueType.Number) {
-            destValue1 = this.destValue1_Number;
+    private checkNode(value) {
+        cc.log('checkNode')
+        if (this.foreachChildMode) {
+            this.watchNodes.forEach((node, index) => {
+                let v = (this.foreachChildType === ChildModeType.NodeIndex) ? index : node.name;
+                let check = this.conditionCheck(value, v);
+                this.setNodeState(node, check);
+            })
         } else {
+            let destValue1 = 0;
+            let destValue2 = 0;
             // 获得destValue1的值
-            destValue1 = this.templateValueArr[index];
-            index++;
-        }
-        if (this.condition == CONDITION.range) {
-            if (this.destValue2Type == DestValueType.Path) {
-                destValue2 = this.templateValueArr[index];
+            if (this.destValue1Type == DestValueType.Number) {
+                destValue1 = this.destValue1_Number;
             } else {
-                destValue2 = this.destValue2_Number;
+                destValue1 = this.templateValueMap.get(this.watchPathArr[1]);
             }
+            // 获得destValue2的值
+            if (this.condition == CONDITION.range) {
+                if (this.destValue2Type == DestValueType.Number) {
+                    destValue2 = this.destValue2_Number;
+                } else {
+                    destValue1 = this.templateValueMap.get(this.watchPathArr[2]);
+                }
+            }
+            let result = this.conditionCheck(this.templateValueMap.get(this.sourceValuePath), destValue1, destValue2);
+            this.setNodesStates(result);
         }
 
-        let check = this.conditionCheck(this.templateValueArr[0], destValue1, destValue2);
-        this.setNodesStates(check);
     }
 
     //更新 多个节点 的 状态
     private setNodesStates(checkState?: boolean) {
+
         this.watchNodes.forEach((node) => {
             this.setNodeState(node, checkState);
         })
@@ -297,8 +344,18 @@ export default class VMStateNew extends VMBase {
 
         return false;
     }
-
-
-
-
+    addDynamicConfig(config: VMStateDynamicConfig) {
+        this.sourceValuePath = config.sourceValuePath
+        this.foreachChildMode = config.foreachChildMode
+        this.foreachChildType = config.foreachChildType
+        this.condition = config.condition
+        this.destValue1Type = config.destValue1Type
+        this.destValue1_Number = config.destValue1_Number
+        this.destValue1_Path = config.destValue1_Path
+        this.destValue2Type = config.destValue2Type
+        this.destValue2_Path = config.destValue2_Path
+        this.destValue2_Number = config.destValue2_Number
+        this.onLoad();
+        this.enabled = true;
+    }
 }

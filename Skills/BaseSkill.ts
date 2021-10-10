@@ -1,4 +1,3 @@
-import { SkillType } from '../../Editor/ECS/Define';
 export default class BaseSkill {
 
     public skillType: any;
@@ -10,4 +9,8 @@ export default class BaseSkill {
 
     }
 
+    applyNewLevel() {
+        this.onRemove();
+        this.onAdd();
+    }
 }

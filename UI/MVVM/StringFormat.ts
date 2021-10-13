@@ -5,6 +5,7 @@
  */
 class StringFormat {
     deal(value: number | string, format: string): string {
+        cc.log('format', format)
         if (format === '') return value as string;
         format = format.toLowerCase().trim();//不区分大小
         let match_func = format.match(/^[a-z|A-Z]+/gi);//匹配到 format 中的 函数名
@@ -27,6 +28,7 @@ class StringFormat {
                 case 'kmbt': res = this.KMBT(value); break;
                 case 'per': res = this.per(value, num); break;
                 case 'sep': res = this.sep(value); break;
+                case 'timehms': res = this.time_h_m_s(value); break;
                 default:
                     break;
             }
@@ -72,6 +74,39 @@ class StringFormat {
     //将数字按 0:00:00:000 显示 （ms制）
     private time_ms(value: number) {
         //todo
+    }
+
+
+    /**
+     * @description 将秒转换为时分秒
+     * @private
+     * @param {number} seconds
+     * @memberof StringFormat
+     */
+    private time_h_m_s(seconds: number) {
+        cc.log('time_h_m_s')
+        let totalSeconds = Math.floor(seconds),
+            minute = 0,
+            hour = 0;
+        // 如果秒数大于60，将秒数转换成整数
+        if (totalSeconds > 60) {
+            // 获取分钟，除以60取整数，得到整数分钟
+            minute = Math.floor(totalSeconds / 60);
+            // 获取秒数，秒数取佘，得到整数秒数
+            totalSeconds = Math.floor(totalSeconds % 60);
+            // 如果分钟大于60，将分钟转换成小时
+            if (minute > 60) {
+                // 获取小时，获取分钟除以60，得到整数小时
+                hour = Math.floor(minute / 60);
+                // 获取小时后取佘的分，获取分钟除以60取佘的分
+                minute = Math.floor(minute % 60);
+            }
+        }
+        // 补位
+        hour = ('0' + hour).slice(-2);
+        minute = ('0' + minute).slice(-2);
+        totalSeconds = ('0' + totalSeconds).slice(-2);
+        return hour + ':' + minute + ":" + totalSeconds;
     }
 
     //将时间戳显示为详细的内容
@@ -148,3 +183,4 @@ class StringFormat {
 
 /**格式化处理函数 */
 export let StringFormatFunction = new StringFormat();
+

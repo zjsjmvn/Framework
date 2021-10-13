@@ -110,7 +110,6 @@ export default abstract class UIPopup extends UIBase {
 
 
     show() {
-        cc.log('_getCapturingTargets')
         super.show();
         if (this._touchBlankToClose) {
             this.node.on(cc.Node.EventType.TOUCH_END, this.onThisNodeTouchEnd_UsedFor_TouchMarginToClose, this, true);
@@ -118,6 +117,9 @@ export default abstract class UIPopup extends UIBase {
         if (this.touchAnyWhereToClose) {
             this.node.on(cc.Node.EventType.TOUCH_END, this.onThisNodeTouchEnd_UsedFor_TouchAnyWhereToClose, this, true);
         }
+        this.node._touchListener.setSwallowTouches(false);
+
+
         // 储存选项
         // 初始化节点
         const background = this.node.getChildByName('Bg')
@@ -212,13 +214,13 @@ export default abstract class UIPopup extends UIBase {
         // let pop = this.node.getComponentsInChildren(UIPopup);
         // cc.log('onThisNodeTouchEnd_UsedFor_TouchMarginToClose', pop)
         // 判断是否点击的是外面,如果点击的是container外面。则关闭。
+        // if (event.eventPhase == cc.Event.CAPTURING_PHASE) return;
+        // 允许触摸穿透
         let containerNode: cc.Node = this.node.getChildByName("Container");
-
         if (!!!containerNode) {
             cc.error("快速关闭需要container节点来判断是否点击ui外部。请参考其他弹框界面的层级结构。");
             return;
         }
-
         let rect: cc.Rect = null;
         if (this.blankJudgeType == BlankJudgeType.BoundingBoxToWorld) {
             rect = containerNode.getBoundingBoxToWorld();
@@ -230,19 +232,16 @@ export default abstract class UIPopup extends UIBase {
             rect = cc.rect(containerNode.x - contentSize.width / 2, containerNode.y - contentSize.height / 2, contentSize.width, contentSize.height);
         }
         let contains = rect.contains(this.node.convertToNodeSpaceAR(event.getLocation()));
-        if (contains) {
-            return true;
-        } else {
-            cc.log('onThisNodeTouchEnd_UsedFor_TouchMarginToClose');
-            event.stopPropagation();
+        if (!contains) {
             UIManager.instance.closeUI(this);
         }
+        return;
     }
 
     onThisNodeTouchEnd_UsedFor_TouchAnyWhereToClose(event) {
-        event.stopPropagation();
         cc.log('onThisNodeTouchEnd_UsedFor_TouchAnyWhereToClose');
         UIManager.instance.closeUI(this);
+
     }
 
 

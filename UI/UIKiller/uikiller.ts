@@ -1,4 +1,5 @@
 import { TouchEvent } from '../../Guide/GuideHelper';
+import Thor from './Thor';
 
 /**
  * 注意：
@@ -74,7 +75,7 @@ export default class UIKiller {
         }
 
         //绑定子节点
-        nodeObject.children.forEach((child) => {
+        nodeObject.children.forEach((child: cc.Node) => {
             let name = child.name;
             // 子节点绑定到父节点上。通过 父节点node.子节点名字访问。如：nodeA.nodeB.nodeC;
             if (!nodeObject[name]) {
@@ -98,6 +99,10 @@ export default class UIKiller {
                     this._bindTouchEvent(child, rootNodeScript);
                     rootNodeScript[name] = child;
                 }
+            }
+            // 如果子节点自己有Thor绑定，那么return
+            if (child.getComponent(Thor)) {
+                return;
             }
             this._bindNode(child, rootNodeScript);
         });

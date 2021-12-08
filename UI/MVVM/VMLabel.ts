@@ -125,7 +125,6 @@ export default class VMLabel extends VMBase {
     /**初始化获取数据 */
     onValueInit() {
         //更新信息
-        cc.log('onValueInit', this.node.name)
         let length = this.watchPathArr.length;
         if (length > 0) {
             for (let i = 0; i < length; i++) {
@@ -150,7 +149,6 @@ export default class VMLabel extends VMBase {
     }
 
     setLabelValue(value) {
-        cc.log('setLabelValue', value)
         this.getComponent(this.labelType).string = value + '';
     }
 
@@ -183,3 +181,4 @@ export default class VMLabel extends VMBase {
     }
 
 }
+

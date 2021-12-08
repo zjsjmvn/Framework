@@ -17,7 +17,6 @@ export default class RedDotComponent extends cc.Component {
 
     // 这个负责显示红点。
     onValueChanged(value) {
-        cc.log('onValueChanged', value, this._path)
         this.currentValue = value;
         if (value == 0 && this.node) {
             // 关闭红点显示。

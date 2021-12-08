@@ -45,8 +45,6 @@ export default class extends cc.ScrollView {
             event.stopPropagation()
             return
         }
-        this.prevLocation = event.touch.getPreviousLocation()
-        this.location = event.touch.getLocation()
         super["_onTouchMoved"](event, captureListeners)
 
     }

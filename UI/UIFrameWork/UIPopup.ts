@@ -117,7 +117,7 @@ export default abstract class UIPopup extends UIBase {
         if (this.touchAnyWhereToClose) {
             this.node.on(cc.Node.EventType.TOUCH_END, this.onThisNodeTouchEnd_UsedFor_TouchAnyWhereToClose, this, true);
         }
-        this.node._touchListener.setSwallowTouches(false);
+        this.node._touchListener?.setSwallowTouches(false);
 
 
         // 储存选项

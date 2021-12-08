@@ -5,7 +5,6 @@
  */
 class StringFormat {
     deal(value: number | string, format: string): string {
-        cc.log('format', format)
         if (format === '') return value as string;
         format = format.toLowerCase().trim();//不区分大小
         let match_func = format.match(/^[a-z|A-Z]+/gi);//匹配到 format 中的 函数名
@@ -54,7 +53,6 @@ class StringFormat {
         return num.replace(new RegExp('(\\d)(?=(\\d{3})+$)', 'ig'), "$1,");
     }
     private floorInt(value: number) {
-        cc.log('floorInt')
         return Math.floor(value);
     }
     private ceilInt(value: number) {
@@ -84,7 +82,6 @@ class StringFormat {
      * @memberof StringFormat
      */
     private time_h_m_s(seconds: number) {
-        cc.log('time_h_m_s')
         let totalSeconds = Math.floor(seconds),
             minute = 0,
             hour = 0;
@@ -184,3 +181,25 @@ class StringFormat {
 /**格式化处理函数 */
 export let StringFormatFunction = new StringFormat();
 
+// cc.log(StringFormatFunction.deal('2.1111', 'fix2'));
+
+// function parseTemplate(originText) {
+//     let regexAll = /\{\{(.+?)\}\}/g; //匹配： 所有的{{value}}
+//     let regex = /\{\{(.+?)\}\}/;//匹配： {{value}} 中的 value
+//     let res = originText.match(regexAll);//匹配结果数组
+//     if (!!!res) return;
+//     for (let i = 0; i < res.length; i++) {
+//         const e = res[i];
+//         let arr = e.match(regex);
+//         let matchName = arr[1];
+//         let matchNameSplit = matchName.split(':');
+//         cc.log('matchNameSplit', matchNameSplit)
+//         let matchInfo = matchNameSplit[1] || '';
+//         let valueIndex = matchNameSplit[0];
+//         this.replaceStrArr[i] = e;
+//         this.valueIndexArr[i] = parseInt(valueIndex || '0') || 0;
+//         this.templateFormatArr[i] = matchInfo;
+//     }
+// }
+
+// parseTemplate("{{0:int}}")

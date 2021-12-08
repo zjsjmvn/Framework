@@ -464,7 +464,6 @@ export default class Utils {
             // cc.delayTime(delayTime);
             let a = {};
             cc.tween(a).delay(delayTime / 1000).call(() => {
-                cc.log('delayTime', delayTime)
                 resolve();
             }).start();
             // cc.director.getScheduler().scheduleOnce()l
@@ -488,6 +487,7 @@ export default class Utils {
     public static formatSuffix(num: string, fixedCount = 2) {
         let special = 'km';
         let strArr = 'abcdefghijlnopqrstuvwxyz';
+        num = num.split('.')[0];
         let length = num.length - 1;
         let indexOf1000 = 0;
         while (length >= 3) {
@@ -583,8 +583,4 @@ export default class Utils {
         return str;
     }
 }
-
-
-
-
 

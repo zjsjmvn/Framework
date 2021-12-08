@@ -248,7 +248,6 @@ export default class VMStateNew extends VMBase {
 
     //检查节点值更新
     private checkNode(value) {
-        cc.log('checkNode')
         if (this.foreachChildMode) {
             this.watchNodes.forEach((node, index) => {
                 let v = (this.foreachChildType === ChildModeType.NodeIndex) ? index : node.name;

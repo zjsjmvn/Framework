@@ -1,4 +1,4 @@
-import TreeNode, { NodeType } from './TreeNode';
+import TreeNode, { RedDotNodeType } from './TreeNode';
 import { singleton } from '../../Tools/Decorator/Singleton';
 
 
@@ -16,7 +16,7 @@ export default class RedDotManager {
     public splitChar: string = '_';
     public root: TreeNode;
     /**
-     * @description 携带这个字符串的节点，将视为动态节点，动态节点会被RedDotManager清楚，而非动态节点
+     * @description 携带这个字符串的节点，将视为动态节点，动态节点会被RedDotManager清除、
      * @memberof RedDotManager
      */
     public dynamicRedDotNodeFlag = '----540ec1b6-61fe-4a0f-bcc8-8ee7ad4bbc3f----';
@@ -65,7 +65,7 @@ export default class RedDotManager {
             if (!child) {
                 if (str.match(this.dynamicRedDotNodeFlag)) {
                     //表示这个节点是动态节点。 
-                    child = new TreeNode(str, nodePath, pointer, NodeType.Dynamic);
+                    child = new TreeNode(str, nodePath, pointer, RedDotNodeType.Dynamic);
                 } else {
                     child = new TreeNode(str, nodePath, pointer);
                 }
@@ -101,7 +101,7 @@ export default class RedDotManager {
         if (!finalNode) {
             return;
         }
-        if (finalNode.nodeType == NodeType.Dynamic) {
+        if (finalNode.nodeType == RedDotNodeType.Dynamic) {
             finalNode.removeFromParent();
             this.removeNodeFromNodesMap(path);
         } else {

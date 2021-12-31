@@ -98,7 +98,7 @@ export class EventManager {
         // 主动拾取事件
         EventManager.instance.pickAndFireEvent(EventNames.MainCoin);
     */
-    pickAndFireEvent(eventName: string) {
+    pickEvent(eventName: string) {
         let event = this._unattendedEventsMap.get(eventName);
         if (event) {
             event.pickTimes--;

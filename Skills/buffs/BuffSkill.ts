@@ -1,5 +1,6 @@
 import { Entity } from '../../ECS/Entitas/Entity';
 import BaseSkill from '../BaseSkill';
+import { UUID } from '../../ECS/Entitas/utils/UUID';
 
 export class BuffSkill extends BaseSkill {
     public casterEntity: Entity;       // 释放者，释放这个buff的人

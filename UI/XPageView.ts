@@ -8,7 +8,7 @@
 const { ccclass, property } = cc._decorator;
 
 @ccclass
-export default class PageView extends cc.PageView {
+export default class XPageView extends cc.PageView {
     //this is for nested scrollview
     hasNestedViewGroup(event, captureListeners) {
         if (event.eventPhase !== cc.Event.CAPTURING_PHASE) return;

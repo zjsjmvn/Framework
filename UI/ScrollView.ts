@@ -19,7 +19,6 @@ export default class extends cc.ScrollView {
             var curre = event.getLocation()
             var xOffset = Math.abs(start.x - curre.x)
             var yOffset = Math.abs(start.y - curre.y)
-            cc.log('_onTouchMoved', Math.abs(xOffset - yOffset))
             if (xOffset > yOffset) {
                 // 本ScrollView滑动方向过程中达到一定偏移量是也可以向上发送事件
                 if (this.vertical) {

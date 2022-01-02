@@ -27,7 +27,6 @@ export class GuideController extends Thor {
     }
 
     private _processTasks() {
-        cc.log('_processTasks');
         //加载进度
         this._loadProgress();
         //初始化任务队列
@@ -72,14 +71,12 @@ export class GuideController extends Thor {
                     this._processStep(step, cb);
                 }, step.onProcessDelayTime);
             } else {
-                cc.log('_processStep');
                 this._processStep(step, cb);
             }
         };
 
         let stepEnd = () => {
 
-            cc.log("GuidePromoteCountAbility,onStepExit")
             this._guideView.hideMask();
             this._saveProgress(step.index);
             if (step.onStepExit) {

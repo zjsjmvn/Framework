@@ -50,7 +50,7 @@ export default abstract class UIPopup extends UIBase {
         return this._showNonBlankArea;
     }
     set showNonBlankArea(val) {
-        cc.log('showNonBlankArea')
+        // cc.log('showNonBlankArea')
         let containerNode: cc.Node = this.node.getChildByName("Container");
 
         if (!!!containerNode) {

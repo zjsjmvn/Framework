@@ -165,7 +165,7 @@ export class Entity {
     this.instanceIndex = Entity.instanceIndex++
     if (mem = alloc[this.instanceIndex]) return mem
 
-    console.log('Insufficient memory allocation at ', this.instanceIndex, '. Allocating ', size, ' entities.')
+    // console.log('Insufficient memory allocation at ', this.instanceIndex, '. Allocating ', size, ' entities.')
     for (let i = this.instanceIndex, l = i + size; i < l; i++) {
       alloc[i] = new Array(totalComponents)
       for (let k = 0; k < totalComponents; k++) {

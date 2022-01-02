@@ -26,13 +26,13 @@ export default class RedDotManager {
     }
 
     public addPathAndBindListener(path: string, callback) {
-        cc.log('addPathAndBindListener', path);
+        // cc.log('addPathAndBindListener', path);
         this.addPath(path);
         this.bindListenerToPath(path, callback);
     }
 
     public addPath(path: string) {
-        cc.log('addPath', path);
+        // cc.log('addPath', path);
         if (!!!path) {
             cc.error("路径不合法，不能为空");
         }
@@ -42,7 +42,7 @@ export default class RedDotManager {
             return;
         }
         let theSplitPathArr = path.split(this.splitChar);
-        cc.log('path', theSplitPathArr);
+        // cc.log('path', theSplitPathArr);
         let hasEmptyString = theSplitPathArr.find((str) => {
             return str == '';
         });
@@ -60,7 +60,7 @@ export default class RedDotManager {
                 nodePath += ('_' + str);
             }
             forEachIndex++;
-            cc.log('nodePath', nodePath)
+            // cc.log('nodePath', nodePath)
             let child = pointer.getChildByName(str);
             if (!child) {
                 if (str.match(this.dynamicRedDotNodeFlag)) {
@@ -90,7 +90,7 @@ export default class RedDotManager {
     }
 
     public addValue(path, addValue: number) {
-        cc.log('addValue', path, addValue);
+        // cc.log('addValue', path, addValue);
         let node = this.getTreeNode(path);
         node.addValue(addValue);
     }
@@ -154,7 +154,7 @@ export default class RedDotManager {
     }
 
     private addNodeToNodesMap(key: string, value: TreeNode) {
-        cc.log('addNodeToNodesMap', key);
+        // cc.log('addNodeToNodesMap', key);
         this.allNodesMap.set(key, value);
     }
 

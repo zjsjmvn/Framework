@@ -81,7 +81,6 @@ export default class TreeNode {
             return;
         }
         this.value = newValue > 0 ? newValue : 0;
-        cc.log('updateValue', this.fullPath, this.value);
         this.onValueChangeCallback && this.onValueChangeCallback(newValue);
         this.parent && this.parent.updateValue();
         if (this.value == 0 && this.nodeType == RedDotNodeType.Dynamic) {

@@ -1,6 +1,4 @@
 String.prototype.format = function () {
-  cc.log('aaaa');
-
   var i, result = this, isNumber = function (n) {
     return !isNaN(parseFloat(n)) && isFinite(n);
   },

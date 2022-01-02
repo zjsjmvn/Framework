@@ -140,7 +140,7 @@ export default class UIManager {
         if (this.cachedUI.has(uiName)) {
             let uiArr = this.cachedUI.get(uiName);
             if (uiArr) {
-                cc.log('cachedUI ', uiName, this.cachedUI.get(uiName).length);
+                // cc.log('cachedUI ', uiName, this.cachedUI.get(uiName).length);
                 ui = uiArr.pop();
             }
         }
@@ -157,7 +157,7 @@ export default class UIManager {
             arr.push(ui);
             this.cachedUI.set(uiName, arr);
         }
-        cc.log('cachedUI ', uiName, this.cachedUI.get(uiName).length);
+        // cc.log('cachedUI ', uiName, this.cachedUI.get(uiName).length);
     }
 
 

@@ -175,16 +175,18 @@ export default class VMStateNew extends VMBase {
 
 
     onLoad() {
-        // 这样写的目的是，onload在dynamicConfig的情况下，还要手动调用一次，虽然调用2次但是只生效一次。
-        if (this.dynamicConfig) {
-            this.initPath();
-            this.initWatchNodes();
-            super.onLoad();
-        } else {
+
+        if (!this.dynamicConfig) {
             this.initPath();
             this.initWatchNodes();
             super.onLoad();
         }
+    }
+
+    applyDynamicConfig() {
+        this.initPath();
+        this.initWatchNodes();
+        super.onLoad();
     }
 
     //如果数组里没有监听值，那么默认把所有子节点给监听了
@@ -198,6 +200,7 @@ export default class VMStateNew extends VMBase {
 
     }
     private initPath() {
+
         // 固定sourceValuePath是watchPathArr0
         if (this.sourceValuePath != '') {
             this.watchPathArr[0] = this.sourceValuePath;
@@ -354,7 +357,7 @@ export default class VMStateNew extends VMBase {
         this.destValue2Type = config.destValue2Type
         this.destValue2_Path = config.destValue2_Path
         this.destValue2_Number = config.destValue2_Number
-        this.onLoad();
+        this.applyDynamicConfig();
         this.enabled = true;
     }
 }

@@ -65,6 +65,7 @@ export default abstract class UIPopup extends UIBase {
             rect.y = nodePos.y
         } else if (this.blankJudgeType == BlankJudgeType.ContentSize) {
             let contentSize = containerNode.getContentSize();
+            // rect = cc.rect(containerNode.x - contentSize.width / 2, containerNode.y - contentSize.height / 2, contentSize.width, contentSize.height);
             rect = cc.rect(containerNode.x - contentSize.width / 2, containerNode.y - contentSize.height / 2, contentSize.width, contentSize.height);
         }
 
@@ -120,8 +121,16 @@ export default abstract class UIPopup extends UIBase {
         this.node._touchListener?.setSwallowTouches(false);
 
 
-        // 储存选项
-        // 初始化节点
+
+        this.runBgAction();
+
+        this.runContainerAction();
+
+
+
+    }
+
+    runBgAction() {
         const background = this.node.getChildByName('Bg')
         if (background) {
             background.active = true;
@@ -131,7 +140,9 @@ export default abstract class UIPopup extends UIBase {
                 .to(this.duration * 0.8, { opacity: 200 })
                 .start();
         }
+    }
 
+    runContainerAction() {
         const container = this.node.getChildByName('Container');
         if (container) {
             container.active = true;
@@ -145,8 +156,6 @@ export default abstract class UIPopup extends UIBase {
                 })
                 .start();
         }
-
-
     }
 
     // TODO: 解决show频繁注册的问题。解决之后hide就不用关闭注册的事件了。

@@ -65,7 +65,7 @@ export default class UIManager {
     public openUIClass<T extends UIBase>(uiClass: { new(): T }, zOrder: number = ViewZOrder.UI, callback?: Function, onProgress?: Function, data?: any) {
         if (this.hasUI(uiClass)) {
             if (!this.getUI(uiClass).allowMultiThisUI) {
-                console.error(`UIManager OpenUI 1: ui ${cc.js.getClassName(uiClass)} is already exist, please check`);
+                console.warn(`UIManager OpenUI 1: ui ${cc.js.getClassName(uiClass)} is already exist, please check`);
                 return;
             }
         }
@@ -105,7 +105,7 @@ export default class UIManager {
             }
             if (this.hasUI(uiClass)) {
                 if (!this.getUI(uiClass).allowMultiThisUI) {
-                    console.error(`UIManager OpenUI 1: ui ${cc.js.getClassName(uiClass)} is already exist, please check`);
+                    console.warn(`UIManager OpenUI 1: ui ${cc.js.getClassName(uiClass)} is already exist, please check`);
                     return;
                 }
             }
@@ -261,11 +261,11 @@ export default class UIManager {
         this.openUIClass(uiClass, ViewZOrder.Tips, null, null, data);
     }
 
-    public showPopup(ui, data?: any) {
+    public showPopup(ui, data?: any, callback?) {
         if (ui instanceof cc.Node) {
-            this.openUINode(ui, ViewZOrder.Popup, null, data);
+            this.openUINode(ui, ViewZOrder.Popup, callback, data);
         } else {
-            this.openUIClass(ui, ViewZOrder.Popup, null, null, data);
+            this.openUIClass(ui, ViewZOrder.Popup, callback, null, data);
         }
     }
 

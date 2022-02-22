@@ -1,5 +1,4 @@
 import { IShareProvider } from './IShareProvider';
-import { defaultCompare } from '../../../Collections/util';
 export default class QQShareProvider implements IShareProvider {
 
     private defaultShareTitle: string = null;

@@ -159,6 +159,7 @@ export class AdsManager {
 
     /**
      * @description 
+     * @description 
      * @returns {Promise<RewardVideoCallBackMsg>}
      * @memberof AdsManager
      */

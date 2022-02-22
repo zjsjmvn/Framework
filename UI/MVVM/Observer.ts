@@ -1,4 +1,3 @@
-import { indexOf } from '../../Collections/arrays';
 import { Entity } from '../../ECS/Entitas/Entity';
 import { Bag } from '../../ECS/Entitas/utils/Bag';
 

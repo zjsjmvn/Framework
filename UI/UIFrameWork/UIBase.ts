@@ -29,7 +29,6 @@ export default abstract class UIBase extends Thor {
     needCache: boolean = false;
 
     @property({ displayName: "此ui是否允许多个", tooltip: "勾选后，ui管理器不会处理重复此ui" })
-
     allowMultiThisUI: boolean = false;
 
     public init(...args) {

@@ -44,4 +44,15 @@ export module EncryptUtil {
         return CryptoJS.enc.Utf8.parse(utf8Str);
     }
 
+
+    export function rsaEncrypt(msg: string, key: string, iv: string): string {
+        let encrypt = CryptoJS.AES.encrypt(msg, utf8Parse(key), {
+            iv: utf8Parse(iv),
+            mode: CryptoJS.mode.CBC,
+            padding: CryptoJS.pad.Pkcs7
+        });
+        return encrypt.toString();
+    }
+
+
 }

@@ -460,15 +460,17 @@ export default class Utils {
      */
     public static delay(delayTime): Promise<void> {
         if (delayTime === 0) { delayTime = 100; }
+        // delayTime -= 18;
         return new Promise(function (resolve, reject) {
             // cc.delayTime(delayTime);
-            let a = {};
-            cc.tween(a).delay(delayTime / 1000).call(() => {
-                resolve();
-            }).start();
+            // let a = {};
+            // cc.tween(a).delay(delayTime / 1000).call(() => {
+            //     resolve();
+            // }).start();
             // cc.director.getScheduler().scheduleOnce()l
-            // setTimeout(function () {
-            // }, delayTime);
+            setTimeout(function () {
+                resolve();
+            }, delayTime);
         });
     }
     /**

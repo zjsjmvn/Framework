@@ -270,8 +270,8 @@ export default class UIManager {
     }
 
 
-    public showNotice(ui, data?: any) {
-        this.openUIClass(ui, ViewZOrder.Notice, null, null, data);
+    public showNotice(ui, data?: any, callback?: Function) {
+        this.openUIClass(ui, ViewZOrder.Notice, callback, null, data);
 
     }
 

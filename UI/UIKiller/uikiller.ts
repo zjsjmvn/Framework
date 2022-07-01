@@ -86,9 +86,9 @@ export default class UIKiller {
                 // 如果是下划线开头，并且name中包含$+数字则去掉$可以直接访问。如：_image$1  访问方式为：_image1 并且为其_image绑定触摸事件。
                 let index = name.indexOf('$');
                 if (index !== -1) {
-                    child.$eventName = name.substr(0, index);
-                    child.$ = name.substr(index + 1);
-                    name = child.$eventName + child.$[0].toUpperCase() + child.$.substr(1);
+                    child.$eventName = name.slice(0, index);
+                    child.$ = name.slice(index + 1);
+                    name = child.$eventName + child.$[0].toUpperCase() + child.$.slice(1);
                     if (!CC_EDITOR) {
                         child.name = name;
                     }

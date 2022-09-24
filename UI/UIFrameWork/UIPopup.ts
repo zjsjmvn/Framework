@@ -1,5 +1,7 @@
 import UIBase from './UIBase';
 import UIManager from './UIManager';
+import { ClazzOrModelSchema } from '../../Tools/Serializer/Serializr/serializr';
+import Utils from '../../Tools/Utils';
 const { property, ccclass } = cc._decorator
 
 /**
@@ -131,13 +133,14 @@ export default abstract class UIPopup extends UIBase {
     }
 
     runBgAction() {
-        const background = this.node.getChildByName('Bg')
+        const background = this.node.getChildByName('Bg');
         if (background) {
+            const oldOpacity = background.opacity;
             background.active = true;
             background.opacity = 0;
             // 播放背景遮罩动画
             cc.tween(background)
-                .to(this.duration * 0.8, { opacity: 200 })
+                .to(this.duration * 0.8, { opacity: oldOpacity })
                 .start();
         }
     }
@@ -159,7 +162,7 @@ export default abstract class UIPopup extends UIBase {
     }
 
     // TODO: 解决show频繁注册的问题。解决之后hide就不用关闭注册的事件了。
-    hide() {
+    async hide() {
         if (this._touchBlankToClose) {
             this.node.off(cc.Node.EventType.TOUCH_END, this.onThisNodeTouchEnd_UsedFor_TouchMarginToClose, this, true);
         }
@@ -177,26 +180,22 @@ export default abstract class UIPopup extends UIBase {
             }
             blocker.active = true;
         }
-        this.disappearAction(() => {
-            super.hide();
-        })
-
+        await this.disappearAction();
+        super.hide();
     }
 
-    close() {
+    async close() {
         if (this._touchBlankToClose) {
             this.node.off(cc.Node.EventType.TOUCH_END, this.onThisNodeTouchEnd_UsedFor_TouchMarginToClose, this, true);
         }
         if (this.touchAnyWhereToClose) {
             this.node.off(cc.Node.EventType.TOUCH_END, this.onThisNodeTouchEnd_UsedFor_TouchAnyWhereToClose, this, true);
         }
-        this.disappearAction(() => {
-            super.close();
-        })
-
+        await this.disappearAction();
+        super.close();
     }
 
-    disappearAction(callback) {
+    async disappearAction(): Promise<boolean> {
         const background = this.node.getChildByName('Bg')
         if (background) {
             cc.tween(background)
@@ -213,10 +212,12 @@ export default abstract class UIPopup extends UIBase {
                 .call(() => {
                     let blocker = this.node.getChildByName('blocker');
                     blocker && (blocker.active = false);
-                    callback && callback()
+
                 })
                 .start();
         }
+        await Utils.delay(this.duration * 1000);
+        return Promise.resolve(true);
     }
 
     onThisNodeTouchEnd_UsedFor_TouchMarginToClose(event) {

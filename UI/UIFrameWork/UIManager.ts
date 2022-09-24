@@ -47,13 +47,20 @@ export default class UIManager {
     public static instance: UIManager;
 
     /**
-     * @description ui栈
+     * @description 动态ui栈放的是动态加载的ui
      * @private
      * @type {UIBase[]}
      * @memberof UIManager
      */
-    private uiStack: UIBase[] = [];
+    private dynamicUIStack: UIBase[] = [];
 
+    /**
+     * @description 静态ui栈，放的是静态ui，比如弹框里的弹框，就没必要在分出去预制体了,否则太乱。
+     * @private
+     * @type {cc.Node[]}
+     * @memberof UIManager
+     */
+    private staticUIStack: cc.Node[] = [];
     /**
      * @description 缓存的ui，如果ui标记needCache那么就会在存到这里。
      * @private
@@ -86,7 +93,7 @@ export default class UIManager {
 
             uiInstance.node.zIndex = zOrder;
             uiInstance.show();
-            this.uiStack.push(uiInstance);
+            this.dynamicUIStack.push(uiInstance);
             callback && callback(uiInstance);
 
         }
@@ -131,6 +138,7 @@ export default class UIManager {
         uiNode.zIndex = zOrder;
         uiNode.getComponent(UIBase).init(data);
         uiNode.getComponent(UIBase).show();
+        this.staticUIStack.push(uiNode);
     }
 
 
@@ -162,50 +170,56 @@ export default class UIManager {
 
 
     public closeUIByUIClass<T extends UIBase>(uiClass: { new(): T }) {
-        for (let i = 0; i < this.uiStack.length; ++i) {
-            if (cc.js.getClassName(this.uiStack[i]) === cc.js.getClassName(uiClass)) {
-                if (cc.isValid(this.uiStack[i].node)) {
-                    this.uiStack[i].close();
+        for (let i = 0; i < this.dynamicUIStack.length; ++i) {
+            if (cc.js.getClassName(this.dynamicUIStack[i]) === cc.js.getClassName(uiClass)) {
+                if (cc.isValid(this.dynamicUIStack[i].node)) {
+                    this.dynamicUIStack[i].close();
+                    // return this.closeUI(this.dynamicUIStack[i]);
                 }
-                this.uiStack.splice(i, 1);
+                this.dynamicUIStack.splice(i, 1);
                 return;
             }
         }
     }
-    public closeUI(ui: UIBase | cc.Node) {
-
+    public async closeUI(ui: UIBase | cc.Node): Promise<boolean> {
+        //节点类型就是在场景中直接存在的
         if (ui instanceof cc.Node) {
-            ui.getComponent(UIBase).hide();
+            let index = this.staticUIStack.indexOf(ui);
+            if (index >= 0) {
+                this.staticUIStack.splice(index, 1);
+            }
+            await ui.getComponent(UIBase).hide();
+            return Promise.resolve(true);
         } else {
             // 不在uiStack的ui都是由节点自己管理。
-            let index = this.uiStack.indexOf(ui);
+            let index = this.dynamicUIStack.indexOf(ui);
             if (index < 0) {
-                ui.hide();
+                await ui.hide();
+                return Promise.resolve(true);
             } else {
                 if (index >= 0) {
-                    this.uiStack.splice(index, 1);
+                    this.dynamicUIStack.splice(index, 1);
                 }
                 if (cc.isValid(ui)) {
                     if (ui.needCache) {
-                        ui.hide();
+                        await ui.hide();
                         this.setUIToCachedMap(ui);
+                        return Promise.resolve(true);
                     } else {
-                        ui.close();
+                        await ui.close();
+                        return Promise.resolve(true);
                     }
                 }
             }
         }
-
-
     }
 
     public closeAllUI() {
-        if (this.uiStack.length == 0) {
+        if (this.dynamicUIStack.length == 0) {
             return;
         }
-        this.closeUI(this.uiStack[0]);
-        while (this.uiStack.length > 0) {
-            this.closeUI(this.uiStack[0]);
+        while (this.dynamicUIStack.length > 0) {
+            this.closeUI(this.dynamicUIStack[0]);
         }
     }
 
@@ -227,8 +241,8 @@ export default class UIManager {
 
     public hasUI<T extends UIBase>(uiClass: { new(): T }): boolean {
         let uiName = cc.js.getClassName(uiClass);
-        for (let i = 0; i < this.uiStack.length; ++i) {
-            if (cc.js.getClassName(this.uiStack[i]) == uiName) {
+        for (let i = 0; i < this.dynamicUIStack.length; ++i) {
+            if (cc.js.getClassName(this.dynamicUIStack[i]) == uiName) {
                 return true;
             }
         }
@@ -236,9 +250,9 @@ export default class UIManager {
     }
 
     public getUI<T extends UIBase>(uiClass: { new(): T }): UIBase {
-        for (let i = 0; i < this.uiStack.length; ++i) {
-            if (cc.js.getClassName(this.uiStack[i]) === cc.js.getClassName(uiClass)) {
-                return this.uiStack[i];
+        for (let i = 0; i < this.dynamicUIStack.length; ++i) {
+            if (cc.js.getClassName(this.dynamicUIStack[i]) === cc.js.getClassName(uiClass)) {
+                return this.dynamicUIStack[i];
             }
         }
         return null;

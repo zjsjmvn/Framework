@@ -52,6 +52,11 @@ export default abstract class UIBase extends Thor {
         this.node.active = false;
     }
 
+
+    // 暂时空
+    public beforeClose() {
+
+    }
     /**
      * @description 关闭
      * @abstract

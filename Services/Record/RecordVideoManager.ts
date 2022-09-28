@@ -136,12 +136,21 @@ export default class RecordVideoManager {
 
 
     /**
+     * @description 在录屏开启后可以剪切
+     * @param {*} timeRangeStart
+     * @param {*} timeRangeEnd
+     * @memberof RecordVideoManager
+     */
+    public recordClip(timeRangeStart, timeRangeEnd) {
+        this.recorder?.recordClip({ timeRange: [timeRangeStart, timeRangeEnd] })
+    }
+    /**
      * 分享录屏
      * @param isShowToast 是否展示toast
-     * @param callback 分享结果回调
+     * @param shareSuccessCallback 分享结果回调
      * errCode 0成功 -1失败
      */
-    shareVideo(isShowToast: boolean, callback: (errCode: number) => void) {
+    shareVideo(isShowToast: boolean, shareSuccessCallback: (errCode: number) => void) {
         if (this.platform && this._videoPath && this._videoPath.length > 0) {
             this.platform.shareAppMessage({
                 channel: "video",
@@ -154,7 +163,7 @@ export default class RecordVideoManager {
                 },
                 success: () => {
                     console.log("分享视频成功");
-                    callback && callback(0);
+                    shareSuccessCallback && shareSuccessCallback(0);
                 },
                 fail: (e) => {
                     console.log("分享视频失败:'" + e.errMsg + "'", e);
@@ -174,7 +183,7 @@ export default class RecordVideoManager {
                             }
                             break;
                     }
-                    callback && callback(-1);
+                    shareSuccessCallback && shareSuccessCallback(-1);
                 }
             });
         } else {

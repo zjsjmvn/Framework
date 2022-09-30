@@ -5,8 +5,33 @@ export interface ShareParams {
     templateId?: string,
     title?: string,
     desc?: string,
-    videoTopicList?: Array<string>
+    query?: string,
+    extra?: ShareExtraParams,
 }
+
+export interface ShareExtraParams {
+    //是否支持跳转到播放页， 以及支持获取视频信息等接口 （为 true 时会在 success 回调中带上 videoId）
+    withVideoId?: boolean,
+    //视频地址 ，分享一个本地视频
+    videoPath?: string,
+    //视频话题(仅抖音支持) ，目前由 hashtag_list 代替，为保证兼容性，建议同时填写两个。
+    videoTopics?: Array<string>
+    //是否分享为挑战视频 ( 仅头条支持 )
+    createChallenge?: boolean
+    //生成输入的默认文案
+    video_title?: string,
+    //视频话题(仅抖音支持)
+    hashtag_list?: Array<string>,
+    // /分享视频的标签，可以结合获取抖音视频排行榜使用
+    videoTag?: string,
+    //抖音 pgc 音乐的短链(仅抖音支持，需要基础库版本大于 1.90) 。形如https://v.douyin.com/JmcxWo8/， 参考 抖音小游戏录屏带配乐能力
+    defaultBgm?: string,
+    //抖音上可用的剪映模板 ID， 参考 录屏添加剪映视频模板能力
+    cutTemplateId?: string,
+    //剪映模板不可用或者剪映模板 ID 无效的时候是否直接回调失败。
+    abortWhenCutTemplateUnavailable?: boolean
+}
+
 
 /**
  * 录屏工具类
@@ -21,13 +46,6 @@ export default class RecordVideoManager {
 
     private _recorder = null;
     private _videoPath: string = null;
-
-    private _shareParams: ShareParams = {
-        title: "",
-        desc: "",
-        templateId: "",
-        videoTopicList: []
-    };
 
     get videoPath() {
         return this._videoPath;
@@ -80,7 +98,7 @@ export default class RecordVideoManager {
      * @param callback 开始录屏回调
      * @param stopCallback 自动结束录屏时回调
      */
-    startRecord(callback?: (res) => void, stopCallback?: (res) => void) {
+    startRecord(duration?: number, callback?: (res) => void, stopCallback?: (res) => void) {
         console.warn("调用开始录屏");
         this.recorder?.onStart(res => {
             console.warn("录屏开始", res);
@@ -101,7 +119,7 @@ export default class RecordVideoManager {
             });
         });
         // 默认使用最大支持时长 300s
-        this.recorder?.start({ duration: 300 });
+        this.recorder?.start({ duration: duration || 300 });
     }
 
 
@@ -150,16 +168,19 @@ export default class RecordVideoManager {
      * @param shareSuccessCallback 分享结果回调
      * errCode 0成功 -1失败
      */
-    shareVideo(isShowToast: boolean, shareSuccessCallback: (errCode: number) => void) {
+    shareVideo(shareParams: ShareParams, isShowToast: boolean, shareSuccessCallback: (errCode: number) => void) {
         if (this.platform && this._videoPath && this._videoPath.length > 0) {
             this.platform.shareAppMessage({
                 channel: "video",
-                templateId: this._shareParams.templateId,
-                title: this._shareParams.title,
-                desc: this._shareParams.desc,
+                templateId: shareParams.templateId,
+                title: shareParams.title,
+                desc: shareParams.desc,
                 extra: {
                     videoPath: this._videoPath, // 可替换成录屏得到的视频地址
-                    videoTopics: this._shareParams.videoTopicList
+                    videoTopics: shareParams.extra.videoTopics,
+                    video_title: shareParams.extra.video_title,
+                    hashtag_list: shareParams.extra.hashtag_list,
+                    defaultBgm: shareParams.extra.defaultBgm,
                 },
                 success: () => {
                     console.log("分享视频成功");

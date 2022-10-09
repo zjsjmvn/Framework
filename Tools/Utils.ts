@@ -17,6 +17,10 @@ export default class Utils {
         // } else if (window['wx'] && wx.vibrateShort) {
         //     wx.vibrateShort();
         // }
+        if (window['tt'] && window['tt'].vibrateShort) {
+            window['tt'].vibrateShort();
+        }
+
     }
 
     /**

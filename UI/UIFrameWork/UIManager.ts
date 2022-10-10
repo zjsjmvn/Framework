@@ -69,7 +69,7 @@ export default class UIManager {
      */
     private cachedUI: Map<string, Array<UIBase>> = new Map();
 
-    public openUIClass<T extends UIBase>(uiClass: { new(): T }, zOrder: number = ViewZOrder.UI, callback?: Function, onProgress?: Function, data?: any) {
+    public openUIClass<T extends UIBase>(uiClass: { new(): T }, zOrder: number = ViewZOrder.UI, showCallback?: Function, onProgress?: Function, data?: any, closeCallback?: Function) {
         if (this.hasUI(uiClass)) {
             if (!this.getUI(uiClass).allowMultiThisUI) {
                 console.warn(`UIManager OpenUI 1: ui ${cc.js.getClassName(uiClass)} is already exist, please check`);
@@ -90,11 +90,11 @@ export default class UIManager {
             uiInstance.node.parent = uiRoot;
             uiInstance.node.setPosition(0, 0);
             uiInstance.init(data);
-
+            uiInstance.closeCallback = closeCallback;
             uiInstance.node.zIndex = zOrder;
             uiInstance.show();
             this.dynamicUIStack.push(uiInstance);
-            callback && callback(uiInstance);
+            showCallback && showCallback(uiInstance);
 
         }
 
@@ -130,7 +130,7 @@ export default class UIManager {
      * @param {Function} [callback]
      * @memberof UIManager
      */
-    public openUINode(uiNode: cc.Node, zOrder: number = ViewZOrder.UI, callback?: Function, data?: any) {
+    public openUINode(uiNode: cc.Node, zOrder: number = ViewZOrder.UI, callback?: Function, data?: any, closeCallback?: Function) {
         if (!uiNode.active) {
             uiNode.active = true;
         }
@@ -138,6 +138,7 @@ export default class UIManager {
         uiNode.zIndex = zOrder;
         uiNode.getComponent(UIBase).init(data);
         uiNode.getComponent(UIBase).show();
+        uiNode.getComponent(UIBase).closeCallback = closeCallback;
         this.staticUIStack.push(uiNode);
     }
 
@@ -275,11 +276,11 @@ export default class UIManager {
         this.openUIClass(uiClass, ViewZOrder.Tips, null, null, data);
     }
 
-    public showPopup(ui, data?: any, callback?) {
+    public showPopup(ui, data?: any, showCallback?, closeCallback?) {
         if (ui instanceof cc.Node) {
-            this.openUINode(ui, ViewZOrder.Popup, callback, data);
+            this.openUINode(ui, ViewZOrder.Popup, showCallback, data);
         } else {
-            this.openUIClass(ui, ViewZOrder.Popup, callback, null, data);
+            this.openUIClass(ui, ViewZOrder.Popup, showCallback, null, data, closeCallback);
         }
     }
 

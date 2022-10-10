@@ -105,7 +105,6 @@ export default abstract class UIPopup extends UIBase {
     set touchAnyWhereToClose(value) {
         this._touchAnyWhereToClose = value;
     }
-    private closeCallback: Function = null;
 
     protected duration: number = 0.2
 

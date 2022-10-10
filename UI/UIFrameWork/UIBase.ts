@@ -20,6 +20,7 @@ export default abstract class UIBase extends Thor {
         return PREFAB_UI_DIR + this.prefabPath;
     }
 
+    public closeCallback: Function = null;
     /**
      * @description 是否需要缓存
      * @type {boolean}
@@ -63,6 +64,7 @@ export default abstract class UIBase extends Thor {
      * @memberof UIBase
      */
     public close() {
+        this.closeCallback && this.closeCallback();
         this.node.destroy();
     }
 

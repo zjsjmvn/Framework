@@ -1,8 +1,7 @@
 import { IAdProvider } from '../../Ads/Provider/IAdvertiser';
 import BasePlatform from '../BasePlatform';
+import { TTCanIUse, TT_onTouchEnd } from './TTDecorators';
 export default class TTPlatform extends BasePlatform {
-
-    private
 
     init() {
         super.init();
@@ -17,26 +16,71 @@ export default class TTPlatform extends BasePlatform {
     // }
 
 
-    /** 长震动 */
+
+    /**
+     * @description  长震动
+     * @memberof TTPlatform
+     */
+    @TTCanIUse
     public vibrateLong() {
-        if (window['tt'] && window['tt'].vibrateShort) {
-            window['tt'].vibrateLong();
-        }
+        tt.vibrateLong(null);
     }
 
-    /** 短震动 */
+    /**
+     * @description 短震动
+     * @memberof TTPlatform
+     */
+    @TTCanIUse
     public vibrateShort() {
-        if (window['tt'] && window['tt'].vibrateShort) {
-            window['tt'].vibrateShort();
-        }
+        tt?.vibrateShort(null);
     }
+
+    /**
+     * @description 可以将小游戏快捷方式添加到手机桌面上。
+     * @memberof TTPlatform
+     */
+    @TT_onTouchEnd
+    @TTCanIUse
+    public addShortcut(callback) {
+        tt.addShortcut({
+            success() {
+                console.log("添加桌面成功");
+                callback && callback(0);
+            },
+            fail(err) {
+                console.log("添加桌面失败", err.errMsg);
+                callback && callback(-1)
+            },
+        });
+    }
+
+
+    /**
+     * @description 检查快捷方式
+     * @param {(res: { status: { exist: boolean, needUpdate: boolean }, errMsg: string }) => void} successCallback
+     * @param {({ errMsg: string }) => void} failCallback
+     * @memberof TTPlatform
+     */
+    public checkShortcut(successCallback: (res: { status: { exist: boolean, needUpdate: boolean }, errMsg: string }) => void, failCallback: ({ errMsg: string }) => void) {
+        tt.checkShortcut({
+            success(res) {
+                console.log("检查快捷方式", res.status);
+                successCallback(res)
+            },
+            fail(res) {
+                console.log("检查快捷方式失败", res.errMsg);
+            },
+        });
+    }
+
 
     /**
      * @description 收藏小程序
      * @memberof TTPlatform
      */
+    @TTCanIUse
     public showFavoriteGuide(callback) {
-        window['tt']?.showFavoriteGuide({
+        tt?.showFavoriteGuide({
             type: "bar",
             content: "一键添加到我的小程序",
             position: "bottom",
@@ -49,11 +93,18 @@ export default class TTPlatform extends BasePlatform {
                 callback && callback(-1);
             },
         });
+
     }
 
-    public static canIUse(schema: string) {
-        return window['tt']?.canIUse(schema);
-    }
+
+
+
+
+
+
+
 
 }
 
+// let t = new TTPlatform();
+// t.addShortcut();

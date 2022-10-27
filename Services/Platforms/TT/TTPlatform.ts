@@ -41,7 +41,7 @@ export default class TTPlatform extends BasePlatform {
      */
     @TT_onTouchEnd
     @TTCanIUse
-    public addShortcut(callback) {
+    public static addShortcut(callback) {
         tt.addShortcut({
             success() {
                 console.log("添加桌面成功");
@@ -61,14 +61,15 @@ export default class TTPlatform extends BasePlatform {
      * @param {({ errMsg: string }) => void} failCallback
      * @memberof TTPlatform
      */
-    public checkShortcut(successCallback: (res: { status: { exist: boolean, needUpdate: boolean }, errMsg: string }) => void, failCallback: ({ errMsg: string }) => void) {
+    public static checkShortcut(successCallback: (res: { status: { exist: boolean, needUpdate: boolean }, errMsg: string }) => void, failCallback: ({ errMsg: string }) => void) {
         tt.checkShortcut({
             success(res) {
                 console.log("检查快捷方式", res.status);
-                successCallback(res)
+                successCallback && successCallback(res)
             },
             fail(res) {
                 console.log("检查快捷方式失败", res.errMsg);
+                failCallback && failCallback(res);
             },
         });
     }
@@ -79,7 +80,7 @@ export default class TTPlatform extends BasePlatform {
      * @memberof TTPlatform
      */
     @TTCanIUse
-    public showFavoriteGuide(callback) {
+    public static showFavoriteGuide(callback) {
         tt?.showFavoriteGuide({
             type: "bar",
             content: "一键添加到我的小程序",

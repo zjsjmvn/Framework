@@ -488,6 +488,9 @@ export default class Utils {
             callback();
         }).start();
     }
+    public static isValidNumber(value) {
+        return !isNaN(parseFloat(value)) && isFinite(value);
+    }
 }
 
 

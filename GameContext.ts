@@ -64,5 +64,8 @@ export default class GameContext {
 
     }
 
+    public manualRegisterService(name, service) {
+        this._servicesDictionary.set(name, service);
+    }
 
 }

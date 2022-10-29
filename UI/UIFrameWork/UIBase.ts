@@ -1,5 +1,5 @@
 import Thor from '../UIKiller/Thor';
-const PREFAB_UI_DIR = 'prefab/ui/';
+const PREFAB_UI_DIR = 'Prefab/UI/';
 
 const { property, ccclass } = cc._decorator
 /**
@@ -20,6 +20,7 @@ export default abstract class UIBase extends Thor {
         return PREFAB_UI_DIR + this.prefabPath;
     }
 
+    public closeCallback: Function = null;
     /**
      * @description 是否需要缓存
      * @type {boolean}
@@ -29,7 +30,6 @@ export default abstract class UIBase extends Thor {
     needCache: boolean = false;
 
     @property({ displayName: "此ui是否允许多个", tooltip: "勾选后，ui管理器不会处理重复此ui" })
-
     allowMultiThisUI: boolean = false;
 
     public init(...args) {
@@ -53,12 +53,18 @@ export default abstract class UIBase extends Thor {
         this.node.active = false;
     }
 
+
+    // 暂时空
+    public beforeClose() {
+
+    }
     /**
      * @description 关闭
      * @abstract
      * @memberof UIBase
      */
     public close() {
+        this.closeCallback && this.closeCallback();
         this.node.destroy();
     }
 

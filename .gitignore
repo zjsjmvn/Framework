@@ -39,6 +39,8 @@ Thumbs.db
 
 *UnityVS.meta
 *.err
+*.ts.meta
+*.js.meta
 *.err.meta
 *.exvim
 *.exvim.meta

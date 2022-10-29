@@ -10,7 +10,7 @@ import RedDotManager from './RedDotManager';
  * @export
  * @enum {number}
  */
-export enum NodeType {
+export enum RedDotNodeType {
     Static, // 静态节点，比如打开背包的按钮。打开装备界面的按钮。这些不会变化
     Dynamic,   // 动态节点，比如背包内的物品，这些都是会变化的，不会一直存在，动态节点的特点是多。
 }
@@ -22,7 +22,7 @@ export default class TreeNode {
     private onValueChangeCallback: Function = null;
     public name: string = ''
     public _fullPath: string = ''
-    public nodeType: NodeType;
+    public nodeType: RedDotNodeType;
     get fullPath() {
         if (!!!this._fullPath) {
             if (this.parent == null || this.parent == RedDotManager.instance.root) {
@@ -37,7 +37,7 @@ export default class TreeNode {
 
     public value: number = 0
     public parent: TreeNode = null;
-    constructor(name: string, fullPath?: string, parent?: TreeNode, nodeType: NodeType = NodeType.Static) {
+    constructor(name: string, fullPath?: string, parent?: TreeNode, nodeType: RedDotNodeType = RedDotNodeType.Static) {
         this.name = name;
         this.value = 0;
         this.nodeType = nodeType;
@@ -81,10 +81,9 @@ export default class TreeNode {
             return;
         }
         this.value = newValue > 0 ? newValue : 0;
-        cc.log('updateValue', this.fullPath, this.value);
         this.onValueChangeCallback && this.onValueChangeCallback(newValue);
         this.parent && this.parent.updateValue();
-        if (this.value == 0 && this.nodeType == NodeType.Dynamic) {
+        if (this.value == 0 && this.nodeType == RedDotNodeType.Dynamic) {
             RedDotManager.instance.clean(this.fullPath);
         }
     }

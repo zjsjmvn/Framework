@@ -39,7 +39,12 @@ export default class VMLabel extends VMBase {
 
     @property({
         type: [cc.String],
-        visible: function () { return true }
+        visible: function () {
+            if (this.dynamicConfig == true) { return false }
+            else {
+                return true;
+            }
+        }
     })
     protected watchPathArr: Array<string> = new Array<string>();
 
@@ -58,12 +63,20 @@ export default class VMLabel extends VMBase {
     }
 
     onLoad() {
-        super.onLoad();
-        this.checkLabelType();
-        if (!CC_EDITOR) {
-            this.originText = this.getLabelValue();
-            this.parseTemplate();
-            this.onValueInit();
+        if (this.dynamicConfig) {
+            super.onLoad();
+            this.checkLabelType();
+            if (!CC_EDITOR) {
+                this.originText = this.getLabelValue()
+                this.parseTemplate();
+            }
+        } else {
+            super.onLoad();
+            this.checkLabelType();
+            if (!CC_EDITOR) {
+                this.originText = this.getLabelValue()
+                this.parseTemplate();
+            }
         }
     }
 
@@ -84,10 +97,6 @@ export default class VMLabel extends VMBase {
             this.valueIndexArr[i] = parseInt(valueIndex || '0') || 0;
             this.templateFormatArr[i] = matchInfo;
         }
-
-        //监听对应的数值变化
-        //this.setMultPathEvent(true);
-
     }
 
     /**
@@ -116,11 +125,13 @@ export default class VMLabel extends VMBase {
     /**初始化获取数据 */
     onValueInit() {
         //更新信息
-        let max = this.watchPathArr.length;
-        for (let i = 0; i < max; i++) {
-            this.templateValueArr[i] = this.VM.getValue(this.watchPathArr[i], '?');
+        let length = this.watchPathArr.length;
+        if (length > 0) {
+            for (let i = 0; i < length; i++) {
+                this.templateValueArr[i] = this.VM.getValue(this.watchPathArr[i], '?');
+            }
+            this.setLabelValue(this.getReplacedText()); // 重新解析
         }
-        this.setLabelValue(this.getReplacedText()); // 重新解析
     }
 
     /**监听数据发生了变动的情况 */
@@ -163,4 +174,11 @@ export default class VMLabel extends VMBase {
         return false;
     }
 
+    addDynamicConfig(pathArr: string[]) {
+        this.watchPathArr = this.watchPathArr.concat(pathArr);
+        this.onLoad();
+        this.enabled = true;
+    }
+
 }
+

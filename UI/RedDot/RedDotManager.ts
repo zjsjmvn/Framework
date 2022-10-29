@@ -1,4 +1,4 @@
-import TreeNode, { NodeType } from './TreeNode';
+import TreeNode, { RedDotNodeType } from './TreeNode';
 import { singleton } from '../../Tools/Decorator/Singleton';
 
 
@@ -16,7 +16,7 @@ export default class RedDotManager {
     public splitChar: string = '_';
     public root: TreeNode;
     /**
-     * @description 携带这个字符串的节点，将视为动态节点，动态节点会被RedDotManager清楚，而非动态节点
+     * @description 携带这个字符串的节点，将视为动态节点，动态节点会被RedDotManager清除、
      * @memberof RedDotManager
      */
     public dynamicRedDotNodeFlag = '----540ec1b6-61fe-4a0f-bcc8-8ee7ad4bbc3f----';
@@ -26,13 +26,13 @@ export default class RedDotManager {
     }
 
     public addPathAndBindListener(path: string, callback) {
-        cc.log('addPathAndBindListener', path);
+        // cc.log('addPathAndBindListener', path);
         this.addPath(path);
         this.bindListenerToPath(path, callback);
     }
 
     public addPath(path: string) {
-        cc.log('addPath', path);
+        // cc.log('addPath', path);
         if (!!!path) {
             cc.error("路径不合法，不能为空");
         }
@@ -42,7 +42,7 @@ export default class RedDotManager {
             return;
         }
         let theSplitPathArr = path.split(this.splitChar);
-        cc.log('path', theSplitPathArr);
+        // cc.log('path', theSplitPathArr);
         let hasEmptyString = theSplitPathArr.find((str) => {
             return str == '';
         });
@@ -60,12 +60,12 @@ export default class RedDotManager {
                 nodePath += ('_' + str);
             }
             forEachIndex++;
-            cc.log('nodePath', nodePath)
+            // cc.log('nodePath', nodePath)
             let child = pointer.getChildByName(str);
             if (!child) {
                 if (str.match(this.dynamicRedDotNodeFlag)) {
                     //表示这个节点是动态节点。 
-                    child = new TreeNode(str, nodePath, pointer, NodeType.Dynamic);
+                    child = new TreeNode(str, nodePath, pointer, RedDotNodeType.Dynamic);
                 } else {
                     child = new TreeNode(str, nodePath, pointer);
                 }
@@ -90,7 +90,7 @@ export default class RedDotManager {
     }
 
     public addValue(path, addValue: number) {
-        cc.log('addValue', path, addValue);
+        // cc.log('addValue', path, addValue);
         let node = this.getTreeNode(path);
         node.addValue(addValue);
     }
@@ -101,7 +101,7 @@ export default class RedDotManager {
         if (!finalNode) {
             return;
         }
-        if (finalNode.nodeType == NodeType.Dynamic) {
+        if (finalNode.nodeType == RedDotNodeType.Dynamic) {
             finalNode.removeFromParent();
             this.removeNodeFromNodesMap(path);
         } else {
@@ -154,7 +154,7 @@ export default class RedDotManager {
     }
 
     private addNodeToNodesMap(key: string, value: TreeNode) {
-        cc.log('addNodeToNodesMap', key);
+        // cc.log('addNodeToNodesMap', key);
         this.allNodesMap.set(key, value);
     }
 

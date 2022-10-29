@@ -1,6 +1,7 @@
 import UIBase from './UIBase';
 import UIManager from './UIManager';
-import { object } from '../../Tools/Serializer/Serializr/serializr';
+import { ClazzOrModelSchema } from '../../Tools/Serializer/Serializr/serializr';
+import Utils from '../../Tools/Utils';
 const { property, ccclass } = cc._decorator
 
 /**
@@ -51,7 +52,7 @@ export default abstract class UIPopup extends UIBase {
         return this._showNonBlankArea;
     }
     set showNonBlankArea(val) {
-        cc.log('showNonBlankArea')
+        // cc.log('showNonBlankArea')
         let containerNode: cc.Node = this.node.getChildByName("Container");
 
         if (!!!containerNode) {
@@ -66,6 +67,7 @@ export default abstract class UIPopup extends UIBase {
             rect.y = nodePos.y
         } else if (this.blankJudgeType == BlankJudgeType.ContentSize) {
             let contentSize = containerNode.getContentSize();
+            // rect = cc.rect(containerNode.x - contentSize.width / 2, containerNode.y - contentSize.height / 2, contentSize.width, contentSize.height);
             rect = cc.rect(containerNode.x - contentSize.width / 2, containerNode.y - contentSize.height / 2, contentSize.width, contentSize.height);
         }
 
@@ -103,13 +105,13 @@ export default abstract class UIPopup extends UIBase {
     set touchAnyWhereToClose(value) {
         this._touchAnyWhereToClose = value;
     }
-    private closeCallback: Function = null;
 
-    abstract init(args: any);
+    protected duration: number = 0.2
+
+    abstract init(args);
 
 
     show() {
-        cc.log('_getCapturingTargets')
         super.show();
         if (this._touchBlankToClose) {
             this.node.on(cc.Node.EventType.TOUCH_END, this.onThisNodeTouchEnd_UsedFor_TouchMarginToClose, this, true);
@@ -117,40 +119,117 @@ export default abstract class UIPopup extends UIBase {
         if (this.touchAnyWhereToClose) {
             this.node.on(cc.Node.EventType.TOUCH_END, this.onThisNodeTouchEnd_UsedFor_TouchAnyWhereToClose, this, true);
         }
+        this.node._touchListener?.setSwallowTouches(false);
+
+
+
+        this.runBgAction();
+
+        this.runContainerAction();
+
+
+
+    }
+
+    runBgAction() {
+        const background = this.node.getChildByName('Bg');
+        if (background) {
+            const oldOpacity = background.opacity;
+            background.active = true;
+            background.opacity = 0;
+            // 播放背景遮罩动画
+            cc.tween(background)
+                .to(this.duration * 0.8, { opacity: oldOpacity })
+                .start();
+        }
+    }
+
+    runContainerAction() {
+        const container = this.node.getChildByName('Container');
+        if (container) {
+            container.active = true;
+            container.scale = 0.5;
+            container.opacity = 0;
+            // 播放弹窗主体动画
+            cc.tween(container)
+                .to(this.duration, { scale: 1, opacity: 255 }, { easing: 'backOut' })
+                .call(() => {
+
+                })
+                .start();
+        }
     }
 
     // TODO: 解决show频繁注册的问题。解决之后hide就不用关闭注册的事件了。
-    hide() {
-        super.hide();
+    async hide() {
         if (this._touchBlankToClose) {
             this.node.off(cc.Node.EventType.TOUCH_END, this.onThisNodeTouchEnd_UsedFor_TouchMarginToClose, this, true);
         }
         if (this.touchAnyWhereToClose) {
             this.node.off(cc.Node.EventType.TOUCH_END, this.onThisNodeTouchEnd_UsedFor_TouchAnyWhereToClose, this, true);
         }
+        // 动画时长不为 0 时拦截点击事件（避免误操作）
+        if (this.duration !== 0) {
+            let blocker = this.node.getChildByName('blocker');
+            if (!blocker) {
+                blocker = blocker = new cc.Node('blocker');
+                blocker.addComponent(cc.BlockInputEvents);
+                blocker.setParent(this.node);
+                blocker.setContentSize(this.node.getContentSize());
+            }
+            blocker.active = true;
+        }
+        await this.disappearAction();
+        super.hide();
     }
 
-    close() {
-        super.close();
+    async close() {
         if (this._touchBlankToClose) {
             this.node.off(cc.Node.EventType.TOUCH_END, this.onThisNodeTouchEnd_UsedFor_TouchMarginToClose, this, true);
         }
         if (this.touchAnyWhereToClose) {
             this.node.off(cc.Node.EventType.TOUCH_END, this.onThisNodeTouchEnd_UsedFor_TouchAnyWhereToClose, this, true);
         }
+        await this.disappearAction();
+        super.close();
+    }
+
+    async disappearAction(): Promise<boolean> {
+        const background = this.node.getChildByName('Bg')
+        if (background) {
+            cc.tween(background)
+                .delay(this.duration * 0.2)
+                .to(this.duration * 0.8, { opacity: 0 })
+                .start();
+        }
+
+        const container = this.node.getChildByName('Container');
+        if (container) {
+            // 播放弹窗主体动画
+            cc.tween(container)
+                .to(this.duration, { scale: 0.5, opacity: 0 }, { easing: 'backIn' })
+                .call(() => {
+                    let blocker = this.node.getChildByName('blocker');
+                    blocker && (blocker.active = false);
+
+                })
+                .start();
+        }
+        await Utils.delay(this.duration * 1000);
+        return Promise.resolve(true);
     }
 
     onThisNodeTouchEnd_UsedFor_TouchMarginToClose(event) {
         // let pop = this.node.getComponentsInChildren(UIPopup);
         // cc.log('onThisNodeTouchEnd_UsedFor_TouchMarginToClose', pop)
         // 判断是否点击的是外面,如果点击的是container外面。则关闭。
+        // if (event.eventPhase == cc.Event.CAPTURING_PHASE) return;
+        // 允许触摸穿透
         let containerNode: cc.Node = this.node.getChildByName("Container");
-
         if (!!!containerNode) {
             cc.error("快速关闭需要container节点来判断是否点击ui外部。请参考其他弹框界面的层级结构。");
             return;
         }
-
         let rect: cc.Rect = null;
         if (this.blankJudgeType == BlankJudgeType.BoundingBoxToWorld) {
             rect = containerNode.getBoundingBoxToWorld();
@@ -162,19 +241,16 @@ export default abstract class UIPopup extends UIBase {
             rect = cc.rect(containerNode.x - contentSize.width / 2, containerNode.y - contentSize.height / 2, contentSize.width, contentSize.height);
         }
         let contains = rect.contains(this.node.convertToNodeSpaceAR(event.getLocation()));
-        if (contains) {
-            return true;
-        } else {
-            cc.log('onThisNodeTouchEnd_UsedFor_TouchMarginToClose');
-            event.stopPropagation();
+        if (!contains) {
             UIManager.instance.closeUI(this);
         }
+        return;
     }
 
     onThisNodeTouchEnd_UsedFor_TouchAnyWhereToClose(event) {
-        event.stopPropagation();
         cc.log('onThisNodeTouchEnd_UsedFor_TouchAnyWhereToClose');
         UIManager.instance.closeUI(this);
+
     }
 
 

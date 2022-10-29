@@ -1,7 +1,6 @@
 import { EncryptUtil } from '../../../Tools/Encrypt/EncryptUtil';
 import { md5 } from '../../../Tools/Encrypt/Md5';
 import { IStorageProvider } from './IStorageProvider';
-import { toString } from '../../../Collections/arrays';
 
 
 export default class LocalDataProvider implements IStorageProvider {

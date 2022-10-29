@@ -47,13 +47,20 @@ export default class UIManager {
     public static instance: UIManager;
 
     /**
-     * @description ui栈
+     * @description 动态ui栈放的是动态加载的ui
      * @private
      * @type {UIBase[]}
      * @memberof UIManager
      */
-    private uiStack: UIBase[] = [];
+    private dynamicUIStack: UIBase[] = [];
 
+    /**
+     * @description 静态ui栈，放的是静态ui，比如弹框里的弹框，就没必要在分出去预制体了,否则太乱。
+     * @private
+     * @type {cc.Node[]}
+     * @memberof UIManager
+     */
+    private staticUIStack: cc.Node[] = [];
     /**
      * @description 缓存的ui，如果ui标记needCache那么就会在存到这里。
      * @private
@@ -62,10 +69,10 @@ export default class UIManager {
      */
     private cachedUI: Map<string, Array<UIBase>> = new Map();
 
-    public openUIClass<T extends UIBase>(uiClass: { new(): T }, zOrder: number = ViewZOrder.UI, callback?: Function, onProgress?: Function, data?: any) {
+    public openUIClass<T extends UIBase>(uiClass: { new(): T }, zOrder: number = ViewZOrder.UI, showCallback?: Function, onProgress?: Function, data?: any, closeCallback?: Function) {
         if (this.hasUI(uiClass)) {
             if (!this.getUI(uiClass).allowMultiThisUI) {
-                console.error(`UIManager OpenUI 1: ui ${cc.js.getClassName(uiClass)} is already exist, please check`);
+                console.warn(`UIManager OpenUI 1: ui ${cc.js.getClassName(uiClass)} is already exist, please check`);
                 return;
             }
         }
@@ -83,11 +90,11 @@ export default class UIManager {
             uiInstance.node.parent = uiRoot;
             uiInstance.node.setPosition(0, 0);
             uiInstance.init(data);
-
+            uiInstance.closeCallback = closeCallback;
             uiInstance.node.zIndex = zOrder;
             uiInstance.show();
-            this.uiStack.push(uiInstance);
-            callback && callback(uiInstance);
+            this.dynamicUIStack.push(uiInstance);
+            showCallback && showCallback(uiInstance);
 
         }
 
@@ -105,7 +112,7 @@ export default class UIManager {
             }
             if (this.hasUI(uiClass)) {
                 if (!this.getUI(uiClass).allowMultiThisUI) {
-                    console.error(`UIManager OpenUI 1: ui ${cc.js.getClassName(uiClass)} is already exist, please check`);
+                    console.warn(`UIManager OpenUI 1: ui ${cc.js.getClassName(uiClass)} is already exist, please check`);
                     return;
                 }
             }
@@ -123,7 +130,7 @@ export default class UIManager {
      * @param {Function} [callback]
      * @memberof UIManager
      */
-    public openUINode(uiNode: cc.Node, zOrder: number = ViewZOrder.UI, callback?: Function, data?: any) {
+    public openUINode(uiNode: cc.Node, zOrder: number = ViewZOrder.UI, callback?: Function, data?: any, closeCallback?: Function) {
         if (!uiNode.active) {
             uiNode.active = true;
         }
@@ -131,6 +138,8 @@ export default class UIManager {
         uiNode.zIndex = zOrder;
         uiNode.getComponent(UIBase).init(data);
         uiNode.getComponent(UIBase).show();
+        uiNode.getComponent(UIBase).closeCallback = closeCallback;
+        this.staticUIStack.push(uiNode);
     }
 
 
@@ -140,7 +149,7 @@ export default class UIManager {
         if (this.cachedUI.has(uiName)) {
             let uiArr = this.cachedUI.get(uiName);
             if (uiArr) {
-                cc.log('cachedUI ', uiName, this.cachedUI.get(uiName).length);
+                // cc.log('cachedUI ', uiName, this.cachedUI.get(uiName).length);
                 ui = uiArr.pop();
             }
         }
@@ -157,55 +166,61 @@ export default class UIManager {
             arr.push(ui);
             this.cachedUI.set(uiName, arr);
         }
-        cc.log('cachedUI ', uiName, this.cachedUI.get(uiName).length);
+        // cc.log('cachedUI ', uiName, this.cachedUI.get(uiName).length);
     }
 
 
     public closeUIByUIClass<T extends UIBase>(uiClass: { new(): T }) {
-        for (let i = 0; i < this.uiStack.length; ++i) {
-            if (cc.js.getClassName(this.uiStack[i]) === cc.js.getClassName(uiClass)) {
-                if (cc.isValid(this.uiStack[i].node)) {
-                    this.uiStack[i].close();
+        for (let i = 0; i < this.dynamicUIStack.length; ++i) {
+            if (cc.js.getClassName(this.dynamicUIStack[i]) === cc.js.getClassName(uiClass)) {
+                if (cc.isValid(this.dynamicUIStack[i].node)) {
+                    this.dynamicUIStack[i].close();
+                    // return this.closeUI(this.dynamicUIStack[i]);
                 }
-                this.uiStack.splice(i, 1);
+                this.dynamicUIStack.splice(i, 1);
                 return;
             }
         }
     }
-    public closeUI(ui: UIBase | cc.Node) {
-
+    public async closeUI(ui: UIBase | cc.Node): Promise<boolean> {
+        //节点类型就是在场景中直接存在的
         if (ui instanceof cc.Node) {
-            ui.getComponent(UIBase).hide();
+            let index = this.staticUIStack.indexOf(ui);
+            if (index >= 0) {
+                this.staticUIStack.splice(index, 1);
+            }
+            await ui.getComponent(UIBase).hide();
+            return Promise.resolve(true);
         } else {
             // 不在uiStack的ui都是由节点自己管理。
-            let index = this.uiStack.indexOf(ui);
+            let index = this.dynamicUIStack.indexOf(ui);
             if (index < 0) {
-                ui.hide();
+                await ui.hide();
+                return Promise.resolve(true);
             } else {
                 if (index >= 0) {
-                    this.uiStack.splice(index, 1);
+                    this.dynamicUIStack.splice(index, 1);
                 }
                 if (cc.isValid(ui)) {
                     if (ui.needCache) {
-                        ui.hide();
+                        await ui.hide();
                         this.setUIToCachedMap(ui);
+                        return Promise.resolve(true);
                     } else {
-                        ui.close();
+                        await ui.close();
+                        return Promise.resolve(true);
                     }
                 }
             }
         }
-
-
     }
 
     public closeAllUI() {
-        if (this.uiStack.length == 0) {
+        if (this.dynamicUIStack.length == 0) {
             return;
         }
-        this.closeUI(this.uiStack[0]);
-        while (this.uiStack.length > 0) {
-            this.closeUI(this.uiStack[0]);
+        while (this.dynamicUIStack.length > 0) {
+            this.closeUI(this.dynamicUIStack[0]);
         }
     }
 
@@ -227,8 +242,8 @@ export default class UIManager {
 
     public hasUI<T extends UIBase>(uiClass: { new(): T }): boolean {
         let uiName = cc.js.getClassName(uiClass);
-        for (let i = 0; i < this.uiStack.length; ++i) {
-            if (cc.js.getClassName(this.uiStack[i]) == uiName) {
+        for (let i = 0; i < this.dynamicUIStack.length; ++i) {
+            if (cc.js.getClassName(this.dynamicUIStack[i]) == uiName) {
                 return true;
             }
         }
@@ -236,9 +251,9 @@ export default class UIManager {
     }
 
     public getUI<T extends UIBase>(uiClass: { new(): T }): UIBase {
-        for (let i = 0; i < this.uiStack.length; ++i) {
-            if (cc.js.getClassName(this.uiStack[i]) === cc.js.getClassName(uiClass)) {
-                return this.uiStack[i];
+        for (let i = 0; i < this.dynamicUIStack.length; ++i) {
+            if (cc.js.getClassName(this.dynamicUIStack[i]) === cc.js.getClassName(uiClass)) {
+                return this.dynamicUIStack[i];
             }
         }
         return null;
@@ -261,14 +276,19 @@ export default class UIManager {
         this.openUIClass(uiClass, ViewZOrder.Tips, null, null, data);
     }
 
-    public showPopup(ui, data?: any) {
+    public showPopup(ui, data?: any, showCallback?, closeCallback?) {
         if (ui instanceof cc.Node) {
-            this.openUINode(ui, ViewZOrder.Popup, null, data);
+            this.openUINode(ui, ViewZOrder.Popup, showCallback, data);
         } else {
-            this.openUIClass(ui, ViewZOrder.Popup, null, null, data);
+            this.openUIClass(ui, ViewZOrder.Popup, showCallback, null, data, closeCallback);
         }
     }
 
+
+    public showNotice(ui, data?: any, callback?: Function) {
+        this.openUIClass(ui, ViewZOrder.Notice, callback, null, data);
+
+    }
 
     // public showUI<T extends UIBase>(uiClass: UIClass<T>, callback?: Function) {
     //     let ui = this.getUI(uiClass);

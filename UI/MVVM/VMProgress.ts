@@ -27,7 +27,6 @@ export default class VMProgress extends VMCustom {
     // LIFE-CYCLE CALLBACKS:
 
     onLoad() {
-        //cc.log(this.watchPathArr)
         if (this.watchPathArr.length < 2 || this.watchPathArr[0] == '[min]' || this.watchPathArr[1] == '[max]') {
             console.error('VMProgress must have two values!');
         }

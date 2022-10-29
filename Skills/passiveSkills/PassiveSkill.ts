@@ -1,16 +1,14 @@
 import { PassiveCondition } from './conditions/PassiveCondition';
+import BaseSkill from '../BaseSkill';
 export enum PassiveConditionMeetMode {
     MeetOne,
     MeetAll,
 }
-/**
- * 被动技能有触发cd时间间隔 也可能没有
- * 暂时先按照面向对象的方式来写。然后在按照ecs的方式来写
- * 先不要写太复杂了。
- */
-export class PassiveSkill {
+
+export class PassiveSkill extends BaseSkill {
     protected conditions: Array<PassiveCondition> = null;
     constructor() {
+        super()
         this.conditions = new Array<PassiveCondition>();
 
     }
@@ -23,7 +21,7 @@ export class PassiveSkill {
     meet(): boolean {
         return false;
     }
-    trigger(target?) {
+    trigger(target?, args?) {
 
     }
 }

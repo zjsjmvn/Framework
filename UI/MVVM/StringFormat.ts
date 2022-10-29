@@ -27,6 +27,7 @@ class StringFormat {
                 case 'kmbt': res = this.KMBT(value); break;
                 case 'per': res = this.per(value, num); break;
                 case 'sep': res = this.sep(value); break;
+                case 'timehms': res = this.time_h_m_s(value); break;
                 default:
                     break;
             }
@@ -52,7 +53,6 @@ class StringFormat {
         return num.replace(new RegExp('(\\d)(?=(\\d{3})+$)', 'ig'), "$1,");
     }
     private floorInt(value: number) {
-        cc.log('floorInt')
         return Math.floor(value);
     }
     private ceilInt(value: number) {
@@ -72,6 +72,38 @@ class StringFormat {
     //将数字按 0:00:00:000 显示 （ms制）
     private time_ms(value: number) {
         //todo
+    }
+
+
+    /**
+     * @description 将秒转换为时分秒
+     * @private
+     * @param {number} seconds
+     * @memberof StringFormat
+     */
+    private time_h_m_s(seconds: number) {
+        let totalSeconds = Math.floor(seconds),
+            minute = 0,
+            hour = 0;
+        // 如果秒数大于60，将秒数转换成整数
+        if (totalSeconds > 60) {
+            // 获取分钟，除以60取整数，得到整数分钟
+            minute = Math.floor(totalSeconds / 60);
+            // 获取秒数，秒数取佘，得到整数秒数
+            totalSeconds = Math.floor(totalSeconds % 60);
+            // 如果分钟大于60，将分钟转换成小时
+            if (minute > 60) {
+                // 获取小时，获取分钟除以60，得到整数小时
+                hour = Math.floor(minute / 60);
+                // 获取小时后取佘的分，获取分钟除以60取佘的分
+                minute = Math.floor(minute % 60);
+            }
+        }
+        // 补位
+        hour = ('0' + hour).slice(-2);
+        minute = ('0' + minute).slice(-2);
+        totalSeconds = ('0' + totalSeconds).slice(-2);
+        return hour + ':' + minute + ":" + totalSeconds;
     }
 
     //将时间戳显示为详细的内容
@@ -148,3 +180,26 @@ class StringFormat {
 
 /**格式化处理函数 */
 export let StringFormatFunction = new StringFormat();
+
+// cc.log(StringFormatFunction.deal('2.1111', 'fix2'));
+
+// function parseTemplate(originText) {
+//     let regexAll = /\{\{(.+?)\}\}/g; //匹配： 所有的{{value}}
+//     let regex = /\{\{(.+?)\}\}/;//匹配： {{value}} 中的 value
+//     let res = originText.match(regexAll);//匹配结果数组
+//     if (!!!res) return;
+//     for (let i = 0; i < res.length; i++) {
+//         const e = res[i];
+//         let arr = e.match(regex);
+//         let matchName = arr[1];
+//         let matchNameSplit = matchName.split(':');
+//         cc.log('matchNameSplit', matchNameSplit)
+//         let matchInfo = matchNameSplit[1] || '';
+//         let valueIndex = matchNameSplit[0];
+//         this.replaceStrArr[i] = e;
+//         this.valueIndexArr[i] = parseInt(valueIndex || '0') || 0;
+//         this.templateFormatArr[i] = matchInfo;
+//     }
+// }
+
+// parseTemplate("{{0:int}}")

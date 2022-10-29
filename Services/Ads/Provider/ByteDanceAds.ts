@@ -18,7 +18,7 @@ export const TTRewardVideoErrMsg = {
 
 export default class ByteDanceAds implements IAdProvider {
 
-
+    name
     private bannerId: string = null;
     private bannerAd: tt.BannerAd = null;
     private interstitialId: string = null;

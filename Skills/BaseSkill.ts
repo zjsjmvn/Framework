@@ -1,7 +1,8 @@
-import { SkillType } from '../../Editor/ECS/Define';
+import { UUID } from '../ECS/Entitas/utils/UUID';
 export default class BaseSkill {
-
     public skillType: any;
+    public id: string = UUID.randomUUID();
+
     onAdd() {
 
     }
@@ -10,4 +11,9 @@ export default class BaseSkill {
 
     }
 
+    applyNewLevel() {
+        this.onRemove();
+        this.onAdd();
+    }
 }
+

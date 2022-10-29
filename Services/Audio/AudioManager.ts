@@ -49,7 +49,7 @@ export default class AudioManager {
                 }
                 else {
 
-                    cc.log('res_arr', res_arr)
+                    // cc.log('res_arr', res_arr)
                     // str_arr.forEach((str, index) => {
                     //     let arr = str.split('/');
                     //     let name = arr[arr.length - 1];

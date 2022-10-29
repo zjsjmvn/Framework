@@ -50,7 +50,7 @@ export default class GameContext {
                 cc.warn(`can not find service: ${s} in all components`);
             }
 
-            console.log("registServices s", s);
+            // console.log("registServices s", s);
             this._servicesDictionary.set(s, services[0]);
         }
     }

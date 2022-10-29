@@ -1,6 +1,3 @@
-import { Widget, Scheduler, delayTime } from '../../../../creator';
-import { resolve } from './IOC/resolution/resolver';
-
 export default class Utils {
     constructor() { }
 
@@ -20,6 +17,10 @@ export default class Utils {
         // } else if (window['wx'] && wx.vibrateShort) {
         //     wx.vibrateShort();
         // }
+        if (window['tt'] && window['tt'].vibrateShort) {
+            window['tt'].vibrateShort();
+        }
+
     }
 
     /**
@@ -463,16 +464,17 @@ export default class Utils {
      */
     public static delay(delayTime): Promise<void> {
         if (delayTime === 0) { delayTime = 100; }
+        // delayTime -= 18;
         return new Promise(function (resolve, reject) {
             // cc.delayTime(delayTime);
-            let a = {};
-            cc.tween(a).delay(delayTime / 1000).call(() => {
-                cc.log('delayTime', delayTime)
-                resolve();
-            }).start();
+            // let a = {};
+            // cc.tween(a).delay(delayTime / 1000).call(() => {
+            //     resolve();
+            // }).start();
             // cc.director.getScheduler().scheduleOnce()l
-            // setTimeout(function () {
-            // }, delayTime);
+            setTimeout(function () {
+                resolve();
+            }, delayTime);
         });
     }
     /**
@@ -488,12 +490,106 @@ export default class Utils {
             callback();
         }).start();
     }
+    public static formatSuffix(num: string, fixedCount = 2) {
+        let special = 'km';
+        let strArr = 'abcdefghijlnopqrstuvwxyz';
+        num = num.split('.')[0];
+        let length = num.length - 1;
+        let indexOf1000 = 0;
+        while (length >= 3) {
+            length -= 3;
+            indexOf1000++;
+        }
+        let str = num.slice(0, length + 1);
+        let str2 = num.slice(length + 1, length + fixedCount + 1);
+        // cc.log('str2', str2)
+        if (num.length >= 3) {
+
+        }
+
+        if (str2 != '') {
+
+
+            let str2EndIndex = str2.length - 1;
+            let get0 = false;
+            let strNeedAdd = '';
+            //找到第一个不为0的位置
+            while (str2EndIndex) {
+                if (str2[str2EndIndex] != '0') {
+                    break;
+                } else {
+                    str2EndIndex--;
+                }
+            }
+            str += '.' + str2.slice(0, str2EndIndex + 1);
+        }
+        // cc.log('length', length, num.slice(0, length + 1));
+        if (indexOf1000 <= 3) {
+            if (indexOf1000 < 1) {
+                return str += '';
+            } else if (indexOf1000 >= 1 && indexOf1000 < 2) {
+                return str += special[0];
+            } else if (indexOf1000 >= 2 && indexOf1000 < 3) {
+                return str += special[1];
+            }
+        }
+        indexOf1000 -= 2;
+        // cc.log('-------------------')
+        //index表示全排列index个字母。通过 Math.pow(strArr.length, index)就能算出这个index有多少数量。
+        /**
+         * 
+         * 如index=2，表示：
+         * aa,ab,ac,ad,ae,af,ag,ah,ai,......az;
+         * ba,bb,bc,bd,be...................bz;
+         * .
+         * .
+         * .
+         * za...............................zz;
+         * 以上，Math.pow(strArr.length, index) 就是全排列2个字母共多少数量。
+         */
+        let leftCount = indexOf1000;
+        let index = 1;
+        // 计算属于哪一个index.和count。count代表的是哪个index的行。
+        while (1) {
+            // 等于的情况
+            let indexCount = Math.pow(strArr.length, index);
+            if (leftCount > indexCount) {
+                index++;
+                leftCount -= indexCount;
+            } else {
+                break;
+            }
+        }
+        //现在算出来了index,index就是全排列几个字母，还有剩余的count；
+        // 算出一共多少行。
+        let columnCount = Math.ceil(leftCount / strArr.length);// left = 1, index= 2
+        // 算出在哪一列
+        let row = indexOf1000 % strArr.length;
+        if (row == 0) {
+            row = strArr.length;
+        }
+        // cc.log(index, columnCount)
+        while (index > 1) {
+            let c = Math.pow(strArr.length, index - 2);
+            let ss = Math.ceil(columnCount / c);
+
+            if (ss > strArr.length) {
+                ss = ss % strArr.length;
+                if (ss == 0) {
+                    ss = strArr.length;
+                }
+            }
+            // columnCount -= c;
+            // cc.log('ss', ss, c, columnCount);
+            str += strArr[ss - 1];
+            index--;
+        }
+        str += strArr[row - 1];
+        // cc.log('row', row);
+        return str;
+    }
     public static isValidNumber(value) {
         return !isNaN(parseFloat(value)) && isFinite(value);
     }
 }
-
-
-
-
 

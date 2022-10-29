@@ -1,3 +1,4 @@
+import { toStatePaths } from 'xstate/lib/utils';
 import { VM } from './VMManager';
 
 
@@ -22,6 +23,22 @@ export default class VMBase extends cc.Component {
 
     /**储存模板多路径的值 */
     protected templateValueArr: any[] = [];
+    @property()
+    public _dynamicConfig: boolean = false;
+    @property({
+        tooltip: '动态配置代表这个节点的内容是代码配置的。比如生成背包的物品列表'
+    })
+    public set dynamicConfig(val: boolean) {
+        this._dynamicConfig = val;
+        if (this._dynamicConfig == true) {
+            this.enabled = false;
+        } else {
+            this.enabled = true;
+        }
+    }
+    public get dynamicConfig() {
+        return this._dynamicConfig;
+    }
 
     /**VM管理 */
     public VM = VM;
@@ -31,7 +48,10 @@ export default class VMBase extends cc.Component {
      */
     onLoad() {
         if (CC_EDITOR) return;
+        this.praseWatchPathArr();
+    }
 
+    praseWatchPathArr() {
         //提前进行路径数组 的 解析
         let pathArr = this.watchPathArr;
         if (pathArr.length >= 1) {
@@ -50,35 +70,20 @@ export default class VMBase extends cc.Component {
                 this.watchPathArr[i] = paths.join('.');
             }
         }
-
-        //打印出所有绑定的路径，方便调试信息
-        if (DEBUG_WATCH_PATH && CC_DEBUG) {
-            // cc.log('所有监听路径', this.watchPathArr, '<<', this.node.getParent().name + '.' + this.node.name)
-        }
-
-        if (this.watchPathArr.join('') == '') {
-            // cc.log('可能未设置路径的节点:', this.node.getParent().name + '.' + this.node.name);
-        }
-
-
     }
 
     onEnable() {
         if (CC_EDITOR) return;//编辑器模式不能判断
-        this.setMultPathEvent(true);
-
-
-        this.onValueInit();//激活时,调用值初始化
+        this.bindPathEvent(true);
+        this.onValueInit();
     }
 
     onDisable() {
         if (CC_EDITOR) return;//编辑器模式不能判断
-        this.setMultPathEvent(false);
-
+        this.bindPathEvent(false);
     }
 
-    //多路径监听方式
-    private setMultPathEvent(enabled: boolean = true) {
+    private bindPathEvent(enabled: boolean = true) {
         if (CC_EDITOR) return;
         let arr = this.watchPathArr;
         for (let i = 0; i < arr.length; i++) {
@@ -89,7 +94,6 @@ export default class VMBase extends cc.Component {
                 this.VM.unbindPath(path, this.onValueChanged, this);
             }
         }
-
     }
 
     protected onValueInit() {
@@ -97,7 +101,7 @@ export default class VMBase extends cc.Component {
 
     }
 
-    protected onValueChanged(n, o, pathArr: string[]) {
+    protected onValueChanged(newValue, oldValue, pathArr: string[]) {
 
     }
 

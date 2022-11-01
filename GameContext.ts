@@ -14,7 +14,7 @@ export default class GameContext {
     public static instance: GameContext = null;
     public static serviceClassDict: Map<string, any> = new Map();
     public static serviceNameArr: Array<string> = new Array();
-    private _servicesDictionary: Map<string, IService> = new Map<string, IService>();
+    private static _servicesDictionary: Map<string, IService> = new Map<string, IService>();
 
 
     constructor() {
@@ -25,38 +25,32 @@ export default class GameContext {
     public registerServices() {
         GameContext.serviceClassDict.forEach((value, key) => {
             let service: IService = new value();
-            this._servicesDictionary.set(key, service);
+            GameContext._servicesDictionary.set(key, service);
         })
 
-
+        cc.log("registerServices")
         let canvas = cc.director.getScene()?.getChildByName("Canvas");
-
         for (let s of GameContext.serviceNameArr) {
-
-
             let services = canvas.getComponents(s);
-
             if (services.length > 1) {
                 throw new Error("service must be only");
             }
             if (services.length === 0) {
                 services = canvas.getComponentsInChildren(s);
                 if (services.length > 1) {
-                    throw new Error("service must be only");
+                    throw new Error("service must be unique");
                 }
-
             }
             if (services.length === 0) {
                 cc.warn(`can not find service: ${s} in all components`);
             }
-
             // console.log("registServices s", s);
-            this._servicesDictionary.set(s, services[0]);
+            GameContext._servicesDictionary.set(s, services[0]);
         }
     }
 
-    public getService<T extends IService>(c: { new(): T; }): T {
-        let service = <T>this._servicesDictionary.get(c.serviceName);
+    public static getService<T extends IService>(c: { new(): T; }): T {
+        let service = <T>GameContext._servicesDictionary.get(c.serviceName);
         if (!!service) {
             return service;
         }
@@ -64,8 +58,7 @@ export default class GameContext {
 
     }
 
-    public manualRegisterService(name, service) {
-        this._servicesDictionary.set(name, service);
+    public static manualRegisterService(name, service) {
+        GameContext._servicesDictionary.set(name, service);
     }
-
 }

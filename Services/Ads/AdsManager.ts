@@ -157,21 +157,22 @@ export class AdsManager {
         return false;
     }
 
+
     /**
-     * @description 
-     * @description 
-     * @returns {Promise<RewardVideoCallBackMsg>}
+     * @description
+     * @param {string} [position] 广告位
+     * @return {*}  {Promise<RewardVideoCallBackMsg>}
      * @memberof AdsManager
      */
-    showRewardVideo(): Promise<RewardVideoCallBackMsg> {
+    showRewardVideo(position?: string): Promise<RewardVideoCallBackMsg> {
         try {
             cc.log("AdsManager showRewardVideo");
             if (CC_PREVIEW) {
                 return DebugAds.showVideo();
             }
             for (let i of this.adComponentsArr) {
-                if (i.hasRewardVideo()) {
-                    return i.showRewardVideo();
+                if (i.hasRewardVideo(position)) {
+                    return i.showRewardVideo(position);
                 }
             }
             return new Promise<RewardVideoCallBackMsg>((resolve, reject) => {

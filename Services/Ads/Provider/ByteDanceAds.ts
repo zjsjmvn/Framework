@@ -22,12 +22,13 @@ export default class ByteDanceAds implements IAdProvider {
     private bannerId: string = null;
     private bannerAd: tt.BannerAd = null;
     private interstitialId: string = null;
+    private interstitialAd = null;
+
     private rewardedVideoAd: tt.RewardedVideoAd = null;
     private rewardCallBack: Function = null;
     private interstitialAdCallBack: Function = null;
     private hasRewardAdInCache: boolean = false;
     private hasInterstitialAdInCache: boolean = false;
-    private interstitialAd = null;
 
 
     /**
@@ -91,7 +92,7 @@ export default class ByteDanceAds implements IAdProvider {
     }
 
     private initInterstitial(interstitialId) {
-        if (!!window.tt && !!window.tt.createRewardedVideoAd) {
+        if (!!window.tt && !!window.tt.createInterstitialAd) {
             this.interstitialId = interstitialId;
             this.createInterstitialAds();
         }

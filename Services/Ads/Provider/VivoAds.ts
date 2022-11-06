@@ -1,6 +1,5 @@
-import { RewardVideoCallBackMsg } from '../AdsManager';
-import { IAdProvider } from './IAdvertiser';
-
+import { RewardVideoCallBackMsg, RewardVideoBundle, InterstitialAdBundle, BannerAdBundle } from '../AdsManager';
+import { IAdProvider } from './IAdProvider';
 export const VivoRewardVideoErrMsg = {
     // "-1": "未知原因	联系技术对接",
     // "-2": "外部SDK错误	联系技术对接",
@@ -84,232 +83,262 @@ export const VivoRewardVideoErrMsg = {
     // 200000: "无广告返回	检查posId是否正确填写",
     // 201000: "广告无数据	联系技术对接 ",
 }
-
 export default class VivoAds implements IAdProvider {
-    name: string;
-    private bannerId: string = null;
-    private bannerAd = null;
-    private interstitialId: string = null;
-    private interstitialAd = null;
+    private rewardVideoInstanceMap: Map<string, RewardVideoBundle> = new Map();
+    private interstitialInstanceMap: Map<string, InterstitialAdBundle> = new Map();
+    private bannerInstanceMap: Map<string, BannerAdBundle> = new Map();
 
-    private rewardedVideoAd = null;
-    private hasRewardAdInCache: boolean = false;
-
-    constructor(rewardVideoId, bannerId, interstitialID) {
-        this.initBanner(bannerId);
-        this.initRewardVideo(rewardVideoId)
+    constructor(rewardVideosMap: Map<string, string>, interstitialAdsMap: Map<string, string>, bannersMap: Map<string, string>) {
+        this.initRewardVideos(rewardVideosMap);
+        this.initInterstitialAds(interstitialAdsMap);
+        this.initBanners(bannersMap);
     }
 
-    private initBanner(bannerId) {
-        this.bannerId = bannerId;
-    }
 
-    showBanner(style, position?): Promise<boolean> {
+    //#region 插屏广告
+    hasInterstitial(): boolean {
+        return true;
+    }
+    preloadInterstitial(): Promise<boolean> {
+        throw new Error("Method not implemented.");
+    }
+    private initInterstitialAds(interstitialAdsMap: Map<string, string>) {
+        interstitialAdsMap?.forEach((value, key) => {
+            let bundle = new InterstitialAdBundle();
+            bundle.interstitialId = value;
+            this.interstitialInstanceMap.set(key, bundle);
+        });
+    }
+    public showInterstitial(posName: string): Promise<boolean> {
         return new Promise((resolve, reject) => {
-            if (window["qg"]?.getSystemInfoSync().platformVersionCode >= 1031) {
-                //销毁旧实例
-                if (this.bannerAd) {
-                    this.bannerAd.destroy();
-                }
-                // vivo 文档写，banner广告实例不能复用，每次需要重新加载时要重新create
-                //创建横幅实例
-                this.bannerAd = window["qg"].createBannerAd({
-                    posId: this.bannerId,
-                    style: {} as any,//style内无需设置任何字段，banner会在屏幕底部居中显示，没有style字段，banner会在上边显示
-                });
-
-                //事件 - 加载成功
-                this.bannerAd.onLoad(() => {
-                    //标记为横幅广告载入成功成功
-                    console.log('>> VivoAds:: banner 广告加载成功')
+            let bundle = this.interstitialInstanceMap.get(posName);
+            if (!!bundle) {
+                this.createInterstitialAdsWithBundle(bundle);
+                bundle.interstitialInstance
+                    .load()
+                    .then(() => {
+                        bundle.interstitialInstance.show().then(() => {
+                        }).catch(err => {
+                            console.log('show', err);
+                            resolve(false);
+                        })
+                    })
+                    .catch(err => {
+                        console.log('load', err);
+                        resolve(false);
+                    });
+                let onCloseFunc = res => {
+                    console.log('>> VivoAds::插页广告关闭')
+                    bundle.interstitialInstance.offClose(onCloseFunc);
                     resolve(true);
-                    this.bannerAd.show();
-                });
-
-                //事件 - 加载失败
-                this.bannerAd.onError((err) => {
-                    //调试日志
-                    if (err.errCode == 30007) {
-                        cc.log(">> VivoAds:: 系统banner广告播放次数已达限制");
-                    } else {
-                        cc.log(">> VivoAds::showBanner err", JSON.stringify(err));
-                    }
-                    resolve(false)
-                });
-
-                // 监听系统banner隐藏
-                this.bannerAd.onClose(() => {
-                });
-
-                // 监听尺寸变化
-                this.bannerAd.onResize(size => {
-                    // good
-                    console.log(size.width, size.height);
-                    let width = cc.view.getFrameSize().width;
-                    let height = cc.view.getFrameSize().height;
-
-                    // this.bannerAd.style.top = height - size.height;
-                    // this.bannerAd.style.left = (width - size.width) / 2;
-                });
+                }
+                bundle.interstitialInstance.onClose(onCloseFunc);
+            } else {
+                cc.error(`>> VivoAds::showInterstitial 无法找到posName=${posName}的广告`);
+                return Promise.reject(false);
             }
-        })
+        });
+
+
+
     }
-    hideBanner() {
-        if (!!this.bannerAd) {
-            this.bannerAd.destroy();
+
+    private createInterstitialAdsWithBundle(bundle: InterstitialAdBundle) {
+        if (!!window['qg'] && !!window['qg'].createInterstitialAd) {
+            if (bundle.interstitialInstance) {
+                bundle.interstitialInstance.destroy();
+                bundle.interstitialInstance = null;
+            }
+            bundle.interstitialInstance = window['qg'].createInterstitialAd({
+                posId: bundle.interstitialId
+            });
+            bundle.interstitialInstance.onLoad(() => {
+                console.log('>> VivoAds::插页广告加载成功')
+                bundle.hasInterstitialInCache = true;
+            });
+            bundle.interstitialInstance.onError(err => {
+                console.log('>> VivoAds::插页广告 播放失败', err)
+                bundle.hasInterstitialInCache = false;
+            });
         }
     }
 
-    private initRewardVideo(rewardVideoId) {
+    //#endregion
+
+
+    //#region 视频激励广告
+    private initRewardVideo(rewardVideoId, rewardVideoBundle: RewardVideoBundle) {
         if (window['qg'].getSystemInfoSync().platformVersionCode >= 1041) {
-            if (window['qg'].createRewardedVideoAd) {
-                let self = this;
+            if (!!window['qg'] && !!window['qg'].createRewardedVideoAd) {
                 //视频
                 let adInfo = {
                     posId: rewardVideoId
                 };
-
-                this.rewardedVideoAd = window['qg'].createRewardedVideoAd(adInfo);
-                this.rewardedVideoAd.onLoad(() => {
+                rewardVideoBundle.rewardVideoInstance = window['qg'].createRewardedVideoAd(adInfo);
+                rewardVideoBundle.rewardVideoInstance.onLoad(() => {
                     console.log('激励视频 广告加载成功')
-                    this.hasRewardAdInCache = true;
+                    rewardVideoBundle.hasRewardVideoInCache = true;
                 });
-                this.rewardedVideoAd.onError(err => {
+                rewardVideoBundle.rewardVideoInstance.onError(err => {
                     console.log('>> VivoAds::rewardedVideoAd::onError 激励视频播放失败', err)
-                    this.hasRewardAdInCache = false;
+                    rewardVideoBundle.hasRewardVideoInCache = false;
                 });
-                this.preloadRewardVideo();
             } else {
                 console.error(">> VivoAds::initRewardVideo window.qg无效,");
+                return null;
             }
         }
     }
 
-    hasRewardVideo(position: any): boolean {
-        return this.hasRewardAdInCache;
+    private initRewardVideos(rewardVideosMap: Map<string, string>) {
+        if (window['qg'].getSystemInfoSync().platformVersionCode >= 1041) {
+            rewardVideosMap?.forEach((value, key) => {
+                let bundle = new RewardVideoBundle();
+                this.initRewardVideo(value, bundle);
+                this.rewardVideoInstanceMap.set(key, bundle);
+            });
+        }
     }
-    showRewardVideo(position: any): Promise<RewardVideoCallBackMsg> {
+
+    showRewardVideo(posName: string): Promise<RewardVideoCallBackMsg> {
         return new Promise((resolve, reject) => {
-            cc.log(">> VivoAds::showRewardVideo");
-            if (!!this.rewardedVideoAd) {
-                let onCloseFunc = (res) => {
-                    // 用户点击了【关闭广告】按钮
-                    let msg = new RewardVideoCallBackMsg();
-                    if (res.isEnded) {
-                        msg.result = true;
-                    } else {
-                        msg.errMsg = "广告被关闭，奖励失败";
+            let bundle = this.rewardVideoInstanceMap.get(posName);
+            let msg = new RewardVideoCallBackMsg();
+            if (bundle) {
+                cc.log(">> VivoAds::showRewardVideo");
+                if (!!bundle.rewardVideoInstance) {
+                    let onCloseFunc = (res) => {
+                        // 用户点击了【关闭广告】按钮
+                        if (!!res && res.isEnded) {
+                            msg.result = true;
+                        } else {
+                            msg.errMsg = "广告被关闭，奖励失败";
+                        }
+                        resolve(msg);
+                        bundle.rewardVideoInstance.load();
+                        // 取消
+                        bundle.rewardVideoInstance.offClose(onCloseFunc);
                     }
-                    resolve(msg);
-                    this.rewardedVideoAd.load();
-                    // 取消
-                    this.rewardedVideoAd.offClose(onCloseFunc);
-                }
-                this.rewardedVideoAd.onClose(onCloseFunc);
-
-                this.rewardedVideoAd.show().then(() => {
-                    console.log('>> VivoAds 广告显示成功');
-                }).catch((err) => {
-                    console.error('>> VivoAds::showRewardVideo 广告组件出现问题', JSON.stringify(err));
-                    let msg = new RewardVideoCallBackMsg();
+                    bundle.rewardVideoInstance.onClose(onCloseFunc);
+                    bundle.rewardVideoInstance.show().then(() => {
+                        console.log('>> VivoAds 广告显示成功');
+                        bundle.hasRewardVideoInCache = false;
+                    }).catch((err) => {
+                        console.error('>> VivoAds::showRewardVideo 广告组件出现问题', JSON.stringify(err));
+                        msg.result = false;
+                        msg.errMsg = VivoRewardVideoErrMsg[err.errCode] || '广告播放失败';
+                        bundle.hasRewardVideoInCache = false;
+                        bundle.rewardVideoInstance.load();
+                        resolve(msg);
+                    });
+                } else {
+                    cc.error(`>> VivoAds::rewardedVideoAd rewardVideoInstance为空`);
                     msg.result = false;
-                    msg.errMsg = VivoRewardVideoErrMsg[err.errCode] || '广告播放失败';
+                    msg.errMsg = '广告初始化失败，实例为空';
                     resolve(msg);
-                    this.rewardedVideoAd.load();
-                });
-            } else {
-                cc.error(">> VivoAds::rewardedVideoAd 无效");
+                }
+            }
+            else {
+                if (window['qg'].getSystemInfoSync().platformVersionCode >= 1041) {
+                    cc.error(`>> VivoAds::rewardedVideoAd 无法找到posName=${posName}的广告`);
+                    msg.errMsg = `无法找到posName=${posName}的广告`;
+                } else {
+                    cc.error(`>> VivoAds::rewardedVideoAd 基础库版本不满足，无法展示`);
+                    msg.errMsg = `基础库版本太低，需要更新`;
+                }
+                msg.result = false;
+                resolve(msg);
             }
         })
     }
+
     preloadRewardVideo(): Promise<boolean> {
-        return new Promise((resolve, reject) => {
-            if (!!this.rewardedVideoAd) {
-                this.rewardedVideoAd.load()
+        this.rewardVideoInstanceMap.forEach((value, key) => {
+            if (!!value) {
+                value.rewardVideoInstance.load()
                     .then(() => {
-                        console.log('>> VivoAds 拉取视频广告成功');
-                        this.hasRewardAdInCache = true;
-                        resolve(true);
+                        console.log(`>> VivoAds ${key}拉取视频广告成功`);
+                        value.hasRewardVideoInCache = true;
                     })
-                    .catch((err) => {
-                        console.log('>> VivoAds 拉取视频广告失败');
-                        this.hasRewardAdInCache = false;
-                        resolve(false);
+                    .catch(() => {
+                        console.log(`>> VivoAds ${key}拉取视频广告失败`);
+                        value.hasRewardVideoInCache = false;
                     })
-            } else {
-                // 广告组件无效则直接返回false
-                resolve(false);
             }
         })
+        return Promise.resolve(true);
     }
 
-    private initInterstitial(interstitialId) {
-        if (window['qg'].getSystemInfoSync().platformVersionCode >= 1031) {
-            if (window['qg'].createInterstitialAd) {
-                this.interstitialId = interstitialId;
-                this.createInterstitialAds();
-            }
-        }
+    hasRewardVideo(posName: string): boolean {
+        let bundle = this.rewardVideoInstanceMap.get(posName);
+        return bundle.hasRewardVideoInCache;
     }
 
-    /**
-     * @description 插屏广告实例不能复用，每次需要重新加载时要重新create
-     * @private
-     * @memberof VivoAds
-     */
-    private createInterstitialAds() {
-        if (!!window["qg"] && !!window["qg"].createInterstitialAd) {
-            if (this.interstitialAd) {
-                this.interstitialAd.destroy();
-                this.interstitialAd = null;
-            }
-            this.interstitialAd = window["qg"].createInterstitialAd({
-                posId: this.interstitialId
-            });
-            this.interstitialAd.onLoad(() => {
-                console.log('>> VivoAds::插页广告加载成功')
-            });
-            this.interstitialAd.onError(err => {
-                console.log('>> VivoAds::插页广告 播放失败', err)
-            });
-            return true;
-        }
-        return false;
-    }
-    hasInterstitial(): boolean {
-        return true;
+
+
+
+
+    //#endregion
+
+
+    //#region  banner广告
+
+    private initBanners(bannersMap: Map<string, string>) {
+        bannersMap?.forEach((value, key) => {
+            let bundle = new BannerAdBundle();
+            bundle.bannerId = value;
+            this.bannerInstanceMap.set(key, bundle);
+        });
     }
 
-    preloadInterstitial(): Promise<boolean> {
-        throw new Error('Method not implemented.');
-    }
-    showInterstitial() {
-        this.createInterstitialAds();
+
+    showBanner(style, posName: string): Promise<boolean> {
         return new Promise((resolve, reject) => {
-            this.interstitialAd?.load()
-                .then(() => {
-                    this.interstitialAd.show().then(() => {
-                        console.log('>> VivoAds::插页广告 播放成功')
-                    }).catch(err => {
-                        console.log('show', err);
-                        resolve(false);
-                    })
-                })
-                .catch(err => {
-                    console.log('load', err);
-                    resolve(false);
-                });
+            if (window["qg"]?.getSystemInfoSync().platformVersionCode >= 1031) {
+                let bundle = this.bannerInstanceMap.get(posName);
+                if (bundle) {
+                    if (window['qg'] && window['qg'].createBannerAd) {
+                        let param = {
+                            posId: bundle.bannerId,
+                            style: {},
+                        };
+                        if (bundle.bannerInstance) {
+                            bundle.bannerInstance.destroy();
+                        }
+                        bundle.bannerInstance = window['qg'].createBannerAd(param);
+                        bundle.bannerInstance.onError(err => {
+                            if (err.errCode == 30007) {
+                                cc.log(">> VivoAds:: 系统banner广告播放次数已达限制");
+                            } else {
+                                cc.log(">> VivoAds::showBanner err", JSON.stringify(err));
+                            }
+                            resolve(false)
+                        });
+                        bundle.bannerInstance.onLoad(() => {
+                            console.log('>> VivoAds:: banner 广告加载成功')
+                            resolve(true);
+                            bundle.bannerInstance.show();
+                        });
+                        bundle.bannerInstance.onResize(size => {
 
-            let onCloseFunc = res => {
-                console.log('>> VivoAds::插页广告关闭')
-                this.interstitialAd.offClose(onCloseFunc);
-                resolve(true);
+                        });
+                    };
+                }
             }
-            this.interstitialAd?.onClose(onCloseFunc);
+            resolve(false);
         })
     }
 
+    hideBanner(posName: string) {
+        let bundle = this.bannerInstanceMap.get(posName);
+        bundle?.bannerInstance.destroy();
+    }
 
+    //#endregion
 
 
 }
+
+
+
+

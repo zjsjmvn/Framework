@@ -1,5 +1,5 @@
 import { RewardVideoCallBackMsg } from '../AdsManager';
-import { IAdProvider } from './IAdvertiser';
+import { IAdProvider } from './IAdProvider';
 
 export const QQRewardVideoErrMsg = {
     1000: '后端接口调用失败',

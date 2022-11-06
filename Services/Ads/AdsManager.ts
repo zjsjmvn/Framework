@@ -1,7 +1,5 @@
-import { IAdProvider } from './Provider/IAdvertiser';
-import DebugAds from './DebugAds';
+import { IAdProvider } from './Provider/IAdProvider';
 import { singleton } from '../../Tools/Decorator/Singleton';
-import { resolve } from '../../Tools/IOC/resolution/resolver';
 
 /**
  * @description 视频广告播放回调，如果失败就读取errMsg
@@ -25,6 +23,29 @@ export class RewardVideoCallBackMsg {
     errMsg: string = "";
 }
 
+export class RewardVideoBundle {
+    /**
+     * @description 广告实例
+     * @memberof RewardVideoBundle
+     */
+    public rewardVideoInstance;
+    /**
+     * @description 是否有缓存的视频广告
+     * @memberof RewardVideoBundle
+     */
+    public hasRewardVideoInCache: boolean = false;
+}
+
+export class InterstitialAdBundle {
+    public interstitialInstance;
+    public interstitialId;
+    public hasInterstitialInCache: boolean = false;
+}
+
+export class BannerAdBundle {
+    public bannerInstance;
+    public bannerId;
+}
 
 @singleton
 export class AdsManager {
@@ -46,19 +67,19 @@ export class AdsManager {
     private _last_show_interstitial_timestamp: number = 0;
 
     /**
-     * @description 加入的广告组件都会存在这里。
+     * @description 加入的广告提供商都会存在这里。
      * @private
      * @type {Array<IAdProvider>}
      * @memberof AdsManager
      */
-    private adComponentsArr: Array<IAdProvider> = new Array<IAdProvider>();
+    private adProviderArr: Array<IAdProvider> = new Array<IAdProvider>();
 
     constructor() {
 
     }
 
-    public addAdvertiser(advertiser: IAdProvider) {
-        this.adComponentsArr.push(advertiser);
+    public addAdProvider(advertiser: IAdProvider) {
+        this.adProviderArr.push(advertiser);
     }
     public removeAdvertiser(advertiser: IAdProvider) {
 
@@ -68,73 +89,55 @@ export class AdsManager {
      * 显示横幅
      * @returns 无
      */
-    async showBanner(style?) {
+    async showBanner(style?, posName: string = "Default") {
         if (this.isNoAds()) return;
-
-        if (CC_PREVIEW) {
-            DebugAds.showBanner();
-            return
-        }
         style = style || this.defaultBannerStyle();
-        for (let i of this.adComponentsArr) {
-            if (!!await i.showBanner(style)) {
+        for (let i of this.adProviderArr) {
+            if (!!await i.showBanner(style, posName)) {
                 return;
             }
         }
     }
 
-    hideBanner() {
-        if (CC_PREVIEW) {
-            DebugAds.hideBanner();
-            return
-        }
+    hideBanner(posName: string = "Default") {
         // 也需要判断广告商是否有banner广告，并不是所有广告商都有banner
-        for (let i of this.adComponentsArr) {
-            i.hideBanner();
+        for (let i of this.adProviderArr) {
+            i.hideBanner(posName);
         }
     }
 
     _checkInterstitialIntervalTimeValid() {
         // 显示插页要控制时间。在制定时间内。只显示一次广告//
         // 目前设置两分钟只显示一次广告
-
-
         return true;
     }
 
-    /**当前有插页能显示 */
-    hasInterstitial() {
-        if (this.isNoAds()) return false;
 
+    hasInterstitial(posName: string) {
+        if (this.isNoAds()) return false;
         if (!this._checkInterstitialIntervalTimeValid()) {
             return false;
         }
-
-
-
-
         return false;
     }
 
+
     /**
-     * @description 插页广告
-     * @returns 
+     * @description 展示插页广告
+     * @param {string} posName 广告位名称
+     * @return {*}  
      * @memberof AdsManager
      */
-    showInterstitial() {
+    showInterstitial(posName: string = "Default") {
         try {
             cc.log("AdsManager showInterstitial");
-            if (CC_PREVIEW) {
-                return DebugAds.showInterstitial();
-            }
-            for (let i of this.adComponentsArr) {
-                if (i.hasInterstitial()) {
-                    return i.showInterstitial();
+            for (let i of this.adProviderArr) {
+                if (i.hasInterstitial(posName)) {
+                    return i.showInterstitial(posName);
                 }
             }
-            return new Promise((resolve, reject) => {
-                resolve(false);
-            })
+            return Promise.resolve(false);
+
         } catch (e) {
             console.error(`showInterstitial: ${e}`);
         }
@@ -145,18 +148,14 @@ export class AdsManager {
      * @returns {boolean}
      * @memberof AdsManager
      */
-    get hasRewardVideo() {
-        if (CC_PREVIEW) {
-            return true;
-        }
-        for (let i of this.adComponentsArr) {
-            if (i.hasRewardVideo()) {
+    hasRewardVideo(posName: string = "Default") {
+        for (let i of this.adProviderArr) {
+            if (i.hasRewardVideo(posName)) {
                 return true;
             }
         }
         return false;
     }
-
 
     /**
      * @description
@@ -164,23 +163,18 @@ export class AdsManager {
      * @return {*}  {Promise<RewardVideoCallBackMsg>}
      * @memberof AdsManager
      */
-    showRewardVideo(position?: string): Promise<RewardVideoCallBackMsg> {
+    showRewardVideo(posName: string = "Default"): Promise<RewardVideoCallBackMsg> {
         try {
             cc.log("AdsManager showRewardVideo");
-            if (CC_PREVIEW) {
-                return DebugAds.showVideo();
-            }
-            for (let i of this.adComponentsArr) {
-                if (i.hasRewardVideo(position)) {
-                    return i.showRewardVideo(position);
+            for (let i of this.adProviderArr) {
+                if (i.hasRewardVideo(posName)) {
+                    return i.showRewardVideo(posName);
                 }
             }
-            return new Promise<RewardVideoCallBackMsg>((resolve, reject) => {
-                let msg = new RewardVideoCallBackMsg();
-                msg.result = false;
-                msg.errMsg = "无可用广告";
-                resolve(msg);
-            })
+            let msg = new RewardVideoCallBackMsg();
+            msg.result = false;
+            msg.errMsg = "无可用广告";
+            return Promise.resolve(msg);
         } catch (e) {
             console.error(`showRewardVideo: ${e}`);
         }
@@ -196,14 +190,14 @@ export class AdsManager {
             if (!!parallel) {
                 // 并行加载
                 let promiseArr = new Array<Promise<boolean>>();
-                for (let i of this.adComponentsArr) {
+                for (let i of this.adProviderArr) {
                     let promise = i.preloadRewardVideo();
                     promiseArr.push(promise);
                 }
                 await Promise.all(promiseArr);
             } else {
                 // 按顺序预加载，只要有一个加载到就结束。
-                for (let i of this.adComponentsArr) {
+                for (let i of this.adProviderArr) {
                     if (await i.preloadRewardVideo() == true) {
                         return;
                     }
@@ -223,7 +217,6 @@ export class AdsManager {
     defaultBannerStyle() {
         let width = cc.view.getFrameSize().width;
         let height = cc.view.getFrameSize().height;
-
         return { width: width };
     }
 
@@ -237,7 +230,5 @@ export class AdsManager {
     private isNoAds() {
         return false;
     }
-
-
 }
 

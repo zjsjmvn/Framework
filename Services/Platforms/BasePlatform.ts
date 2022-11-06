@@ -1,4 +1,4 @@
-import { IAdProvider } from '../Ads/Provider/IAdvertiser';
+import { IAdProvider } from '../Ads/Provider/IAdProvider';
 import { IdComponent } from '../../../GamePlay/ECS/components/Components';
 export default abstract class BasePlatform {
     private adProviders: Array<IAdProvider>;

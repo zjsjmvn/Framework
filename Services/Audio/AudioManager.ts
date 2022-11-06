@@ -3,18 +3,18 @@ export default class AudioManager {
     public static get instance() {
         return this._instance || (this._instance = new AudioManager());
     }
-    public audioPath: string = null;
-    lastPlayedMusicPath: string = ''
-    playing_music = false;
-    playing_music_name = undefined;
-    maxVolume = 1;
-    audio_clip_map: Map<string, cc.AudioClip> = new Map()
-    audio_path_map: Map<string, string> = new Map()
-    loading: boolean = false;
+    private audioPath: string = null;
+    private lastPlayedMusicPath: string = ''
+    private playing_music = false;
+    private playing_music_name = undefined;
+    private maxVolume = 1;
+    private audio_clip_map: Map<string, cc.AudioClip> = new Map()
+    private audio_path_map: Map<string, string> = new Map()
+    private loading: boolean = false;
     private loadingAudioArr: Array<string> = new Array();
-    volumeChangeFunc = null;
-    _canPlayMusic: boolean = true;
-    _canPlayEffect: boolean = true;
+    private volumeChangeFunc = null;
+    private _canPlayMusic: boolean = true;
+    private _canPlayEffect: boolean = true;
     public get canPlayMusic() {
         return this._canPlayMusic;
     }
@@ -71,8 +71,9 @@ export default class AudioManager {
             });
         }
     }
-
-
+    public init(audioPath) {
+        this.audioPath = audioPath;
+    }
 
     public playMusic(filePath, volume = 1) {
         if (!this.canPlayMusic) {

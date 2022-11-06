@@ -1,5 +1,6 @@
-import { RewardVideoCallBackMsg } from '../AdsManager';
-import { IAdProvider } from './IAdvertiser';
+import { RewardVideoCallBackMsg, InterstitialAdBundle, BannerAdBundle, RewardVideoBundle } from '../AdsManager';
+import { IAdProvider } from './IAdProvider';
+import { Intersection, deserialize } from '../../../../../../creator';
 /**
  * 激励广告播放失败代码翻译
  */
@@ -16,214 +17,172 @@ export const TTRewardVideoErrMsg = {
 };
 
 
+
 export default class ByteDanceAds implements IAdProvider {
+    private rewardVideoInstanceMap: Map<string, RewardVideoBundle> = new Map();
+    private interstitialInstanceMap: Map<string, InterstitialAdBundle> = new Map();
+    private bannerInstanceMap: Map<string, BannerAdBundle> = new Map();
 
-    name
-    private bannerId: string = null;
-    private bannerAd: tt.BannerAd = null;
-    private interstitialId: string = null;
-    private interstitialAd = null;
-
-    private rewardedVideoAd: tt.RewardedVideoAd = null;
-    private rewardCallBack: Function = null;
-    private interstitialAdCallBack: Function = null;
-    private hasRewardAdInCache: boolean = false;
-    private hasInterstitialAdInCache: boolean = false;
-
-
-    /**
-     *Creates an instance of ByteDanceAds.
-     * @param {*} rewardVideoId
-     * @param {*} bannerId
-     * @memberof ByteDanceAds
-     */
-    constructor(rewardVideoId, bannerId, interstitialID) {
-        this.initRewardVideo(rewardVideoId);
-        this.initBanner(bannerId)
-        this.initInterstitial(interstitialID);
+    constructor(rewardVideosMap: Map<string, string>, interstitialAdsMap: Map<string, string>, bannersMap: Map<string, string>) {
+        this.initRewardVideos(rewardVideosMap);
+        this.initInterstitialAds(interstitialAdsMap);
+        this.initBanners(bannersMap);
     }
+
+
+    //#region 插屏广告
     hasInterstitial(): boolean {
         return true;
     }
     preloadInterstitial(): Promise<boolean> {
         throw new Error("Method not implemented.");
     }
-    private initRewardVideo(rewardVideoId) {
+    private initInterstitialAds(interstitialAdsMap: Map<string, string>) {
+        interstitialAdsMap?.forEach((value, key) => {
+            let bundle = new InterstitialAdBundle();
+            bundle.interstitialId = value;
+            this.interstitialInstanceMap.set(key, bundle);
+        });
+    }
+    public showInterstitial(posName: string): Promise<boolean> {
+        return new Promise((resolve, reject) => {
+            let bundle = this.interstitialInstanceMap.get(posName);
+            if (!!bundle) {
+                this.createInterstitialAdsWithBundle(bundle);
+                const isDouyin = tt.getSystemInfoSync().appName === "Douyin";
+                // 插屏广告仅今日头条安卓客户端支持
+                if (isDouyin) {
+                    bundle.interstitialInstance
+                        .load()
+                        .then(() => {
+                            bundle.interstitialInstance.show().then(() => {
+                            }).catch(err => {
+                                console.log('show', err);
+                                resolve(false);
+                            })
+                        })
+                        .catch(err => {
+                            console.log('load', err);
+                            resolve(false);
+                        });
+                    let onCloseFunc = res => {
+                        console.log('>> VivoAds::插页广告关闭')
+                        bundle.interstitialInstance.offClose(onCloseFunc);
+                        resolve(true);
+                    }
+                    bundle.interstitialInstance.onClose(onCloseFunc);
+                } else {
+                    resolve(false);
+                }
+            } else {
+                cc.error(`>> VivoAds::showInterstitial 无法找到posName=${posName}的广告`);
+                return Promise.reject(false);
+            }
+        });
+    }
+
+    private createInterstitialAdsWithBundle(bundle: InterstitialAdBundle) {
+        if (!!window.tt && !!window.tt.createInterstitialAd) {
+            const isDouyin = tt.getSystemInfoSync().appName === "Douyin";
+            if (isDouyin) {
+                if (bundle.interstitialInstance) {
+                    bundle.interstitialInstance.destroy();
+                    bundle.interstitialInstance = null;
+                }
+                bundle.interstitialInstance = tt.createInterstitialAd({
+                    adUnitId: bundle.interstitialId
+                });
+                bundle.interstitialInstance.onLoad(() => {
+                    console.log('插页广告加载成功')
+                    bundle.hasInterstitialInCache = true;
+                });
+                bundle.interstitialInstance.onError(err => {
+                    console.log('插页广告 播放失败', err)
+                    bundle.hasInterstitialInCache = false;
+                });
+            }
+        }
+    }
+
+    //#endregion
+
+
+    //#region 视频激励广告
+    private initRewardVideo(rewardVideoId, rewardVideoBundle: RewardVideoBundle) {
         if (!!window.tt && !!window.tt.createRewardedVideoAd) {
-            let self = this;
             //视频
             let adInfo = {
                 adUnitId: rewardVideoId
             };
-
-            this.rewardedVideoAd = window.tt.createRewardedVideoAd(adInfo);
-            this.rewardedVideoAd.onLoad(() => {
+            rewardVideoBundle.rewardVideoInstance = window.tt.createRewardedVideoAd(adInfo);
+            rewardVideoBundle.rewardVideoInstance.onLoad(() => {
                 console.log('激励视频 广告加载成功')
-                this.hasRewardAdInCache = true;
-
+                rewardVideoBundle.hasRewardVideoInCache = true;
             });
-            this.rewardedVideoAd.onError(err => {
+            rewardVideoBundle.rewardVideoInstance.onError(err => {
                 console.log('激励视频播放失败', err)
-                this.hasRewardAdInCache = false;
-
+                rewardVideoBundle.hasRewardVideoInCache = false;
             });
-            this.rewardedVideoAd.onClose(res => {
-                // 用户点击了【关闭广告】按钮
-                // 小于 2.1.0 的基础库版本，res 是一个 undefined
-                if (!!res && res.isEnded || res === undefined) {
-                    cc.log('tt rewardvideo success', JSON.stringify(res));
-                    if (!!this.rewardCallBack) {
-                        this.rewardCallBack(true);
-                    }
-                } else {
-                    if (!!this.rewardCallBack) {
-                        this.rewardCallBack(false);
-                    }
-                }
-            });
-
-            this.preloadRewardVideo();
         } else {
             console.error("ByteDanceAds：并不是头条平台，却引用了头条的广告组件");
+            return null;
         }
     }
-    private initBanner(bannerId) {
-        this.bannerId = bannerId;
+
+    private initRewardVideos(rewardVideosMap: Map<string, string>) {
+        rewardVideosMap?.forEach((value, key) => {
+            let bundle = new RewardVideoBundle();
+            this.initRewardVideo(value, bundle);
+            this.rewardVideoInstanceMap.set(key, bundle);
+        });
     }
 
-    private initInterstitial(interstitialId) {
-        if (!!window.tt && !!window.tt.createInterstitialAd) {
-            this.interstitialId = interstitialId;
-            this.createInterstitialAds();
-        }
-    }
-    private createInterstitialAds() {
-        if (!!window.tt && !!window.tt.createInterstitialAd) {
-            const isDouyin = tt.getSystemInfoSync().appName === "Douyin";
-            if (isDouyin) {
-                if (this.interstitialAd) {
-                    this.interstitialAd.destroy();
-                    this.interstitialAd = null;
-                }
-                this.interstitialAd = tt.createInterstitialAd({
-                    adUnitId: this.interstitialId
-                });
-                this.interstitialAd.onLoad(() => {
-                    console.log('插页广告加载成功')
-                    this.hasInterstitialAdInCache = true;
-
-                });
-                this.interstitialAd.onError(err => {
-                    console.log('插页广告 播放失败', err)
-                    this.hasInterstitialAdInCache = false;
-
-                });
-                this.interstitialAd.onClose(res => {
-                    console.log('插页广告关闭')
-                    this.interstitialAdCallBack(true);
-                    this.interstitialAdCallBack = null;
-
-                });
-            }
-        }
-    }
-    showBanner(style: tt.RectanbleStyle): Promise<boolean> {
+    showRewardVideo(posName: string): Promise<RewardVideoCallBackMsg> {
         return new Promise((resolve, reject) => {
-            if (window.tt && window.tt.createBannerAd) {
-                console.log(JSON.stringify(style));
-                let param = {
-                    adUnitId: this.bannerId,
-                    style: style
-                };
-                this.bannerAd = window.tt.createBannerAd(param);
-                this.bannerAd.onError(err => {
-                    console.log("ByteDance banner error: ", err)
-                    resolve(false)
-                });
-
-                this.bannerAd.onLoad(() => {
-                    console.log('tt banner 广告加载成功')
-                    resolve(true);
-                    this.bannerAd.show();
-                });
-                //TODO: 这个地方会让广告在屏幕最下居中。
-                this.bannerAd.onResize(size => {
-                    // good
-                    console.log(size.width, size.height);
-                    let width = cc.view.getFrameSize().width;
-                    let height = cc.view.getFrameSize().height;
-
-                    this.bannerAd.style.top = height - size.height;
-                    this.bannerAd.style.left = (width - size.width) / 2;
-
-                });
-            };
-        })
-    }
-
-    showInterstitial(): Promise<boolean> {
-        this.createInterstitialAds();
-        return new Promise((resolve, reject) => {
-            const isDouyin = tt.getSystemInfoSync().appName === "Douyin";
-            // 插屏广告仅今日头条安卓客户端支持
-            if (isDouyin) {
-                this.interstitialAd
-                    .load()
-                    .then(() => {
-                        this.interstitialAd.show().then(() => {
-                            this.interstitialAdCallBack = (result) => {
-                                resolve(result);
-                            }
-                        }).catch(err => {
-                            console.log('show', err);
-                            resolve(false);
-                        })
-                    })
-                    .catch(err => {
-                        console.log('load', err);
-                        resolve(false);
+            let bundle = this.rewardVideoInstanceMap.get(posName);
+            let msg = new RewardVideoCallBackMsg();
+            if (bundle) {
+                cc.log(">> VivoAds::showRewardVideo");
+                if (!!bundle.rewardVideoInstance) {
+                    let onCloseFunc = (res) => {
+                        // 用户点击了【关闭广告】按钮
+                        if (!!res && res.isEnded) {
+                            msg.result = true;
+                        } else {
+                            msg.errMsg = "广告被关闭，奖励失败";
+                        }
+                        resolve(msg);
+                        bundle.rewardVideoInstance.load();
+                        // 取消
+                        bundle.rewardVideoInstance.offClose(onCloseFunc);
+                    }
+                    bundle.rewardVideoInstance.onClose(onCloseFunc);
+                    bundle.rewardVideoInstance.show().then(() => {
+                        console.log('>> VivoAds 广告显示成功');
+                        bundle.hasRewardVideoInCache = false;
+                    }).catch((err) => {
+                        console.error('>> VivoAds::showRewardVideo 广告组件出现问题', JSON.stringify(err));
+                        msg.result = false;
+                        msg.errMsg = TTRewardVideoErrMsg[err.errCode] || '广告播放失败';
+                        bundle.hasRewardVideoInCache = false;
+                        bundle.rewardVideoInstance.load();
+                        resolve(msg);
                     });
-            } else {
-                resolve(false);
-            }
-        })
-    }
-    showRewardVideo(): Promise<RewardVideoCallBackMsg> {
-        return new Promise((resolve, reject) => {
-            cc.log("ByteDanceAds showRewardVideo");
-            this.rewardCallBack = (result: boolean) => {
-                let msg = new RewardVideoCallBackMsg();
-                if (result == true) {
-                    msg.result = true;
                 } else {
-                    msg.errMsg = "广告被关闭，奖励失败";
-                }
-                cc.log("showRewardVideo msg", msg.errMsg);
-                resolve(msg);
-                this.rewardCallBack = null;
-            }
-            if (!!this.rewardedVideoAd) {
-                this.rewardedVideoAd.show().then(() => {
-                    console.log('广告显示成功');
-                }).catch((err) => {
-                    console.log('广告组件出现问题', err);
-                    let msg = new RewardVideoCallBackMsg();
+                    cc.error(`>> VivoAds::rewardedVideoAd rewardVideoInstance为空`);
                     msg.result = false;
-                    msg.errMsg = TTRewardVideoErrMsg[err.errCode] || '广告播放失败';
+                    msg.errMsg = '广告初始化失败，实例为空';
                     resolve(msg);
-                });
-            } else {
-                cc.error("rewardedVideoAd 无效");
+                }
             }
-
+            else {
+                cc.error(`>> VivoAds::rewardedVideoAd 无法找到posName=${posName}的广告`);
+                msg.result = false;
+                msg.errMsg = `无法找到posName=${posName}的广告`;
+                resolve(msg);
+            }
         })
     }
-    hideBanner() {
-        if (!!this.bannerAd) {
-            this.bannerAd.destroy();
-        }
-    }
-
     /**
      * @description 预加载广告
      * @date 2019-09-09
@@ -231,29 +190,91 @@ export default class ByteDanceAds implements IAdProvider {
      * @memberof ByteDanceAds
      */
     preloadRewardVideo(): Promise<boolean> {
-        return new Promise((resolve, reject) => {
-            if (!!this.rewardedVideoAd) {
-                this.rewardedVideoAd.load()
+        this.rewardVideoInstanceMap.forEach((value, key) => {
+            if (!!value) {
+                value.rewardVideoInstance.load()
                     .then(() => {
-                        console.log('ByteDanceAds 拉取视频广告成功');
-                        this.hasRewardAdInCache = true;
-                        resolve(true);
+                        console.log(`ByteDanceAds ${key}拉取视频广告成功`);
+                        value.hasRewardVideoInCache = true;
                     })
                     .catch(() => {
-                        console.log('ByteDanceAds 拉取视频广告失败');
-                        this.hasRewardAdInCache = false;
-                        resolve(false);
+                        console.log(`ByteDanceAds ${key}拉取视频广告失败`);
+                        value.hasRewardVideoInCache = false;
                     })
-            } else {
-                // 广告组件无效则直接返回false
-                resolve(false);
+            }
+        })
+        return Promise.resolve(true);
+    }
+
+    hasRewardVideo(posName: string): boolean {
+        let bundle = this.rewardVideoInstanceMap.get(posName);
+        return bundle.hasRewardVideoInCache;
+    }
+
+
+
+
+
+    //#endregion
+
+
+    //#region  banner广告
+
+    private initBanners(bannersMap: Map<string, string>) {
+        bannersMap?.forEach((value, key) => {
+            let bundle = new BannerAdBundle();
+            bundle.bannerId = value;
+            this.bannerInstanceMap.set(key, bundle);
+        });
+    }
+
+
+    showBanner(style: tt.RectanbleStyle, posName: string): Promise<boolean> {
+        return new Promise((resolve, reject) => {
+            let bundle = this.bannerInstanceMap.get(posName);
+            if (bundle) {
+                if (window.tt && window.tt.createBannerAd) {
+                    console.log(JSON.stringify(style));
+                    let param = {
+                        adUnitId: bundle.bannerId,
+                        style: style
+                    };
+                    if (bundle.bannerInstance) {
+                        bundle.bannerInstance.destroy();
+                    }
+                    bundle.bannerInstance = window.tt.createBannerAd(param);
+                    bundle.bannerInstance.onError(err => {
+                        console.log("ByteDance banner error: ", err)
+                        resolve(false)
+                    });
+                    bundle.bannerInstance.onLoad(() => {
+                        console.log('tt banner 广告加载成功')
+                        resolve(true);
+                        bundle.bannerInstance.show();
+                    });
+                    //TODO: 这个地方会让广告在屏幕最下居中，被写死，需要修改
+                    bundle.bannerInstance.onResize(size => {
+                        console.log(size.width, size.height);
+                        let width = cc.view.getFrameSize().width;
+                        let height = cc.view.getFrameSize().height;
+                        bundle.bannerInstance.style.top = height - size.height;
+                        bundle.bannerInstance.style.left = (width - size.width) / 2;
+                    });
+                };
             }
         })
     }
 
-
-    hasRewardVideo(): boolean {
-        return this.hasRewardAdInCache;
+    hideBanner(posName: string) {
+        let bundle = this.bannerInstanceMap.get(posName);
+        bundle?.bannerInstance.destroy();
     }
 
+    //#endregion
+
+
 }
+
+
+
+

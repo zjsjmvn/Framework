@@ -1,4 +1,4 @@
-import { IAdProvider } from '../../Ads/Provider/IAdvertiser';
+import { IAdProvider } from '../../Ads/Provider/IAdProvider';
 import BasePlatform from '../BasePlatform';
 import { TTCanIUse, TT_onTouchEnd } from './TTDecorators';
 export default class TTPlatform extends BasePlatform {

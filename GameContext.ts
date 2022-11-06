@@ -1,28 +1,20 @@
 import IService from "./Services/IService";
 import { singleton } from './Tools/Decorator/Singleton';
 
-
-@singleton
+/**
+ * @description 
+ * @export
+ * @class GameContext
+ */
 export default class GameContext {
-
-    /**
-     * @description only for ide intellisense 
-     * @static
-     * @type {GameContext}
-     * @memberof GameContext
-     */
-    public static instance: GameContext = null;
     public static serviceClassDict: Map<string, any> = new Map();
     public static serviceNameArr: Array<string> = new Array();
     private static _servicesDictionary: Map<string, IService> = new Map<string, IService>();
 
-
-    constructor() {
+    public static init() {
         this.registerServices();
     }
-
-
-    public registerServices() {
+    public static registerServices() {
         GameContext.serviceClassDict.forEach((value, key) => {
             let service: IService = new value();
             GameContext._servicesDictionary.set(key, service);

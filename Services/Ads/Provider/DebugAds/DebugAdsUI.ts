@@ -1,62 +1,15 @@
-import { RewardVideoCallBackMsg, AdsManager } from './AdsManager';
-
-enum DebugAdsEnum {
-    Banner = 0,
-    Interstitial = 1,
-    Reward = 2,
-}
+import { RewardVideoCallBackMsg, AdsManager } from '../../AdsManager';
+import { DebugAdsEnum } from './DebugAds';
 
 
 const { ccclass, property } = cc._decorator;
 @ccclass
 
-export default class DebugAds extends cc.Component {
+export default class DebugAdsView extends cc.Component {
     private rewardAdsCallFunc: (pram: RewardVideoCallBackMsg) => {} = null;
     private interstitialCallFunc: (result: boolean) => {} = null;
-    public static showInterstitial(): Promise<boolean> {
-        return new Promise((resolve, reject) => {
-            let node = new cc.Node('DebugAds');
-            let debugAds: DebugAds = node.addComponent('DebugAds');
-            let callback = (result) => {
-                resolve(result);
-            }
-            debugAds.initInterstitialAds(callback);
-        })
-    }
-    public static showVideo(): Promise<RewardVideoCallBackMsg> {
-        return new Promise((resolve, reject) => {
-            cc.log("DebugAds showVideo ")
-            let node = new cc.Node('DebugAds');
-            let debugAds: DebugAds = node.addComponent(DebugAds);
-            let callback = (result: RewardVideoCallBackMsg) => {
-                resolve(result);
-            }
-            debugAds.initRewardAds(callback);
-        })
-    }
 
-    public static showBanner() {
-        // cc.log('showBanner');
-        if (cc.director.getScene()) {
-            let banner = cc.director.getScene().getChildByName('Banner');
-            if (!banner) {
-                let node = new cc.Node('Banner');
-                let debugAds = node.addComponent('DebugAds');
-                debugAds.initBanner();
-                cc.log('showBanner', node.parent);
-                cc.director.getScene().addChild(node);
-            }
-        }
-    }
-    public static hideBanner() {
-        if (cc.director.getScene()) {
-            let banner = cc.director.getScene().getChildByName('Banner');
-            if (banner) {
-                banner.getComponent('DebugAds').close();
-            }
-        }
-    }
-    initBanner(style) {
+    initBanner(style?) {
         this.node.zIndex = 9999;
         // cc.game.addPersistRootNode(this.node);
         this.node.addComponent(cc.BlockInputEvents);

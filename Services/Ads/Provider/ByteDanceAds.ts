@@ -1,6 +1,5 @@
 import { RewardVideoCallBackMsg, InterstitialAdBundle, BannerAdBundle, RewardVideoBundle } from '../AdsManager';
 import { IAdProvider } from './IAdProvider';
-import { Intersection, deserialize } from '../../../../../../creator';
 /**
  * 激励广告播放失败代码翻译
  */
@@ -66,7 +65,7 @@ export default class ByteDanceAds implements IAdProvider {
                             resolve(false);
                         });
                     let onCloseFunc = res => {
-                        console.log('>> VivoAds::插页广告关闭')
+                        console.log('>> ByteDanceAds::插页广告关闭')
                         bundle.interstitialInstance.offClose(onCloseFunc);
                         resolve(true);
                     }
@@ -75,7 +74,7 @@ export default class ByteDanceAds implements IAdProvider {
                     resolve(false);
                 }
             } else {
-                cc.error(`>> VivoAds::showInterstitial 无法找到posName=${posName}的广告`);
+                cc.error(`>> ByteDanceAds::showInterstitial 无法找到posName=${posName}的广告`);
                 return Promise.reject(false);
             }
         });
@@ -127,6 +126,7 @@ export default class ByteDanceAds implements IAdProvider {
             console.error("ByteDanceAds：并不是头条平台，却引用了头条的广告组件");
             return null;
         }
+
     }
 
     private initRewardVideos(rewardVideosMap: Map<string, string>) {
@@ -135,6 +135,7 @@ export default class ByteDanceAds implements IAdProvider {
             this.initRewardVideo(value, bundle);
             this.rewardVideoInstanceMap.set(key, bundle);
         });
+        this.preloadRewardVideo()
     }
 
     showRewardVideo(posName: string): Promise<RewardVideoCallBackMsg> {
@@ -142,7 +143,7 @@ export default class ByteDanceAds implements IAdProvider {
             let bundle = this.rewardVideoInstanceMap.get(posName);
             let msg = new RewardVideoCallBackMsg();
             if (bundle) {
-                cc.log(">> VivoAds::showRewardVideo");
+                cc.log(">> ByteDanceAds::showRewardVideo");
                 if (!!bundle.rewardVideoInstance) {
                     let onCloseFunc = (res) => {
                         // 用户点击了【关闭广告】按钮
@@ -158,10 +159,10 @@ export default class ByteDanceAds implements IAdProvider {
                     }
                     bundle.rewardVideoInstance.onClose(onCloseFunc);
                     bundle.rewardVideoInstance.show().then(() => {
-                        console.log('>> VivoAds 广告显示成功');
+                        console.log('>> ByteDanceAds 广告显示成功');
                         bundle.hasRewardVideoInCache = false;
                     }).catch((err) => {
-                        console.error('>> VivoAds::showRewardVideo 广告组件出现问题', JSON.stringify(err));
+                        console.error('>> ByteDanceAds::showRewardVideo 广告组件出现问题', JSON.stringify(err));
                         msg.result = false;
                         msg.errMsg = TTRewardVideoErrMsg[err.errCode] || '广告播放失败';
                         bundle.hasRewardVideoInCache = false;
@@ -169,14 +170,14 @@ export default class ByteDanceAds implements IAdProvider {
                         resolve(msg);
                     });
                 } else {
-                    cc.error(`>> VivoAds::rewardedVideoAd rewardVideoInstance为空`);
+                    cc.error(`>> ByteDanceAds::rewardedVideoAd rewardVideoInstance为空`);
                     msg.result = false;
                     msg.errMsg = '广告初始化失败，实例为空';
                     resolve(msg);
                 }
             }
             else {
-                cc.error(`>> VivoAds::rewardedVideoAd 无法找到posName=${posName}的广告`);
+                cc.error(`>> ByteDanceAds::rewardedVideoAd 无法找到posName=${posName}的广告`);
                 msg.result = false;
                 msg.errMsg = `无法找到posName=${posName}的广告`;
                 resolve(msg);
@@ -239,9 +240,6 @@ export default class ByteDanceAds implements IAdProvider {
                         adUnitId: bundle.bannerId,
                         style: style
                     };
-                    if (bundle.bannerInstance) {
-                        bundle.bannerInstance.destroy();
-                    }
                     bundle.bannerInstance = window.tt.createBannerAd(param);
                     bundle.bannerInstance.onError(err => {
                         console.log("ByteDance banner error: ", err)

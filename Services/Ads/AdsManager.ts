@@ -1,5 +1,6 @@
 import { IAdProvider } from './Provider/IAdProvider';
 import { singleton } from '../../Tools/Decorator/Singleton';
+import { IConfig } from '../../../GamePlay/LaunchConfigs';
 
 /**
  * @description 视频广告播放回调，如果失败就读取errMsg
@@ -76,6 +77,18 @@ export class AdsManager {
 
     constructor() {
 
+    }
+    public init(config: IConfig["adsConfig"]) {
+        for (let adProvider of config.adsProviders) {
+            let rewardVideosMap = config.rewardVideoProviderAndPosIdsMap?.get(adProvider);
+            let interstitialAdsMap = config.interstitialProviderAndPosIdsMap?.get(adProvider);
+            let bannersMap: Map<string, string> = config.bannerProviderAndPosIdsMap?.get(adProvider);
+            let provider = new adProvider(rewardVideosMap, interstitialAdsMap, bannersMap);
+            cc.log('rewardVideosMap', rewardVideosMap);
+            cc.log('interstitialAdsMap', interstitialAdsMap);
+            cc.log('bannersMap', bannersMap);
+            this.addAdProvider(provider);
+        }
     }
 
     public addAdProvider(advertiser: IAdProvider) {

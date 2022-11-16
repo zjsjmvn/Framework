@@ -1,7 +1,7 @@
 import UIBase from './UIBase';
 import UIManager from './UIManager';
-import { ClazzOrModelSchema } from '../../Tools/Serializer/Serializr/serializr';
-import Utils from '../../Tools/Utils';
+import { ClazzOrModelSchema } from '../../Utils/Serializer/Serializr/serializr';
+import Utils from '../../Utils/Utils';
 const { property, ccclass } = cc._decorator
 
 /**

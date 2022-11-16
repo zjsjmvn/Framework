@@ -1,4 +1,4 @@
-import { singleton } from '../../Tools/Decorator/Singleton';
+import { singleton } from '../../Utils/Decorator/Singleton';
 import UIBase from './UIBase';
 import UITips from './UITips';
 

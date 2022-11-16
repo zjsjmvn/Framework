@@ -1,5 +1,5 @@
-import { EncryptUtil } from '../../../Tools/Encrypt/EncryptUtil';
-import { md5 } from '../../../Tools/Encrypt/Md5';
+import { EncryptUtil } from '../../../Utils/Encrypt/EncryptUtil';
+import { md5 } from '../../../Utils/Encrypt/Md5';
 import { IStorageProvider } from './IStorageProvider';
 
 

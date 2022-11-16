@@ -1,5 +1,5 @@
 import UIKiller from "./uikiller";
-import Utils from '../../Tools/Utils';
+import Utils from '../../Utils/Utils';
 const { ccclass, property } = cc._decorator;
 /**
  * @description 

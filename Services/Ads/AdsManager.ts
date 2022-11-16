@@ -1,6 +1,6 @@
 import { IAdProvider } from './Provider/IAdProvider';
-import { singleton } from '../../Tools/Decorator/Singleton';
 import { IConfig } from '../../../GamePlay/LaunchConfigs';
+import { singleton } from '../../Utils/Decorator/Singleton';
 
 /**
  * @description 视频广告播放回调，如果失败就读取errMsg

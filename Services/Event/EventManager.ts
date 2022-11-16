@@ -1,4 +1,5 @@
-import { singleton } from '../../Tools/Decorator/Singleton';
+import { singleton } from "../../Utils/Decorator/Singleton";
+
 interface EventListener {
     callBack: Function,
     target: any,

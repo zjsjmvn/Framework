@@ -1,5 +1,5 @@
 import IService from "./Services/IService";
-import { singleton } from './Tools/Decorator/Singleton';
+import { singleton } from './Utils/Decorator/Singleton';
 
 /**
  * @description 

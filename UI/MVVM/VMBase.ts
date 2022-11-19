@@ -83,6 +83,13 @@ export default class VMBase extends cc.Component {
         this.bindPathEvent(false);
     }
 
+    public changeWatchPath(paths: Array<string>) {
+        this.watchPathArr = paths;
+        this.praseWatchPathArr();
+        this.bindPathEvent(true);
+        this.onValueInit();
+    }
+
     private bindPathEvent(enabled: boolean = true) {
         if (CC_EDITOR) return;
         let arr = this.watchPathArr;

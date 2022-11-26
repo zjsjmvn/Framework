@@ -13,7 +13,7 @@ enum BlankJudgeType {
     BoundingBoxToWorld,
 }
 @ccclass
-export default abstract class UIPopup extends UIBase {
+export default abstract class UIPopup<T = any> extends UIBase {
     /**
      * @description 点击空白处关闭
      * @type {boolean}
@@ -32,7 +32,6 @@ export default abstract class UIPopup extends UIBase {
             cc.error('需要Container节点才行');
         }
     }
-
 
     @property({
         visible: function () { return this.touchBlankToClose === true },
@@ -90,7 +89,6 @@ export default abstract class UIPopup extends UIBase {
 
     }
 
-
     /**
      * @description 点击任意处关闭
      * @type {boolean}
@@ -106,10 +104,9 @@ export default abstract class UIPopup extends UIBase {
         this._touchAnyWhereToClose = value;
     }
 
-    protected duration: number = 0.2
-
-    abstract init(args);
-
+    protected duration: number = 0.2;
+    private backgroundOriginalOpacity: { opacity: number } = null;
+    public abstract init(args?: T);
 
     show() {
         super.show();
@@ -120,8 +117,6 @@ export default abstract class UIPopup extends UIBase {
             this.node.on(cc.Node.EventType.TOUCH_END, this.onThisNodeTouchEnd_UsedFor_TouchAnyWhereToClose, this, true);
         }
         this.node._touchListener?.setSwallowTouches(false);
-
-
 
         this.runBgAction();
 
@@ -135,11 +130,14 @@ export default abstract class UIPopup extends UIBase {
         const background = this.node.getChildByName('Bg');
         if (background) {
             const oldOpacity = background.opacity;
+            if (!this.backgroundOriginalOpacity) {
+                this.backgroundOriginalOpacity = { opacity: oldOpacity }
+            }
             background.active = true;
             background.opacity = 0;
             // 播放背景遮罩动画
             cc.tween(background)
-                .to(this.duration * 0.8, { opacity: oldOpacity })
+                .to(this.duration * 0.8, { opacity: this.backgroundOriginalOpacity.opacity })
                 .start();
         }
     }
@@ -168,17 +166,7 @@ export default abstract class UIPopup extends UIBase {
         if (this.touchAnyWhereToClose) {
             this.node.off(cc.Node.EventType.TOUCH_END, this.onThisNodeTouchEnd_UsedFor_TouchAnyWhereToClose, this, true);
         }
-        // 动画时长不为 0 时拦截点击事件（避免误操作）
-        if (this.duration !== 0) {
-            let blocker = this.node.getChildByName('blocker');
-            if (!blocker) {
-                blocker = blocker = new cc.Node('blocker');
-                blocker.addComponent(cc.BlockInputEvents);
-                blocker.setParent(this.node);
-                blocker.setContentSize(this.node.getContentSize());
-            }
-            blocker.active = true;
-        }
+
         await this.disappearAction();
         super.hide();
     }

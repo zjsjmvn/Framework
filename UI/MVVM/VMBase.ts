@@ -19,7 +19,7 @@ const { ccclass, property } = cc._decorator;
 export default class VMBase extends cc.Component {
 
     /** watch 多路径 */
-    protected watchPathArr: Array<string> = [];
+    public watchPathArr: Array<string> = [];
 
     /**储存模板多路径的值 */
     protected templateValueArr: any[] = [];

@@ -67,7 +67,9 @@ export default class UIManager {
      * @type {UIBase[]}
      * @memberof UIManager
      */
-    private cachedUI: Map<string, Array<UIBase>> = new Map();
+    private cachedUI: Map<string, UIBase> = new Map();
+
+    private uiPrefabNameAndPathMap: Map<string, string> = new Map();
 
     public openUIClass<T extends UIBase>(uiClass: { new(): T }, zOrder: number = ViewZOrder.UI, showCallback?: Function, onProgress?: Function, data?: any, closeCallback?: Function) {
         if (this.hasUI(uiClass)) {
@@ -79,7 +81,7 @@ export default class UIManager {
 
         let initUI = (uiInstance: UIBase) => {
             if (!uiInstance) {
-                console.error(`${uiClass.PrefabPath}没有绑定UI脚本!!!`);
+                console.error(`${cc.js.getClassName(uiClass)}没有绑定UI脚本!!!`);
                 return;
             }
             let uiRoot = cc.director.getScene().getChildByName('Canvas');
@@ -101,9 +103,17 @@ export default class UIManager {
         let uiInstance = this.getUIFromCachedMap(uiClass);
         if (uiInstance) {
             initUI(uiInstance);
+            uiInstance.show();
             return;
         }
-        cc.resources.load(uiClass.PrefabPath, (completedCount: number, totalCount: number, item: any) => {
+
+
+        let path = this.uiPrefabNameAndPathMap.get(cc.js.getClassName(uiClass));
+        if (!path) {
+            cc.error(`没有找到uiClass = ${cc.js.getClassName(uiClass)}对应的预制体路径`)
+            return;
+        }
+        cc.resources.load(path, (completedCount: number, totalCount: number, item: any) => {
             onProgress && onProgress(completedCount, totalCount, item);
         }, (error, prefab) => {
             if (error) {
@@ -147,11 +157,7 @@ export default class UIManager {
         let ui = null;
         let uiName = cc.js.getClassName(uiClass);
         if (this.cachedUI.has(uiName)) {
-            let uiArr = this.cachedUI.get(uiName);
-            if (uiArr) {
-                // cc.log('cachedUI ', uiName, this.cachedUI.get(uiName).length);
-                ui = uiArr.pop();
-            }
+            ui = this.cachedUI.get(uiName);
         }
         return ui;
     }
@@ -159,16 +165,12 @@ export default class UIManager {
     private setUIToCachedMap(ui: UIBase) {
         let uiName = cc.js.getClassName(ui);
         if (this.cachedUI.has(uiName)) {
-            let uiArr = this.cachedUI.get(uiName);
-            uiArr.push(ui);
+            return;
         } else {
-            let arr = new Array();
-            arr.push(ui);
-            this.cachedUI.set(uiName, arr);
+            this.cachedUI.set(uiName, ui);
         }
         // cc.log('cachedUI ', uiName, this.cachedUI.get(uiName).length);
     }
-
 
     public closeUIByUIClass<T extends UIBase>(uiClass: { new(): T }) {
         for (let i = 0; i < this.dynamicUIStack.length; ++i) {
@@ -301,5 +303,30 @@ export default class UIManager {
 
     public ShowConfirmDialog(uiClass, data?: any) {
         this.openUIClass(uiClass, ViewZOrder.Popup, null, null, data);
+    }
+
+
+    public registerUIPrefab(path: string) {
+        let infos = [];
+        cc.resources.getDirWithPath(path, cc.Prefab, infos);
+        infos.forEach((info) => {
+            let splitPathArr = (info.path as string).split('/')
+            cc.log("splitPathArr", splitPathArr)
+            if (splitPathArr.length > 0) {
+                let lastPath = splitPathArr.slice(-1)
+                if (lastPath.length > 0) {
+                    let prefabPath = this.uiPrefabNameAndPathMap.get(lastPath[0]);
+                    if (prefabPath) {
+                        cc.error(`已经存在${lastPath[0]},prefabPath = ${prefabPath}`);
+                        return;
+                    }
+                    this.uiPrefabNameAndPathMap.set(lastPath[0], info.path);
+                } else {
+                    cc.error("lastPath length is zero")
+                }
+            } else {
+                cc.error("splitPathArr length is zero")
+            }
+        })
     }
 }

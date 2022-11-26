@@ -164,7 +164,7 @@ export default class UIKiller {
             }
 
 
-            node.on(eventTypes[index], (event: cc.Event.EventTouch) => {
+            node.on(eventTypes[index], async (event: cc.Event.EventTouch) => {
                 //被禁用的node 节点不响应事件
                 let eventNode = event.currentTarget;
                 if (eventNode.interactable === false || eventNode.active === false) {
@@ -197,7 +197,8 @@ export default class UIKiller {
 
 
                         eventResult = eventFunc.call(rootNodeScript, event);
-                        //cc.log("target, eventNode, event"+target+eventNode+event);
+
+                        // cc.log(" eventResult", eventResult, await eventResult);
                         //只要是触摸事件返回fasle，都使节点可穿透
                         //event.type === cc.Node.EventType.TOUCH_START &&
 
@@ -206,12 +207,14 @@ export default class UIKiller {
 
                         let result = true;
                         if (eventResult instanceof Promise) {
-                            eventResult.then((value) => {
-                                result = value;
-                            })
+                            // eventResult.then((value) => {
+                            //     result = value;
+                            // })
+                            result = await eventResult;
                         } else if (typeof eventResult == "boolean") {
                             result = eventResult;
                         }
+                        cc.log(" eventResult2", result);
 
 
                         if (result === false) {

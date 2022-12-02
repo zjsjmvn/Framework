@@ -214,8 +214,6 @@ export default class UIKiller {
                         } else if (typeof eventResult == "boolean") {
                             result = eventResult;
                         }
-                        cc.log(" eventResult2", result);
-
 
                         if (result === false) {
                             eventNode._touchListener.setSwallowTouches(false);

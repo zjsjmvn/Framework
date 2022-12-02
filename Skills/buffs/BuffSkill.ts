@@ -2,7 +2,7 @@ import { Entity } from '../../ECS/Entitas/Entity';
 import BaseSkill from '../BaseSkill';
 import { UUID } from '../../ECS/Entitas/utils/UUID';
 
-export class BuffSkill extends BaseSkill {
+export abstract class BuffSkill extends BaseSkill {
     public casterEntity: Entity;       // 释放者，释放这个buff的人
     public effectEntity: Entity;       // 影响者。被buff影响的人。 TODO: 可能被影响的人是一堆。
     public buffID: number;             //buffid
@@ -38,9 +38,6 @@ export class BuffSkill extends BaseSkill {
     }
 
 
-    meetRemoveCondition(): boolean {
-        return true;
-    }
-
+    abstract meetRemoveCondition(): boolean
 
 }

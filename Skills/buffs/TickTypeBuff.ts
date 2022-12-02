@@ -10,7 +10,8 @@ import { Entity } from '../../ECS/Entitas/Entity';
  * @class TickTypeBuff
  * @extends {BuffSkill}
  */
-export default class TickTypeBuff extends BuffSkill {
+export default abstract class TickTypeBuff extends BuffSkill {
+
     public tick: number = 0;
     public currentTick: number = 0;
 
@@ -25,4 +26,5 @@ export default class TickTypeBuff extends BuffSkill {
             this.currentTick = this.tick;
         }
     }
+    abstract meetRemoveCondition(): boolean;
 }

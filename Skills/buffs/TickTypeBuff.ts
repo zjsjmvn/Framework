@@ -18,6 +18,7 @@ export default abstract class TickTypeBuff extends BuffSkill {
     constructor(caster: Entity, target: Entity, tick: number) {
         super(caster, target);
         this.tick = tick;
+        this.currentTick = this.tick;
     }
     public onTick(dt) {
         this.currentTick -= dt;

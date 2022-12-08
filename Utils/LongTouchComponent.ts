@@ -1,3 +1,4 @@
+import { PrivateNode } from '../../../../creator';
 const { ccclass, property } = cc._decorator;
 
 /**
@@ -46,6 +47,11 @@ export default class LongTouchComponent extends cc.Component {
     })
     longTouchEvents: cc.Component.EventHandler[] = [];
 
+
+    @property({
+        tooltip: "长按x秒之后开始触发长按，0表示点击就开始触发,"
+    })
+    longTouchStartDelay: number = 0;
     /**
      * 触摸计数器，用于统计本次长按的回调次数
      */
@@ -55,6 +61,8 @@ export default class LongTouchComponent extends cc.Component {
      * 标记当前是否在触摸这个节点
      */
     private _isTouching: boolean = false;
+
+    private _touchLongTimer: number = 0;
 
     onEnable() {
         this.node.on(cc.Node.EventType.TOUCH_START, this._onTouchStart, this);
@@ -70,60 +78,71 @@ export default class LongTouchComponent extends cc.Component {
 
     private _onTouchStart(event: cc.Event.EventTouch) {
         // 这是为了不支持多点触控
-        if (!this.enableMultiTouching) {
-            if (this._isTouching) {
-                return;
-            }
+        // if (!this.enableMultiTouching) {
 
-            if (this.node.getBoundingBoxToWorld().contains(event.getLocation())) {
-                this._isTouching = true;
-            } else {
-                this._isTouching = false;
-            }
+        // }
+        // if (this._isTouching) {
+        //     return;
+        // }
+        // if (this.node.getBoundingBoxToWorld().contains(event.getLocation())) {
+        //     this._isTouching = true;
+        // } else {
+        //     this._isTouching = false;
+        // }
+        let delay = this.longTouchStartDelay * 1000;
+        cc.log('delay', delay)
+        this._touchLongTimer = setTimeout(() => {
+            //准备触发touchLong事件
+            // 第一次触摸立即回调一次
+            this.publishOneTouch(event);
+            // 然后开启计时器，计算后续的长按相当于触摸了多少次
+            this.schedule(this._touchCounterCallback.bind(this, event), this.touchInterval);
+        }, delay);
 
-            if (this._isTouching) {
-                // 第一次触摸立即回调一次
-                this.publishOneTouch(event);
+        // if (this._isTouching) {
+        //     // 第一次触摸立即回调一次
+        //     this.publishOneTouch(event);
 
-                // 然后开启计时器，计算后续的长按相当于触摸了多少次
-                this.schedule(this._touchCounterCallback.bind(this, event), this.touchInterval);
-            }
-        }
+        //     // 然后开启计时器，计算后续的长按相当于触摸了多少次
+        //     this.schedule(this._touchCounterCallback.bind(this, event), this.touchInterval);
+        // }
     }
 
     private _onTouchEnd(event: cc.Event.EventTouch) {
         this._isTouching = false;
         this._touchCounter = 0;
         // this.unschedule(this._touchCounterCallback);
-
+        clearTimeout(this._touchLongTimer);
         this.unscheduleAllCallbacks();
     }
 
     private _onTouchCancel(event: cc.Event.EventTouch) {
         this._isTouching = false;
         this._touchCounter = 0;
+        clearTimeout(this._touchLongTimer);
         // this.unschedule(this._touchCounterCallback);
         this.unscheduleAllCallbacks();
 
     }
 
     private _touchCounterCallback(event) {
-        if (this._isTouching) {
-            this.publishOneTouch(event);
-        } else {
-            // this.unschedule(this._touchCounterCallback);
-            this.unscheduleAllCallbacks();
+        this.publishOneTouch(event);
+        // if (this._isTouching) {
+        //     this.publishOneTouch(event);
+        // } else {
+        //     // this.unschedule(this._touchCounterCallback);
+        //     this.unscheduleAllCallbacks();
 
-        }
+        // }
     }
 
     /**
      * 通知出去：被点击/触摸了一次，长按时，会连续多次回调这个方法
      */
     private publishOneTouch(event) {
-        if (!this._isTouching) {
-            return;
-        }
+        // if (!this._isTouching) {
+        //     return;
+        // }
         this._touchCounter++;
         this.longTouchEvents.forEach((eventHandler: cc.Component.EventHandler) => {
             eventHandler.emit([event, this._touchCounter,]);

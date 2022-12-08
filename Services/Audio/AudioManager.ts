@@ -71,8 +71,10 @@ export default class AudioManager {
             });
         }
     }
-    public init(audioPath) {
+    public init(audioPath, canPlayEffect: boolean = true, canPlayMusic: boolean = true) {
         this.audioPath = audioPath;
+        this.canPlayEffect = canPlayEffect;
+        this.canPlayMusic = canPlayMusic;
     }
 
     public playMusic(filePath, volume = 1) {

@@ -1,4 +1,5 @@
 import { Observer } from './Observer';
+import { director } from 'cc';
 
 export const VM_EMIT_HEAD = 'VC:';
 
@@ -47,7 +48,7 @@ export class ViewModel<T>{
     //索引值用的标签
     private _tag: string = null;
 
-    /**激活状态, 将会通过 cc.director.emit 发送值变动的信号, 适合需要屏蔽的情况 */
+    /**激活状态, 将会通过 director.emit 发送值变动的信号, 适合需要屏蔽的情况 */
     public active: boolean = true;
 
     /**是否激活根路径回调通知, 不激活的情况下 只能监听末端路径值来判断是否变化 */
@@ -57,14 +58,14 @@ export class ViewModel<T>{
     private _callback(n: any, o: any, path: string[]): void {
         if (this.active == true) {
             let name = VM_EMIT_HEAD + this._tag + '.' + path.join('.')
-            cc.director.emit(name, n, o, [this._tag].concat(path)); //通知末端路径
+            director.emit(name, n, o, [this._tag].concat(path)); //通知末端路径
 
-            if (this.emitToRootPath) cc.director.emit(VM_EMIT_HEAD + this._tag, n, o, path);//通知主路径
+            if (this.emitToRootPath) director.emit(VM_EMIT_HEAD + this._tag, n, o, path);//通知主路径
 
             if (path.length >= 2) {
                 for (let i = 0; i < path.length - 1; i++) {
                     const e = path[i];
-                    //cc.log('中端路径');
+                    //log('中端路径');
 
                 }
             }

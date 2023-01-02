@@ -2,16 +2,18 @@ import Thor from "../UI/UIKiller/Thor";
 import { GuideHelper } from "./GuideHelper";
 import { GuideView } from "./GuideView";
 import { GuideStep, GuideStepType_TouchTimes, GuideStepType_LongTouch, GuideStepType_DragToDistance, GuideStepType_MoveAmongMultipleNodes, GuideStepType_DragToTarget } from './GuideStep';
-let async = require("async");
-const { ccclass, property } = cc._decorator;
+import { _decorator, log, Rect, UITransform, v3, EventTouch, Node, v2 } from 'cc';
+//@ts-ignore
+// let async = require("async");
+const { ccclass, property } = _decorator;
 
 
 @ccclass
 export class GuideController extends Thor {
     _guideConfig: GuideHelper.GuideConfig = null;
-    _target: cc.Node = null;
+    _target: Node = null;
     _touchMoveIndex: number = 0;                            //触摸移动下标
-    _locateNodes: cc.Node[] = null;                         //定位节点、、
+    _locateNodes: Node[] = null;                         //定位节点、、
     _guideView: GuideView = null;
     _exitCallback: Function = null;
     _currentStep: GuideStep = null;
@@ -28,13 +30,12 @@ export class GuideController extends Thor {
 
     private _processTasks() {
         //加载进度
-        this._loadProgress();
         //初始化任务队列
         let steps = this._initSteps();
         //任务组
         async.eachSeries(steps, this._stepHandler.bind(this), (err) => {
             if (!!err) {
-                cc.log('eachSeries err', err);
+                log('eachSeries err', err);
             }
             this._exitGuide();
         });
@@ -58,7 +59,7 @@ export class GuideController extends Thor {
         this._currentStep = step;
         let stepBegin = (cb) => {
             if (step.onStepEnter) {
-                // cc.log('onStepEnter', cb);
+                // log('onStepEnter', cb);
                 step.onStepEnter(this.node, cb);
             } else {
                 cb();
@@ -78,7 +79,6 @@ export class GuideController extends Thor {
         let stepEnd = () => {
 
             this._guideView.hideMask();
-            this._saveProgress(step.index);
             if (step.onStepExit) {
                 step.onStepExit(this.node, callback);
             } else {
@@ -89,19 +89,19 @@ export class GuideController extends Thor {
     };
 
     private _processStep(step: GuideStep, cb) {
-        cc.log("guide: <" + step.log + ", step begin >");
+        log("guide: <" + step.log + ", step begin >");
 
         if (step.log.length !== 0 && step.debug) {
-            cc.log("guide: <" + step.log + ", step begin >");
+            log("guide: <" + step.log + ", step begin >");
         }
 
         step.finishCallback = () => {
-            cc.log("finishedStageIndex finish");
+            log("finishedStageIndex finish");
             step.finishCallback = null;
             this._guideView.stopFingerAction();
             this._guideView._showCompleteTextHint(step);
             if (step.log.length !== 0 && step.debug) {
-                cc.log("guide: <" + step.log + ", step finished >");
+                log("guide: <" + step.log + ", step finished >");
             }
             if (step.finishDelayTime) {
                 setTimeout(() => {
@@ -146,7 +146,7 @@ export class GuideController extends Thor {
         }
 
 
-        this._guideView._showDescriptTextHint(step);
+        this._guideView._showDescriptionTextHint(step);
     }
 
     /**
@@ -154,31 +154,31 @@ export class GuideController extends Thor {
      * @param touch
      * @returns {boolean}
      */
-    _onTouchStart(event) {
+    _onTouchStart(event: EventTouch) {
         if (!!this._locateNodes && this._locateNodes.length === 0) return false;
         // if (this._currentStep.listenTouchEventType !== GuideHelper.TouchEvent.START){
 
         //     return false;
         // }
-        let rect = this._locateNodes[0].getBoundingBoxToWorld();
-        let nodePos = this.node.convertToNodeSpaceAR(cc.v2(rect.x, rect.y));
+        let rect = this._locateNodes[0].getComponent(UITransform).getBoundingBoxToWorld();
+        let nodePos = this.node.getComponent(UITransform).convertToNodeSpaceAR(v3(rect.x, rect.y, 0));
         rect.x = nodePos.x;
         rect.y = nodePos.y;
-        let point = this.node.convertToNodeSpaceAR(event.getLocation());
+        let point = this.node.getComponent(UITransform).convertToNodeSpaceAR(v3(event.getLocation().x, event.getLocation().y));
 
-        let isContains = rect.contains(point);
+        let isContains = rect.contains(v2(point.x, point.y));
         if (isContains) {
-            //cc.log("Right~.点击位置包含引导按钮");
+            //log("Right~.点击位置包含引导按钮");
             if (this._currentStep.listenTouchEventType === GuideHelper.TouchEvent.LONG) {
                 let step = <GuideStepType_LongTouch>this._currentStep;
 
                 clearTimeout(step._touchLongTimer)
-                //  cc.log('_touchLongTimer');
+                //  log('_touchLongTimer');
                 step._touchLongTimer = setTimeout(() => {
                     //准备触发touchLong事件
                     step.onStepFinished(this.node);
                     step._touchLongTimer = null;
-                    //        cc.log('_touchLongTimer');
+                    //        log('_touchLongTimer');
                 }, step.touchLongTimeLength || 1000);
             }
             if (this._currentStep.listenTouchEventType === GuideHelper.TouchEvent.START) {
@@ -191,10 +191,10 @@ export class GuideController extends Thor {
 
     _onTouchMove(event) {
         //设置点击位置显示
-        let point = this.node.convertToNodeSpaceAR(event.getLocation());
+        let point = this.node.getComponent(UITransform).convertToNodeSpaceAR(event.getLocation());
 
         if (this._currentStep.listenTouchEventType === GuideHelper.TouchEvent.MOVE && this._currentStep instanceof GuideStepType_DragToDistance) {
-            let dis = cc.v2(event.getLocation()).sub(event.getStartLocation()).mag();
+            let dis = v2(event.getLocation()).subtract(event.getStartLocation()).length();
             if (dis >= this._currentStep.touchMoveDis) {
                 this._currentStep.onStepFinished(this.node);
                 return true;
@@ -204,28 +204,18 @@ export class GuideController extends Thor {
 
         if (this._currentStep.listenTouchEventType === GuideHelper.TouchEvent.MOVE) {
             //如果触摸的位置是结束的位置，那么就执行回调函数。
-            let rect = this._locateNodes[this._locateNodes.length - 1].getBoundingBoxToWorld();
-            let nodePos = this.node.convertToNodeSpaceAR(cc.v2(rect.x, rect.y));
+            let rect = this._locateNodes[this._locateNodes.length - 1].getComponent(UITransform).getBoundingBoxToWorld();
+            let nodePos = this.node.getComponent(UITransform).convertToNodeSpaceAR(v3(rect.x, rect.y));
             rect.x = nodePos.x;
             rect.y = nodePos.y;
-            let isContains = rect.contains(point);
+            let isContains = rect.contains(v2(point.x, point.y));
             if (isContains) {
                 this._currentStep.onStepFinished(this.node);
                 return false;
             }
         }
 
-        // if(this._touchMoveIndex<this._locateNodes.length){
-        //     let node  = this._locateNodes[this._touchMoveIndex];
-        //     let targetNode_rect = node.getBoundingBoxToWorld();
-        //     let nodePos = this.node.convertToNodeSpaceAR(cc.v2(targetNode_rect.x,targetNode_rect.y));
-        //     targetNode_rect.x = nodePos.x;
-        //     targetNode_rect.y = nodePos.y;
-        //     let isContains = cc.rectContainsPoint(targetNode_rect, point);
-        //     if (!isContains){
-        //         cc.log('移动的不对');
-        //     }
-        // }
+
         return false;
     }
 
@@ -238,8 +228,8 @@ export class GuideController extends Thor {
      * @memberof GuideController
      */
     _onTouchEnd(event) {
-        cc.log('_onTouchEnd');
-        // if (this._currentStep.listenTouchEventType&&this._currentStep.listenTouchEventType !== cc.Node.EventType.TOUCH_END){
+        log('_onTouchEnd');
+        // if (this._currentStep.listenTouchEventType&&this._currentStep.listenTouchEventType !== Node.EventType.TOUCH_END){
         //     // this._processTasks()
         //     return true
         // }
@@ -250,14 +240,14 @@ export class GuideController extends Thor {
             return true;
             // }
         } else if (this._currentStep.listenTouchEventType === GuideHelper.TouchEvent.END) {
-            let point = this.node.convertToNodeSpaceAR(event.getLocation());
-            let targetNode_side_offset: cc.Rect = new cc.Rect(0, 0, 0, 0);
+            let point = this.node.getComponent(UITransform).convertToNodeSpaceAR(event.getLocation());
+            let targetNode_side_offset: Rect = new Rect(0, 0, 0, 0);
 
             if (this._currentStep instanceof GuideStepType_DragToTarget) {
                 targetNode_side_offset = this._currentStep.targetSizeOffset;
             }
             if (this._locateNodes.length === 0) return false;
-            let targetNode_rect = this._locateNodes[this._locateNodes.length - 1].getBoundingBoxToWorld();
+            let targetNode_rect = this._locateNodes[this._locateNodes.length - 1].getComponent(UITransform).getBoundingBoxToWorld();
             targetNode_rect.width += targetNode_side_offset.width;
             targetNode_rect.height += targetNode_side_offset.height;
             targetNode_rect.x -= targetNode_side_offset.width / 2;
@@ -265,15 +255,15 @@ export class GuideController extends Thor {
 
 
 
-            let nodePos = this.node.convertToNodeSpaceAR(cc.v2(targetNode_rect.x, targetNode_rect.y));
+            let nodePos = this.node.getComponent(UITransform).convertToNodeSpaceAR(v3(targetNode_rect.x, targetNode_rect.y));
             targetNode_rect.x = nodePos.x;
             targetNode_rect.y = nodePos.y;
 
-            let isContains = targetNode_rect.contains(point);
+            let isContains = targetNode_rect.contains(v2(point.x, point.y));
             if (isContains) {
-                // cc.log('touchend 拖拽成功。');
+                // log('touchend 拖拽成功。');
                 if (this._currentStep.onStepFinishVerify(this.node) === false) {
-                    cc.log('校验失败。')
+                    log('校验失败。')
                     return true;
                 } else {
                     let step = <any>this._currentStep;
@@ -286,7 +276,7 @@ export class GuideController extends Thor {
                     return false;
                 }
             } else {
-                cc.log("touchend point is not contains in targetNode_rect", this._locateNodes[0].name);
+                log("touchend point is not contains in targetNode_rect", this._locateNodes[0].name);
                 this._currentStep.onStepFail(this.node, null);
                 return true;
             }
@@ -301,32 +291,5 @@ export class GuideController extends Thor {
         }
     }
 
-    private _saveProgress(index, cb?) {
-        cc.log("_saveProgress", index);
-        cc.sys.localStorage.setItem(this._guideConfig.guideName, index);
-        if (cb) {
-            cb();
-        }
-    }
 
-    /**
-     * // TODO:引导存档的问题还是需要仔细考虑
-     * @description 
-     * @private
-     * @memberof GuideController
-     */
-    private _loadProgress() {
-        return;
-        var localStorage = localStorage || cc.sys.localStorage;
-        if (!!!localStorage.getItem(this._guideConfig.guideName)) {
-            this.progressIndex = - 1;
-        } else {
-            this.progressIndex = parseInt(localStorage.getItem(this._guideConfig.guideName));
-        }
-        cc.log("_loadProgress", this.progressIndex);
-        // TODo
-
-        // this.progressIndex = -1
-
-    }
 }

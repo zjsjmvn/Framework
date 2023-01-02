@@ -1,3 +1,5 @@
+import { AudioClip, resources, error, log, AudioSource } from 'cc';
+
 export default class AudioManager {
     private static _instance: AudioManager;
     public static get instance() {
@@ -8,7 +10,7 @@ export default class AudioManager {
     private playing_music = false;
     private playing_music_name = undefined;
     private maxVolume = 1;
-    private audio_clip_map: Map<string, cc.AudioClip> = new Map()
+    private audio_clip_map: Map<string, AudioClip> = new Map()
     private audio_path_map: Map<string, string> = new Map()
     private loading: boolean = false;
     private loadingAudioArr: Array<string> = new Array();
@@ -37,27 +39,27 @@ export default class AudioManager {
     }
 
     public preloadAudio(path) {
-        cc.error('暂时没实现。需要修改cc.loader');
+        error('暂时没实现。需要修改loader');
         if (!this.loading && Object.keys(this.audio_clip_map).length == 0) {
             let self = this;
             this.loading = true;
-            cc.resources.loadDir(path, cc.AudioClip, null, (error, res_arr) => {
+            resources.loadDir(path, AudioClip, null, (error, res_arr) => {
 
                 self.loading = false;
                 if (error) {
-                    cc.log(error);
+                    log(error);
                 }
                 else {
 
-                    // cc.log('res_arr', res_arr)
+                    // log('res_arr', res_arr)
                     // str_arr.forEach((str, index) => {
                     //     let arr = str.split('/');
                     //     let name = arr[arr.length - 1];
                     //     let res_url = res_arr[index].nativeUrl;
                     //     self.audio_clip_map[name] = res_arr[index];
                     //     //带后缀地址
-                    //     if (cc.loader.md5Pipe) {
-                    //         res_url = cc.loader.md5Pipe.transformURL(res_url);
+                    //     if (loader.md5Pipe) {
+                    //         res_url = loader.md5Pipe.transformURL(res_url);
                     //     }
                     //     self.audio_path_map[name] = res_url;//'resources/' + str + '.' + typeName;                        
                     // });
@@ -86,7 +88,7 @@ export default class AudioManager {
         }
         else {
             if (!!!filePath) return false;
-            if (filePath == this.lastPlayedMusicPath && cc.audioEngine.isMusicPlaying()) {
+            if (filePath == this.lastPlayedMusicPath && AudioSource.isMusicPlaying()) {
                 return true;
             }
             this.playing_music = true;
@@ -94,12 +96,12 @@ export default class AudioManager {
             this.playing_music_name = filePath;
             if (this.audio_clip_map[filePath]) {
                 this._setMusicVolume(volume);
-                cc.audioEngine.playMusic(this.audio_clip_map[filePath], true);
+                AudioSource.playMusic(this.audio_clip_map[filePath], true);
                 return true;
             }
             else {
                 if (!!!this.audioPath) {
-                    cc.warn('audioPath is null');
+                    warn('audioPath is null');
                 } else {
                     this.loadAudio(this.audioPath + filePath, true, true, true, volume);
                 }
@@ -118,7 +120,7 @@ export default class AudioManager {
         this.loadingAudioArr.push(path);
         let load = () => {
             load_count += 1;
-            cc.resources.load(path, cc.AudioClip, (err, res: cc.AudioClip) => {
+            resources.load(path, AudioClip, (err, res: AudioClip) => {
                 if (err) {
                     console.log(`音频${path}加载错误重复加载次数 >>`, load_count);
                     if (load_count <= 3) {
@@ -128,8 +130,8 @@ export default class AudioManager {
                     let name = res.name
                     let res_url = res.nativeUrl;
                     this.audio_clip_map[name] = res;
-                    if (cc.assetManager.md5Pipe) {
-                        res_url = cc.assetManager.md5Pipe.transformURL(res_url);
+                    if (assetManager.md5Pipe) {
+                        res_url = assetManager.md5Pipe.transformURL(res_url);
                     }
                     this.audio_path_map[name] = res_url;//'resources/' + str + '.' + typeName;             
                     if (playAfterLoaded) {
@@ -155,7 +157,7 @@ export default class AudioManager {
      */
     public setMusicVolume(volume, isGradually = false, internalMS = 100) {
         volume = Math.min(volume, this.maxVolume);
-        if (volume > 0 && !cc.audioEngine.isMusicPlaying()) {
+        if (volume > 0 && !audioEngine.isMusicPlaying()) {
             this.playMusic(this.lastPlayedMusicPath);
         }
 
@@ -177,22 +179,22 @@ export default class AudioManager {
                     }
                 }
                 else {
-                    cc.audioEngine.isMusicPlaying()
+                    audioEngine.isMusicPlaying()
                     this._setMusicVolume(currentVolume + (currentVolume > volume ? - changeSpeed : changeSpeed));
                 }
             }, internalMS);
 
         }
         else {
-            cc.audioEngine.isMusicPlaying()
+            audioEngine.isMusicPlaying()
             this._setMusicVolume(volume);
         }
     }
     private _setMusicVolume(volume) {
-        cc.audioEngine.setMusicVolume(volume);
+        audioEngine.setMusicVolume(volume);
     }
     private getMusicVolume() {
-        return cc.audioEngine.getMusicVolume();
+        return audioEngine.getMusicVolume();
     }
     /**
      * Stop playing background music.
@@ -210,24 +212,24 @@ export default class AudioManager {
                 }
                 else {
                     this.playing_music = false;
-                    cc.audioEngine.stopMusic();
+                    audioEngine.stopMusic();
                     clear_func(decreaseFunc);
                 }
             }, internalMS);
         }
         else {
-            cc.audioEngine.stopMusic();
+            audioEngine.stopMusic();
         }
     }
 
     public playEffect(filePath, loop = false, volume = 1) {
         if (this.canPlayEffect) {
             if (this.audio_clip_map[filePath]) {
-                return cc.audioEngine.play(this.audio_clip_map[filePath], loop, volume);
+                return audioEngine.play(this.audio_clip_map[filePath], loop, volume);
             }
             else {
                 if (!!!this.audioPath) {
-                    cc.warn('audioPath is null');
+                    warn('audioPath is null');
                 } else {
                     this.loadAudio(this.audioPath + filePath, true, false, loop, volume);
                 }
@@ -241,35 +243,35 @@ export default class AudioManager {
     * Pause playing background music.
     */
     public pauseMusic() {
-        cc.audioEngine.pauseMusic();
+        audioEngine.pauseMusic();
         this.playing_music = false;
     }
     /**
     * Resume playing background music.
     */
     public resumeMusic() {
-        cc.audioEngine.resumeMusic();
+        audioEngine.resumeMusic();
         this.playing_music = true;
     }
     /**
     * Pause all playing sound effect.
     */
     public pauseAllEffects() {
-        cc.audioEngine.pauseAll();
+        audioEngine.pauseAll();
     }
 
     /**
     * Resume all playing sound effect.
     */
     public resumeAllEffects() {
-        cc.audioEngine.resumeAll();
+        audioEngine.resumeAll();
     }
 
     /**
     * Stop all playing sound effects.
     */
     public stopAllEffects() {
-        cc.audioEngine.stopAllEffects();
+        audioEngine.stopAllEffects();
     }
 
 }

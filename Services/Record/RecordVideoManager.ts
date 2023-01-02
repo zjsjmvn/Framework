@@ -1,3 +1,4 @@
+import { game } from 'cc';
 /**
  * 分享参数
  */
@@ -82,11 +83,11 @@ export default class RecordVideoManager {
                 console.error(errMsg);
             });
             // 退到后台
-            cc.game.on(cc.game.EVENT_HIDE, () => {
+            game.on(game.EVENT_HIDE, () => {
                 this.recording && this.recorder.pause();
             }, this);
             // 回到前台
-            cc.game.on(cc.game.EVENT_HIDE, () => {
+            game.on(game.EVENT_HIDE, () => {
                 this.recording && this.recorder.resume();
             }, this);
         }

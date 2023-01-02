@@ -130,9 +130,9 @@
 //                 this.bannerAd.onError((err) => {
 //                     //调试日志
 //                     if (err.errCode == 30007) {
-//                         cc.log(">> VivoAds:: 系统banner广告播放次数已达限制");
+//                         log(">> VivoAds:: 系统banner广告播放次数已达限制");
 //                     } else {
-//                         cc.log(">> VivoAds::showBanner err", JSON.stringify(err));
+//                         log(">> VivoAds::showBanner err", JSON.stringify(err));
 //                     }
 //                     resolve(false)
 //                 });
@@ -145,8 +145,8 @@
 //                 this.bannerAd.onResize(size => {
 //                     // good
 //                     console.log(size.width, size.height);
-//                     let width = cc.view.getFrameSize().width;
-//                     let height = cc.view.getFrameSize().height;
+//                     let width = view.getFrameSize().width;
+//                     let height = view.getFrameSize().height;
 
 //                     // this.bannerAd.style.top = height - size.height;
 //                     // this.bannerAd.style.left = (width - size.width) / 2;
@@ -190,7 +190,7 @@
 //     }
 //     showRewardVideo(position: any): Promise<RewardVideoCallBackMsg> {
 //         return new Promise((resolve, reject) => {
-//             cc.log(">> VivoAds::showRewardVideo");
+//             log(">> VivoAds::showRewardVideo");
 //             if (!!this.rewardedVideoAd) {
 //                 let onCloseFunc = (res) => {
 //                     // 用户点击了【关闭广告】按钮
@@ -218,7 +218,7 @@
 //                     this.rewardedVideoAd.load();
 //                 });
 //             } else {
-//                 cc.error(">> VivoAds::rewardedVideoAd 无效");
+//                 error(">> VivoAds::rewardedVideoAd 无效");
 //             }
 //         })
 //     }

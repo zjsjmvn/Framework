@@ -1,5 +1,6 @@
 import { RewardVideoCallBackMsg, RewardVideoBundle, InterstitialAdBundle, BannerAdBundle } from '../AdsManager';
 import { IAdProvider } from './IAdProvider';
+import { error, log } from 'cc';
 export const VivoRewardVideoErrMsg = {
     // "-1": "未知原因	联系技术对接",
     // "-2": "外部SDK错误	联系技术对接",
@@ -134,7 +135,7 @@ export default class VivoAds implements IAdProvider {
                 }
                 bundle.interstitialInstance.onClose(onCloseFunc);
             } else {
-                cc.error(`>> VivoAds::showInterstitial 无法找到posName=${posName}的广告`);
+                error(`>> VivoAds::showInterstitial 无法找到posName=${posName}的广告`);
                 return Promise.reject(false);
             }
         });
@@ -205,7 +206,7 @@ export default class VivoAds implements IAdProvider {
             let bundle = this.rewardVideoInstanceMap.get(posName);
             let msg = new RewardVideoCallBackMsg();
             if (bundle) {
-                cc.log(">> VivoAds::showRewardVideo");
+                log(">> VivoAds::showRewardVideo");
                 if (!!bundle.rewardVideoInstance) {
                     let onCloseFunc = (res) => {
                         // 用户点击了【关闭广告】按钮
@@ -232,7 +233,7 @@ export default class VivoAds implements IAdProvider {
                         resolve(msg);
                     });
                 } else {
-                    cc.error(`>> VivoAds::rewardedVideoAd rewardVideoInstance为空`);
+                    error(`>> VivoAds::rewardedVideoAd rewardVideoInstance为空`);
                     msg.result = false;
                     msg.errMsg = '广告初始化失败，实例为空';
                     resolve(msg);
@@ -240,10 +241,10 @@ export default class VivoAds implements IAdProvider {
             }
             else {
                 if (window['qg'].getSystemInfoSync().platformVersionCode >= 1041) {
-                    cc.error(`>> VivoAds::rewardedVideoAd 无法找到posName=${posName}的广告`);
+                    error(`>> VivoAds::rewardedVideoAd 无法找到posName=${posName}的广告`);
                     msg.errMsg = `无法找到posName=${posName}的广告`;
                 } else {
-                    cc.error(`>> VivoAds::rewardedVideoAd 基础库版本不满足，无法展示`);
+                    error(`>> VivoAds::rewardedVideoAd 基础库版本不满足，无法展示`);
                     msg.errMsg = `基础库版本太低，需要更新`;
                 }
                 msg.result = false;
@@ -308,9 +309,9 @@ export default class VivoAds implements IAdProvider {
                         bundle.bannerInstance = window['qg'].createBannerAd(param);
                         bundle.bannerInstance.onError(err => {
                             if (err.errCode == 30007) {
-                                cc.log(">> VivoAds:: 系统banner广告播放次数已达限制");
+                                log(">> VivoAds:: 系统banner广告播放次数已达限制");
                             } else {
-                                cc.log(">> VivoAds::showBanner err", JSON.stringify(err));
+                                log(">> VivoAds::showBanner err", JSON.stringify(err));
                             }
                             resolve(false)
                         });

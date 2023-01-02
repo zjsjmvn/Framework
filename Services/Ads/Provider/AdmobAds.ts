@@ -6,17 +6,17 @@
 //     }
 
 //     _admobInit() {
-//         cc.log('_admobInit');
+//         log('_admobInit');
 //         let self = this;
 //         sdkbox.PluginAdMob.setListener({
 //             //缓存成功
 //             adViewDidReceiveAd(name) {
-//                 cc.log('admob adViewDidReceiveAd name=' + name);
+//                 log('admob adViewDidReceiveAd name=' + name);
 //                 if (name == "banner") {
 
 //                     if (!this.isNoAds()) {
 //                         //banner 展示的时候，如果有启动（开屏）广告，那就等待启动广告关闭在展示，如果没有，那么就直接展示。
-//                         var interstitial_node = cc.director.getScene().getChildByName('Interstitial');
+//                         var interstitial_node = director.getScene().getChildByName('Interstitial');
 //                         if (interstitial_node) {
 //                             interstitial_node.getComponent("Interstitial").registCloseCallback(function () {
 //                                 //self.showBanner();
@@ -29,7 +29,7 @@
 //             },
 //             //缓存失败
 //             adViewDidFailToReceiveAdWithError(name, msg) {
-//                 cc.log('admob adViewDidFailToReceiveAdWithError name=' + name + ' msg=' + msg);
+//                 log('admob adViewDidFailToReceiveAdWithError name=' + name + ' msg=' + msg);
 //                 if (name == "banner") {
 //                     //self.showQYBanner();
 //                 }
@@ -39,11 +39,11 @@
 //             },
 //             //将要显示
 //             adViewWillPresentScreen(name) {//
-//                 cc.log('admob adViewWillPresentScreen name=' + name);
+//                 log('admob adViewWillPresentScreen name=' + name);
 //             },
 //             //关闭后
 //             adViewDidDismissScreen(name) {
-//                 cc.log('admob adViewDidDismissScreen name=' + name);
+//                 log('admob adViewDidDismissScreen name=' + name);
 //                 if (name == 'interstitial') {
 //                     self._interstitialEnd(true);
 //                 }
@@ -55,18 +55,18 @@
 //             },
 //             //将要关闭
 //             adViewWillDismissScreen(name) {
-//                 cc.log('admob adViewWillDismissScreen=' + name);
+//                 log('admob adViewWillDismissScreen=' + name);
 //                 if (name == 'interstitial') {
 //                     self._interstitialEnd(true);
 //                 }
 //             },
 //             //离开app
 //             adViewWillLeaveApplication(name) {
-//                 cc.log('admob adViewWillLeaveApplication=' + name);
+//                 log('admob adViewWillLeaveApplication=' + name);
 //             },
 //             //获得奖励
 //             reward(name, currency, amount) {
-//                 cc.log('admob reward=' + name, currency, amount);
+//                 log('admob reward=' + name, currency, amount);
 //                 self.successReward = true;
 //                 //self._reward(true);
 //             }
@@ -81,7 +81,7 @@
 //         if (sdkbox.PluginAdMob && sdkbox.PluginAdMob.isAvailable("interstitial")) {
 //             sdkbox.PluginAdMob.show('interstitial');
 //             setTimeout(() => {
-//                 cc.log('adcache admob interstitial');
+//                 log('adcache admob interstitial');
 //                 sdkbox.PluginAdMob.cache("interstitial");
 //             }, 10000);
 //         }
@@ -92,7 +92,7 @@
 //             sdkbox.PluginAdMob.show('rewardedVideo');
 //             //应该是在播放的时候无法加载。所以要延时加载
 //             setTimeout(() => {
-//                 cc.log('adcache admob rewardedVideo3');
+//                 log('adcache admob rewardedVideo3');
 //                 sdkbox.PluginAdMob.cache("rewardedVideo");
 //             }, 10000);
 //         }

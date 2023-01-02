@@ -71,7 +71,7 @@ export class Observer<T> {
      */
     private observe<T>(obj: T, path?: Array<string>) {
         if (Object.prototype.toString.call(obj) === types.array) {
-            // cc.log('Object.prototype.toString', Object.prototype.toString.call(obj), path, Object.prototype.toString.call(obj) == typeof Bag);
+            // log('Object.prototype.toString', Object.prototype.toString.call(obj), path, Object.prototype.toString.call(obj) == typeof Bag);
             // this.overrideArrayProto(obj, path);
         }
         Object.keys(obj).forEach((key) => {

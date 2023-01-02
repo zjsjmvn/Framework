@@ -2,7 +2,8 @@ import VMBase from "./VMBase";
 import { VM } from './VMManager';
 
 import Thor from '../UIKiller/Thor';
-const { ccclass, property } = cc._decorator;
+import { Component, Node, _decorator } from 'cc';
+const { ccclass, property } = _decorator;
 @ccclass
 export default class VMParentExtendThor extends Thor {
 
@@ -31,7 +32,7 @@ export default class VMParentExtendThor extends Thor {
 
         this.tag = '_temp' + '<' + this.node.uuid.replace('.', '') + '>';
         VM.add(this.data, this.tag);
-        //cc.log(VM['_mvs'],tag)
+        //log(VM['_mvs'],tag)
         //搜寻所有节点：找到 watch path
         let comps = this.getVMComponents();
         //console.group();
@@ -54,7 +55,7 @@ export default class VMParentExtendThor extends Thor {
 
     }
 
-    private replaceVMPath(comp: cc.Component, tag: string) {
+    private replaceVMPath(comp: Component, tag: string) {
         let pathArr: string[] = comp['watchPathArr'];
         if (pathArr) {
             for (let i = 0; i < pathArr.length; i++) {
@@ -71,7 +72,7 @@ export default class VMParentExtendThor extends Thor {
 
         //过滤掉不能赋值的parent
         let filters = [];
-        parents.forEach((node: cc.Node) => {
+        parents.forEach((node: Node) => {
             filters = filters.concat(node.getComponentsInChildren('VMBase'));
         })
 

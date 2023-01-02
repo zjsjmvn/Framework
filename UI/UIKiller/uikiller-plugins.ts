@@ -36,10 +36,10 @@
 //     '1': 'hello',
 //     '2': 'wrold',
 // }
-// const UIKillerLabelLanguage = {  
+// const UIKillerLabelLanguage = {
 //     name: 'UIKillerLabelLanguage',
 //     onCheckNode(node, target) {
-//         let label = node.getComponent(cc.Label);
+//         let label = node.getComponent(Label);
 //         if (!label) {
 //             return;
 //         }

@@ -1,5 +1,6 @@
 import TreeNode, { RedDotNodeType } from './TreeNode';
 import { singleton } from '../../Utils/Decorator/Singleton';
+import { error, log } from 'cc';
 
 
 /**
@@ -26,15 +27,15 @@ export default class RedDotManager {
     }
 
     public addPathAndBindListener(path: string, callback) {
-        // cc.log('addPathAndBindListener', path);
+        // log('addPathAndBindListener', path);
         this.addPath(path);
         this.bindListenerToPath(path, callback);
     }
 
     public addPath(path: string) {
-        // cc.log('addPath', path);
+        // log('addPath', path);
         if (!!!path) {
-            cc.error("路径不合法，不能为空");
+            error("路径不合法，不能为空");
         }
         let node = this.allNodesMap.get(path);
         if (node) {
@@ -42,12 +43,12 @@ export default class RedDotManager {
             return;
         }
         let theSplitPathArr = path.split(this.splitChar);
-        // cc.log('path', theSplitPathArr);
+        // log('path', theSplitPathArr);
         let hasEmptyString = theSplitPathArr.find((str) => {
             return str == '';
         });
         if (hasEmptyString) {
-            cc.error('path 定义错误，含有非法字符。');
+            error('path 定义错误，含有非法字符。');
         }
         // 指针，指向root
         let pointer = this.root;
@@ -60,7 +61,7 @@ export default class RedDotManager {
                 nodePath += ('_' + str);
             }
             forEachIndex++;
-            // cc.log('nodePath', nodePath)
+            // log('nodePath', nodePath)
             let child = pointer.getChildByName(str);
             if (!child) {
                 if (str.match(this.dynamicRedDotNodeFlag)) {
@@ -90,7 +91,7 @@ export default class RedDotManager {
     }
 
     public addValue(path, addValue: number) {
-        // cc.log('addValue', path, addValue);
+        // log('addValue', path, addValue);
         let node = this.getTreeNode(path);
         node.addValue(addValue);
     }
@@ -139,7 +140,7 @@ export default class RedDotManager {
      */
     public getTreeNode(path: string, createIfInexistence: boolean = true) {
         if (!!!path) {
-            cc.error("路径不能为空");
+            error("路径不能为空");
         }
         let node = this.allNodesMap.get(path);
         if (!node && createIfInexistence) {
@@ -154,7 +155,7 @@ export default class RedDotManager {
     }
 
     private addNodeToNodesMap(key: string, value: TreeNode) {
-        // cc.log('addNodeToNodesMap', key);
+        // log('addNodeToNodesMap', key);
         this.allNodesMap.set(key, value);
     }
 
@@ -165,7 +166,7 @@ export default class RedDotManager {
 
     public showValues() {
         this.allNodesMap.forEach((value, key) => {
-            cc.log('showValues：', key, value.value);
+            log('showValues：', key, value.value);
         })
     }
 

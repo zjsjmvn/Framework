@@ -1,4 +1,5 @@
 import { singleton } from "../../Utils/Decorator/Singleton";
+import { error, log, warn } from 'cc';
 
 interface EventListener {
     callBack: Function,
@@ -35,11 +36,11 @@ export class EventManager {
 
     addEventListener(eventName: string, callBack: Function, target?: any): boolean {
         if (!eventName) {
-            cc.warn("eventName is empty" + eventName);
+            warn("eventName is empty" + eventName);
             return;
         }
         if (null == callBack) {
-            cc.log('addEventListener callBack is null');
+            log('addEventListener callBack is null');
             return false;
         }
         let handler: EventListener = { callBack: callBack, target: target };
@@ -84,7 +85,7 @@ export class EventManager {
                 iterator.callBack.call(iterator.target, eventData);
             }
         } else if (null == this._eventListeners.get(eventName) && !!!pickTimes) {
-            cc.error('eventName:' + eventName + ' 不存在listener');
+            error('eventName:' + eventName + ' 不存在listener');
         }
         if (pickTimes > 0) {
             this._unattendedEventsMap.set(eventName, { eventData, pickTimes });

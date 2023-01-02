@@ -1,61 +1,58 @@
 import { RewardVideoCallBackMsg, AdsManager } from '../../AdsManager';
 import { DebugAdsEnum } from './DebugAds';
+import { _decorator, Component, game, log, resources, Sprite, SpriteFrame, director, BlockInputEvents, Label, Color, Node, UITransform, view, v2, v3, error } from 'cc';
 
 
-const { ccclass, property } = cc._decorator;
+const { ccclass, property } = _decorator;
 @ccclass
 
-export default class DebugAdsView extends cc.Component {
+export default class DebugAdsView extends Component {
     private rewardAdsCallFunc: (pram: RewardVideoCallBackMsg) => {} = null;
     private interstitialCallFunc: (result: boolean) => {} = null;
-
     initBanner(style?) {
-        this.node.zIndex = 9999;
-        // cc.game.addPersistRootNode(this.node);
-        this.node.addComponent(cc.BlockInputEvents);
-        this.node.addComponent(cc.Sprite).sizeMode = cc.Sprite.SizeMode.CUSTOM;
+        this.node.setSiblingIndex(9999);
+        // game.addPersistRootNode(this.node);
+        this.node.addComponent(BlockInputEvents);
+        this.node.addComponent(Sprite).sizeMode = Sprite.SizeMode.CUSTOM;
         this.setSpriteFrame(this.node);
-
-        this.node.anchorX = 0;
-        this.node.anchorY = 1;
+        let uiTransform = this.node.getComponent(UITransform);
+        uiTransform.anchorX = 0;
+        uiTransform.anchorY = 1;
         //使用百度方案
         style = style || AdsManager.instance.defaultBannerStyle();
-        let scaleX = cc.view.getVisibleSize().width / cc.view.getFrameSize().width;
-        let scaleY = cc.view.getVisibleSize().height / cc.view.getFrameSize().height;
-        cc.log('scalex', scaleX)
-        this.node.width = style.width / 2 * scaleX;
-        this.node.height = this.node.width / 16 * 9;
-
-        cc.log('getVisibleSize', cc.view.getVisibleSize().width, cc.view.getFrameSize().width;)
+        let scaleX = view.getVisibleSize().width / view.getFrameSize().width;
+        let scaleY = view.getVisibleSize().height / view.getFrameSize().height;
+        log('scalex', scaleX)
+        uiTransform.width = style.width / 2 * scaleX;
+        uiTransform.height = uiTransform.width / 16 * 9;
         //百度
         let title = this.addTitle('banner');
-        title.position = cc.v2(this.node.width / 2, -this.node.height / 2);
-        title.scale = 0.7;
+        title.setPosition(v3(uiTransform.width / 2, -uiTransform.height / 2, 0));
+        title.setScale(v3(0.7, 0.7, 0));
 
-        this.node.x = (cc.view.getVisibleSize().width - this.node.width) / 2
-        this.node.y = this.node.height + 1;
+        this.node.setPosition(v3((view.getVisibleSize().width - uiTransform.width) / 2, uiTransform.height + 1));
     }
     initInterstitialAds(callback) {
         this.interstitialCallFunc = callback;
         this.initUI(DebugAdsEnum.Interstitial)
     }
     initRewardAds(callFunc) {
-        //cc.director.pause();
+        //director.pause();
         this.rewardAdsCallFunc = callFunc;
         this.initUI(DebugAdsEnum.Reward);
     }
 
     initUI(adsEnum: DebugAdsEnum) {
-        this.node.zIndex = 10000;
-        cc.game.addPersistRootNode(this.node);
+        this.node.setSiblingIndex(10000);
+        director.addPersistRootNode(this.node);
 
-        let size = cc.view.getVisibleSize();
-        this.node.width = size.width;
-        this.node.height = size.height;
-        this.node.x = size.width / 2;
-        this.node.y = size.height / 2;
-        this.node.addComponent(cc.BlockInputEvents);
-        this.node.addComponent(cc.Sprite).sizeMode = cc.Sprite.SizeMode.CUSTOM;
+        let size = view.getVisibleSize();
+        let uiTransform = this.node.getComponent(UITransform);
+        uiTransform.width = size.width;
+        uiTransform.height = size.height
+        this.node.setPosition(size.width / 2, size.height / 2);
+        this.node.addComponent(BlockInputEvents);
+        this.node.addComponent(Sprite).sizeMode = Sprite.SizeMode.CUSTOM;
         this.setSpriteFrame(this.node);
         switch (adsEnum) {
             case DebugAdsEnum.Banner: {
@@ -74,38 +71,31 @@ export default class DebugAdsView extends cc.Component {
     }
 
     addBtn(desc, callFunc) {
-
-        let node = new cc.Node(desc);
-        node.color = cc.Color.BLACK;
-        node.addComponent(cc.Label).string = desc;
+        let node = new Node(desc);
+        node.addComponent(Label).string = desc;
+        node.getComponent(Label).color = Color.BLACK;
         this.node.addChild(node);
-
-        node.on(cc.Node.EventType.TOUCH_END, callFunc, this);
-
+        node.on(Node.EventType.TOUCH_END, callFunc, this);
         return node;
     }
 
     addTitle(desc) {
-        let node = new cc.Node(desc);
-        node.color = cc.Color.BLACK;
-        node.addComponent(cc.Label).string = desc;
+        let node = new Node(desc);
+        node.addComponent(Label).string = desc;
         this.node.addChild(node);
-
-        node.y = 100;
-
+        this.node.setPosition(0, 100);
         return node;
     }
     /**单色 */
     setSpriteFrame(node) {
-        let sp = node.getComponent(cc.Sprite);
+        let sp = node.getComponent(Sprite);
         if (sp) {
-            cc.resources.load({ uuid: 'a23235d1-15db-4b95-8439-a2e005bfff91', type: cc.SpriteFrame }, function (e, r) {
+            resources.load({ uuid: 'a23235d1-15db-4b95-8439-a2e005bfff91', type: SpriteFrame }, function (e, r) {
                 if (!e) {
-                    cc.log('load success');
-
+                    log('load success');
                     sp.spriteFrame = r;
                 } else {
-                    cc.error('load fail');
+                    error('load fail');
                 }
             });
         }
@@ -148,10 +138,8 @@ export default class DebugAdsView extends cc.Component {
     }
 
     close() {
-        cc.game.removePersistRootNode(this.node);
-        cc.director.resume();
+        director.removePersistRootNode(this.node);
+        director.resume();
         this.node.destroy();
-
-
     }
 }

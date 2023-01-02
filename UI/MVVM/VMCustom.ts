@@ -1,20 +1,22 @@
+import { EDITOR } from 'cc/env';
 import VMBase from './VMBase';
+import { Toggle, _decorator } from 'cc';
 
-const { ccclass, property, executeInEditMode, menu } = cc._decorator;
+const { ccclass, property, executeInEditMode, menu } = _decorator;
 
 
 /**自动检查识别的数组,你可以准备自己的组件放上去自动识别 */
-const COMP_ARRAY_CHECK= [
-    ['BhvFrameIndex','index',false],
-    ['BhvGroupToggle','index',false],
-    ['BhvRollNumber','targetValue',false],
+const COMP_ARRAY_CHECK = [
+    ['BhvFrameIndex', 'index', false],
+    ['BhvGroupToggle', 'index', false],
+    ['BhvRollNumber', 'targetValue', false],
     //组件名、默认属性、controller值
-    ['cc.Label','string',false],
-    ['cc.RichText','string',false],
-    ['cc.EditBox','string',true],
-    ['cc.Slider','progress',true],
-    ['cc.ProgressBar','progress',false],
-    ['cc.Toggle','isChecked',true]
+    ['Label', 'string', false],
+    ['RichText', 'string', false],
+    ['EditBox', 'string', true],
+    ['Slider', 'progress', true],
+    ['ProgressBar', 'progress', false],
+    ['Toggle', 'isChecked', true]
 ];
 
 
@@ -72,7 +74,7 @@ export default class VMCustom extends VMBase {
         super.onLoad();
         //只在运行时检查组件是否缺失可用
         this.checkEditorComponent();//编辑器检查
-        if (!CC_EDITOR) {
+        if (!EDITOR) {
             this._watchComponent = this.node.getComponent(this.componentName);
             this.checkComponentState();
         }
@@ -89,7 +91,7 @@ export default class VMCustom extends VMBase {
 
     //挂在对应节点后，自动获取组件属性和名字
     checkEditorComponent() {
-        if (CC_EDITOR) {
+        if (EDITOR) {
             let checkArray = COMP_ARRAY_CHECK;
             this.controller = false;
             for (let i = 0; i < checkArray.length; i++) {
@@ -123,13 +125,13 @@ export default class VMCustom extends VMBase {
     }
 
     setComponentValue(value: any) {
-        //如果遇到cc.Toggle 组件就调用上面的方法解决
-        if (this.componentName == "cc.Toggle") {
+        //如果遇到Toggle 组件就调用上面的方法解决
+        if (this.componentName == "Toggle") {
             if (value == true) {
-                this.node.getComponent(cc.Toggle).check();
+                this.node.getComponent(Toggle).check();
             }
             if (value == false) {
-                this.node.getComponent(cc.Toggle).uncheck();
+                this.node.getComponent(Toggle).uncheck();
             }
         } else {
             this._watchComponent[this.componentProperty] = value;
@@ -139,13 +141,13 @@ export default class VMCustom extends VMBase {
 
     /**初始化获取数据 */
     onValueInit() {
-        if (CC_EDITOR) return; //编辑器模式不初始化
+        if (EDITOR) return; //编辑器模式不初始化
         //更新信息
         //this.setComponentValue(this.VM.getValue(this.watchPath));
     }
 
     /**[可重写]组件的值发生变化后，触发更新此值 */
-    onValueController(newValue,oldValue){
+    onValueController(newValue, oldValue) {
         //this.VM.setValue(this.watchPath, newValue);
     }
 
@@ -156,7 +158,7 @@ export default class VMCustom extends VMBase {
 
     update(dt) {
         //脏检查（组件是否存在，是否被激活）
-        if (CC_EDITOR == true) return;
+        if (EDITOR == true) return;
         //if (this.templateMode == true) return; //todo 模板模式下不能计算  
         if (!this.controller) return;
         if (!this._canWatchComponent || this._watchComponent['enabled'] === false) return;
@@ -171,7 +173,7 @@ export default class VMCustom extends VMBase {
 
         if (this._oldValue === newValue) return;
         this._oldValue = this.getComponentValue();
-        this.onValueController(newValue,oldValue);
+        this.onValueController(newValue, oldValue);
 
     }
 }

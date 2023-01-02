@@ -11,7 +11,7 @@ VM组件文本监听，用于处理 Label 的监听问题。监听watchPath  路
 
 - `Watch PathArr` - 绑定数值监听的路径数组 (多路径模板模式开启后出现)
 
-- `Label Type` - 只读属性，自动绑定cc.Label 或者 cc.RichText，你可以在脚本修改自己定义的Label
+- `Label Type` - 只读属性，自动绑定Label 或者 RichText，你可以在脚本修改自己定义的Label
 
 
 

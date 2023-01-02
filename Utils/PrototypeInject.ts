@@ -31,8 +31,8 @@
 // //     var result2 = template2.format({ name: "loogn", age: 22 });
 // //     var result3 = template1.format("loogn", 22);
 
-// //     cc.log(result1)
-// //     cc.log(result2)
-// //     cc.log(result3)
+// //     log(result1)
+// //     log(result2)
+// //     log(result3)
 // // }, 100);
 

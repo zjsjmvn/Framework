@@ -1,5 +1,5 @@
-import { PrivateNode } from '../../../../creator';
-const { ccclass, property } = cc._decorator;
+import { Component, Event, Node, _decorator, log, EventTouch, EventHandler } from 'cc';
+const { ccclass, property } = _decorator;
 
 /**
  * @classdesc 长按监听组件
@@ -24,7 +24,7 @@ const { ccclass, property } = cc._decorator;
  *  ```
  */
 @ccclass
-export default class LongTouchComponent extends cc.Component {
+export default class LongTouchComponent extends Component {
     @property({
         tooltip: "触摸回调间隔（秒）。假如为0.1，那么1秒内会回调10次 ${longTouchEvents} 事件数组"
     })
@@ -38,14 +38,14 @@ export default class LongTouchComponent extends cc.Component {
 
     /**
      * @description 参数event，_touchCounter
-     * @type {cc.Component.EventHandler[]}
+     * @type {Component.EventHandler[]}
      * @memberof LongTouchComponent
      */
     @property({
-        type: [cc.Component.EventHandler],
+        type: [Component.EventHandler],
         tooltip: "回调事件数组，每间隔 ${toucheInterval}s 回调一次"
     })
-    longTouchEvents: cc.Component.EventHandler[] = [];
+    longTouchEvents: EventHandler[] = [];
 
 
     @property({
@@ -65,18 +65,18 @@ export default class LongTouchComponent extends cc.Component {
     private _touchLongTimer: number = 0;
 
     onEnable() {
-        this.node.on(cc.Node.EventType.TOUCH_START, this._onTouchStart, this);
-        this.node.on(cc.Node.EventType.TOUCH_END, this._onTouchEnd, this);
-        this.node.on(cc.Node.EventType.TOUCH_CANCEL, this._onTouchCancel, this);
+        this.node.on(Node.EventType.TOUCH_START, this._onTouchStart, this);
+        this.node.on(Node.EventType.TOUCH_END, this._onTouchEnd, this);
+        this.node.on(Node.EventType.TOUCH_CANCEL, this._onTouchCancel, this);
     }
 
     onDisable() {
-        this.node.off(cc.Node.EventType.TOUCH_START, this._onTouchStart, this);
-        this.node.off(cc.Node.EventType.TOUCH_END, this._onTouchEnd, this);
-        this.node.off(cc.Node.EventType.TOUCH_CANCEL, this._onTouchCancel, this);
+        this.node.off(Node.EventType.TOUCH_START, this._onTouchStart, this);
+        this.node.off(Node.EventType.TOUCH_END, this._onTouchEnd, this);
+        this.node.off(Node.EventType.TOUCH_CANCEL, this._onTouchCancel, this);
     }
 
-    private _onTouchStart(event: cc.Event.EventTouch) {
+    private _onTouchStart(event: EventTouch) {
         // 这是为了不支持多点触控
         // if (!this.enableMultiTouching) {
 
@@ -90,7 +90,7 @@ export default class LongTouchComponent extends cc.Component {
         //     this._isTouching = false;
         // }
         let delay = this.longTouchStartDelay * 1000;
-        cc.log('delay', delay)
+        log('delay', delay)
         this._touchLongTimer = setTimeout(() => {
             //准备触发touchLong事件
             // 第一次触摸立即回调一次
@@ -108,7 +108,7 @@ export default class LongTouchComponent extends cc.Component {
         // }
     }
 
-    private _onTouchEnd(event: cc.Event.EventTouch) {
+    private _onTouchEnd(event: EventTouch) {
         this._isTouching = false;
         this._touchCounter = 0;
         // this.unschedule(this._touchCounterCallback);
@@ -116,7 +116,7 @@ export default class LongTouchComponent extends cc.Component {
         this.unscheduleAllCallbacks();
     }
 
-    private _onTouchCancel(event: cc.Event.EventTouch) {
+    private _onTouchCancel(event: EventTouch) {
         this._isTouching = false;
         this._touchCounter = 0;
         clearTimeout(this._touchLongTimer);
@@ -144,7 +144,7 @@ export default class LongTouchComponent extends cc.Component {
         //     return;
         // }
         this._touchCounter++;
-        this.longTouchEvents.forEach((eventHandler: cc.Component.EventHandler) => {
+        this.longTouchEvents.forEach((eventHandler: EventHandler) => {
             eventHandler.emit([event, this._touchCounter,]);
         });
     }

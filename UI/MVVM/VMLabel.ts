@@ -1,12 +1,14 @@
 import VMBase from './VMBase';
 import { StringFormatFunction } from './StringFormat';
+import { _decorator, error, CCString } from 'cc';
+import { EDITOR } from 'cc/env';
 
-const { ccclass, property, menu, executeInEditMode } = cc._decorator;
+const { ccclass, property, menu, executeInEditMode } = _decorator;
 
 export enum LABEL_TYPE {
-    CC_LABEL = 'cc.Label',
-    CC_RICH_TEXT = 'cc.RichText',
-    CC_EDIT_BOX = 'cc.EditBox'
+    CC_LABEL = 'Label',
+    CC_RICH_TEXT = 'RichText',
+    CC_EDIT_BOX = 'EditBox'
 }
 
 
@@ -38,7 +40,7 @@ export default class VMLabel extends VMBase {
     private labelType: string = LABEL_TYPE.CC_LABEL;
 
     @property({
-        type: [cc.String],
+        type: [CCString],
         visible: function () {
             if (this.dynamicConfig == true) { return false }
             else {
@@ -66,14 +68,14 @@ export default class VMLabel extends VMBase {
         if (this.dynamicConfig) {
             super.onLoad();
             this.checkLabelType();
-            if (!CC_EDITOR) {
+            if (!EDITOR) {
                 this.originText = this.getLabelValue()
                 this.parseTemplate();
             }
         } else {
             super.onLoad();
             this.checkLabelType();
-            if (!CC_EDITOR) {
+            if (!EDITOR) {
                 this.originText = this.getLabelValue()
                 this.parseTemplate();
             }
@@ -170,7 +172,7 @@ export default class VMLabel extends VMBase {
                 return true;
             }
         }
-        cc.error('没有挂载任何label组件');
+        error('没有挂载任何label组件');
         return false;
     }
 

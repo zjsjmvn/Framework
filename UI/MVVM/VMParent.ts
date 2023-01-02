@@ -1,8 +1,9 @@
 import VMBase from "./VMBase";
 import { VM } from './VMManager';
+import { Component, Node, _decorator } from 'cc';
 
 
-const { ccclass, property } = cc._decorator;
+const { ccclass, property } = _decorator;
 
 
 /**
@@ -16,7 +17,7 @@ const { ccclass, property } = cc._decorator;
  * v0.1 修复bug ，现在可以支持 Parent 嵌套 （但是注意性能问题，不要频繁嵌套）
  */
 @ccclass
-export default class VMParent extends cc.Component {
+export default class VMParent extends Component {
 
     /**绑定的标签，可以通过这个tag 获取 当前的 vm 实例 */
     protected tag: string = '_temp';
@@ -43,7 +44,7 @@ export default class VMParent extends cc.Component {
 
         this.tag = '_temp' + '<' + this.node.uuid.replace('.', '') + '>';
         VM.add(this.data, this.tag);
-        //cc.log(VM['_mvs'],tag)
+        //log(VM['_mvs'],tag)
         //搜寻所有节点：找到 watch path
         let comps = this.getVMComponents();
         //console.group();
@@ -66,7 +67,7 @@ export default class VMParent extends cc.Component {
 
     }
 
-    private replaceVMPath(comp: cc.Component, tag: string) {
+    private replaceVMPath(comp: Component, tag: string) {
         let pathArr: string[] = comp['watchPathArr'];
         if (pathArr) {
             for (let i = 0; i < pathArr.length; i++) {
@@ -83,7 +84,7 @@ export default class VMParent extends cc.Component {
 
         //过滤掉不能赋值的parent
         let filters = [];
-        parents.forEach((node: cc.Node) => {
+        parents.forEach((node: Node) => {
             filters = filters.concat(node.getComponentsInChildren('VMBase'));
         })
 

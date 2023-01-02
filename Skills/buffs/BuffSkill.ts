@@ -1,6 +1,7 @@
 import { Entity } from '../../ECS/Entitas/Entity';
 import BaseSkill from '../BaseSkill';
 import { UUID } from '../../ECS/Entitas/utils/UUID';
+import { log } from 'cc';
 
 export abstract class BuffSkill extends BaseSkill {
     public casterEntity: Entity;       // 释放者，释放这个buff的人
@@ -18,7 +19,7 @@ export abstract class BuffSkill extends BaseSkill {
     }
 
     onRemove() {
-        cc.log('onRemove');
+        log('onRemove');
     }
 
     onKill() {

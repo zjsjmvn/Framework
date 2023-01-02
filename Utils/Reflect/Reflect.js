@@ -22,7 +22,7 @@ and limitations under the License.
         },
         configurable: true // This makes it possible to `delete` the getter later.
     });
-    cc.log('__magic__', __magic__)
+    log('__magic__', __magic__)
     __magic__.globalThis = __magic__; // lolwat
     delete Object.prototype.__magic__;
 }());

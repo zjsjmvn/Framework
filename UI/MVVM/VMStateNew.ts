@@ -1,8 +1,9 @@
 
 import VMBase from './VMBase';
 import { VM } from './VMManager';
+import { _decorator, Enum, CCInteger, UIOpacity, Node } from 'cc';
 
-const { ccclass, property, menu } = cc._decorator;
+const { ccclass, property, menu } = _decorator;
 
 /**比较条件 */
 export enum CONDITION {
@@ -76,20 +77,20 @@ export default class VMStateNew extends VMBase {
     foreachChildMode: boolean = false;
 
     @property({
-        type: cc.Enum(ChildModeType),
+        type: Enum(ChildModeType),
         tooltip: '遍历子节点,根据子节点的名字转换为值，判断值满足条件 来激活',
         visible: function () { return this.dynamicConfig == false && this.foreachChildMode === true }
     })
     foreachChildType: ChildModeType = ChildModeType.NodeIndex;
 
     @property({
-        type: cc.Enum(CONDITION),
+        type: Enum(CONDITION),
         visible: function () { return this.dynamicConfig == false }
     })
     condition: CONDITION = CONDITION["=="];
 
     @property({
-        type: cc.Enum(DestValueType),
+        type: Enum(DestValueType),
         visible: function () { return this.dynamicConfig == false && this.foreachChildMode === false }
     })
     destValue1Type: DestValueType = DestValueType.Null;
@@ -105,7 +106,7 @@ export default class VMStateNew extends VMBase {
     destValue1_Path: string = '';
 
     @property({
-        type: cc.Enum(DestValueType),
+        type: Enum(DestValueType),
         visible: function () { return this.dynamicConfig == false && this.foreachChildMode === false && this.condition === CONDITION.range }
     })
     destValue2Type: DestValueType = DestValueType.Null;
@@ -121,7 +122,7 @@ export default class VMStateNew extends VMBase {
     destValue2_Path: string = '';
 
     @property({
-        type: cc.Enum(ACTION),
+        type: Enum(ACTION),
         tooltip: '一旦满足条件就对节点执行操作',
     })
     valueAction: ACTION = ACTION.NODE_ACTIVE;
@@ -129,7 +130,7 @@ export default class VMStateNew extends VMBase {
     @property({
         visible: function () { return this.valueAction === ACTION.NODE_OPACITY },
         range: [0, 255],
-        type: cc.Integer,
+        type: CCInteger,
         displayName: 'Action Opacity'
     })
     valueActionOpacity: number = 0;
@@ -138,7 +139,7 @@ export default class VMStateNew extends VMBase {
         visible: function () { return this.valueAction === ACTION.NODE_COLOR },
         displayName: 'Action Color'
     })
-    valueActionColor: cc.Color = cc.color(155, 155, 155);
+    valueActionColor: Color = color(155, 155, 155);
 
 
     @property({
@@ -166,10 +167,10 @@ export default class VMStateNew extends VMBase {
     valueComponentActionValue: string = '';
 
     @property({
-        type: [cc.Node],
+        type: [Node],
         tooltip: '需要执行条件的节点，如果不填写则默认会执行本节点以及本节点的所有子节点 的状态'
     })
-    watchNodes: cc.Node[] = [];
+    watchNodes: Node[] = [];
     //#endregion
 
 
@@ -289,13 +290,13 @@ export default class VMStateNew extends VMBase {
     }
 
     /**更新单个节点的状态 */
-    private setNodeState(node: cc.Node, checkState?: boolean) {
+    private setNodeState(node: Node, checkState?: boolean) {
         let a = ACTION;
         switch (this.valueAction) {
             case a.NODE_ACTIVE: node.active = checkState ? true : false; break;
-            case a.NODE_VISIBLE: node.opacity = checkState ? 255 : 0; break;
-            case a.NODE_COLOR: node.color = checkState ? this.valueActionColor : cc.color(255, 255, 255); break;
-            case a.NODE_OPACITY: node.opacity = checkState ? this.valueActionOpacity : 255; break;
+            case a.NODE_VISIBLE: node.getComponent(UIOpacity).opacity = checkState ? 255 : 0; break;
+            // case a.NODE_COLOR: node.color = checkState ? this.valueActionColor : color(255, 255, 255); break;
+            case a.NODE_OPACITY: node.getComponent(UIOpacity).opacity = checkState ? this.valueActionOpacity : 255; break;
 
             case a.COMPONENT_CUSTOM:
                 let comp = node.getComponent(this.valueComponentName);

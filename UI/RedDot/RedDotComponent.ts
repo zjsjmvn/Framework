@@ -1,10 +1,11 @@
 import RedDotManager from './RedDotManager';
-const { ccclass, property } = cc._decorator;
+import { Component, _decorator, log, UIOpacity } from 'cc';
+const { ccclass, property } = _decorator;
 
 
 
 @ccclass
-export default class RedDotComponent extends cc.Component {
+export default class RedDotComponent extends Component {
 
     @property
     public _path: string = ''
@@ -20,12 +21,12 @@ export default class RedDotComponent extends cc.Component {
         this.currentValue = value;
         if (value == 0 && this.node) {
             // 关闭红点显示。
-            this.node.opacity = 0;
+            this.node.getComponent(UIOpacity).opacity = 0;
         } else if (value > 0 && this.node) {
             // 显示红点。
-            this.node.opacity = 255;
+            this.node.getComponent(UIOpacity).opacity = 255;
         } else if (value < 0) {
-            cc.log('value < 0 ');
+            log('value < 0 ');
         }
     }
 

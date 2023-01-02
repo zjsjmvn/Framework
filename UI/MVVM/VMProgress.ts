@@ -1,8 +1,10 @@
 import VMBase from "./VMBase";
 import VMCustom from "./VMCustom";
 import { StringFormatFunction } from "./StringFormat";
+import { _decorator, CCString } from 'cc';
+import { EDITOR } from "cc/env";
 
-const { ccclass, property, menu } = cc._decorator;
+const { ccclass, property, menu } = _decorator;
 
 
 @ccclass
@@ -10,7 +12,7 @@ const { ccclass, property, menu } = cc._decorator;
 export default class VMProgress extends VMCustom {
 
     @property({
-        type: [cc.String],
+        type: [CCString],
         tooltip: '第一个值是min 值，第二个值 是 max 值，会计算出两者的比例'
     })
     protected watchPathArr: string[] = ['[min]', '[max]'];
@@ -34,7 +36,7 @@ export default class VMProgress extends VMCustom {
     }
 
     start() {
-        if (CC_EDITOR) return;
+        if (EDITOR) return;
         this.onValueInit();
     }
 

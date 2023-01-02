@@ -1,5 +1,6 @@
 import IService from "./Services/IService";
 import { singleton } from './Utils/Decorator/Singleton';
+import { log, director, warn } from 'cc';
 
 /**
  * @description 
@@ -20,8 +21,8 @@ export default class GameContext {
             GameContext._servicesDictionary.set(key, service);
         })
 
-        cc.log("registerServices")
-        let canvas = cc.director.getScene()?.getChildByName("Canvas");
+        log("registerServices")
+        let canvas = director.getScene()?.getChildByName("Canvas");
         for (let s of GameContext.serviceNameArr) {
             let services = canvas.getComponents(s);
             if (services.length > 1) {
@@ -34,7 +35,7 @@ export default class GameContext {
                 }
             }
             if (services.length === 0) {
-                cc.warn(`can not find service: ${s} in all components`);
+                warn(`can not find service: ${s} in all components`);
             }
             // console.log("registServices s", s);
             GameContext._servicesDictionary.set(s, services[0]);

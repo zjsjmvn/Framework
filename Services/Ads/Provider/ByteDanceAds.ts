@@ -1,5 +1,6 @@
 import { RewardVideoCallBackMsg, InterstitialAdBundle, BannerAdBundle, RewardVideoBundle } from '../AdsManager';
 import { IAdProvider } from './IAdProvider';
+import { error, log, screen, view } from 'cc';
 /**
  * 激励广告播放失败代码翻译
  */
@@ -74,7 +75,7 @@ export default class ByteDanceAds implements IAdProvider {
                     resolve(false);
                 }
             } else {
-                cc.error(`>> ByteDanceAds::showInterstitial 无法找到posName=${posName}的广告`);
+                error(`>> ByteDanceAds::showInterstitial 无法找到posName=${posName}的广告`);
                 return Promise.reject(false);
             }
         });
@@ -143,7 +144,7 @@ export default class ByteDanceAds implements IAdProvider {
             let bundle = this.rewardVideoInstanceMap.get(posName);
             let msg = new RewardVideoCallBackMsg();
             if (bundle) {
-                cc.log(">> ByteDanceAds::showRewardVideo");
+                log(">> ByteDanceAds::showRewardVideo");
                 if (!!bundle.rewardVideoInstance) {
                     let onCloseFunc = (res) => {
                         // 用户点击了【关闭广告】按钮
@@ -170,14 +171,14 @@ export default class ByteDanceAds implements IAdProvider {
                         resolve(msg);
                     });
                 } else {
-                    cc.error(`>> ByteDanceAds::rewardedVideoAd rewardVideoInstance为空`);
+                    error(`>> ByteDanceAds::rewardedVideoAd rewardVideoInstance为空`);
                     msg.result = false;
                     msg.errMsg = '广告初始化失败，实例为空';
                     resolve(msg);
                 }
             }
             else {
-                cc.error(`>> ByteDanceAds::rewardedVideoAd 无法找到posName=${posName}的广告`);
+                error(`>> ByteDanceAds::rewardedVideoAd 无法找到posName=${posName}的广告`);
                 msg.result = false;
                 msg.errMsg = `无法找到posName=${posName}的广告`;
                 resolve(msg);
@@ -253,8 +254,8 @@ export default class ByteDanceAds implements IAdProvider {
                     //TODO: 这个地方会让广告在屏幕最下居中，被写死，需要修改
                     bundle.bannerInstance.onResize(size => {
                         console.log(size.width, size.height);
-                        let width = cc.view.getFrameSize().width;
-                        let height = cc.view.getFrameSize().height;
+                        let width = screen.windowSize().width;
+                        let height = screen.windowSize().height;
                         bundle.bannerInstance.style.top = height - size.height;
                         bundle.bannerInstance.style.left = (width - size.width) / 2;
                     });

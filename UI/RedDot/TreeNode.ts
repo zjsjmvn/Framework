@@ -1,5 +1,6 @@
 
 import RedDotManager from './RedDotManager';
+import { error } from 'cc';
 
 
 
@@ -66,7 +67,7 @@ export default class TreeNode {
     public updateValue(newValue?) {
         if (newValue !== undefined && newValue !== null) {
             if (this._childrenMap != null && this._childrenMap.size != 0) {
-                cc.error("不允许直接改变非叶子节点的值：" + this.fullPath);
+                error("不允许直接改变非叶子节点的值：" + this.fullPath);
             }
 
         } else {
@@ -100,7 +101,7 @@ export default class TreeNode {
 
     public addChild(node: TreeNode, name) {
         if (this._childrenMap.has(name)) {
-            cc.error("子节点" + name + "添加失败，不允许重复添加：");
+            error("子节点" + name + "添加失败，不允许重复添加：");
         } else {
             this._childrenMap.set(name, node);
         }

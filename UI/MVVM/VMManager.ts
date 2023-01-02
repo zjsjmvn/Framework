@@ -1,3 +1,4 @@
+import { director } from 'cc';
 import { VM_EMIT_HEAD, setValueFromPath, getValueFromPath, ViewModel } from './ViewModel';
 /**
  * VM 对象管理器(工厂)
@@ -98,7 +99,7 @@ class VMManager {
     setObjValue = setValueFromPath;
     getObjValue = getValueFromPath;
 
-    /**等同于 cc.director.on */
+    /**等同于 director.on */
     bindPath(path: string, callback: Function, target?: any, useCapture?: boolean): void {
         path = path.trim();//防止空格,自动剔除
         if (path == '') {
@@ -109,17 +110,17 @@ class VMManager {
             console.error(path, '路径不合法,可能错误覆盖了 VMParent 的onLoad 方法, 或者父节点并未挂载 VMParent 相关的组件脚本');
             return;
         }
-        cc.director.on(VM_EMIT_HEAD + path, callback, target, useCapture);
+        director.on(VM_EMIT_HEAD + path, callback, target, useCapture);
     }
 
-    /**等同于 cc.director.off */
+    /**等同于 director.off */
     unbindPath(path: string, callback: Function, target?: any): void {
         path = path.trim();//防止空格,自动剔除
         if (path.split('.')[0] === '*') {
             console.error(path, '路径不合法,可能错误覆盖了 VMParent 的onLoad 方法, 或者父节点并未挂载 VMParent 相关的组件脚本');
             return;
         }
-        cc.director.off(VM_EMIT_HEAD + path, callback, target);
+        director.off(VM_EMIT_HEAD + path, callback, target);
     }
 
 

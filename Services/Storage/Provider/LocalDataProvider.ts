@@ -64,7 +64,7 @@ export default class LocalDataProvider implements IStorageProvider {
             }
 
         }
-        cc.sys.localStorage.setItem(key, value);
+        sys.localStorage.setItem(key, value);
     }
 
     /**
@@ -81,7 +81,7 @@ export default class LocalDataProvider implements IStorageProvider {
         if (this.encrypted) {
             key = md5(key);
         }
-        let str: string | null = cc.sys.localStorage.getItem(key);
+        let str: string | null = sys.localStorage.getItem(key);
         if (null != str && '' !== str && null != this._key && null != this._iv && this.encrypted) {
             try {
                 str = EncryptUtil.aesDecrypt(str, this._key, this._iv);
@@ -127,13 +127,13 @@ export default class LocalDataProvider implements IStorageProvider {
             return;
         }
         key = md5(key);
-        cc.sys.localStorage.removeItem(key);
+        sys.localStorage.removeItem(key);
     }
 
     /**
      * 清空整个本地存储
      */
     public clear() {
-        cc.sys.localStorage.clear();
+        sys.localStorage.clear();
     }
 }

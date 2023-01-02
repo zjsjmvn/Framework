@@ -275,7 +275,7 @@ export class Entity {
     if (!this.hasComponent(index)) {
       const errorMsg = "Cannot get component at index " + index + " from " + this
       // throw new EntityDoesNotHaveComponentException(errorMsg, index)
-      cc.error(errorMsg);
+      error(errorMsg);
     }
     return this._components[index]
   }

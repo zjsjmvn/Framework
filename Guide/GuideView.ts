@@ -1,20 +1,32 @@
 import Thor from "../UI/UIKiller/Thor";
+import Utils from "../Utils/Utils";
 import { GuideHelper } from "./GuideHelper";
 import { GuideStep } from "./GuideStep";
-let async = require("async");
-const { ccclass, property } = cc._decorator;
+import { Vec2, _decorator, log, v2, Rect, UIOpacity, v3, UITransform, Node, Vec3, tween, Tween, TweenAction, utils } from 'cc';
+
+const { ccclass, property } = _decorator;
 @ccclass
 export class GuideView extends Thor {
 
     _index = 0;                                     //引导序号
-    _finger = null;                                 //手型精灵 通过thor赋值 直接使用
+    _finger: Node = null;                                 //手型精灵 通过thor赋值 直接使用
     _clipper = null;                                //遮罩层 通过thor赋值 直接使用
 
-    _text: cc.Node = null;
-    _textBg: cc.Node = null;
-    _textLabel: cc.Node = null;
+    _text: Node = null;
+    _textBg: Node = null;
+    _textLabel: Node = null;
     onLoad() {
 
+
+        this._finger = this.node.getChildByName('finger');
+
+
+        setTimeout(() => {
+
+
+            // this.fingerToNode([this.node.getChildByName('Node1')], { showMask: false, repeatAction: true, fingerPosOffset: v2(1, 1) });
+            this._fingerToPointArrayAndBackAction([this.node.getChildByName('Node1').getPosition(), this.node.getChildByName('Node2').getPosition(), this.node.getChildByName('Node3').getPosition()], 500, true)
+        }, 1000);
     }
     onEnable() {
 
@@ -29,18 +41,18 @@ export class GuideView extends Thor {
      * @param cb
      * @private
      */
-    fingerToNode(locateNodes: Array<cc.Node>, step: GuideStep, assignedAction = null) {
+    fingerToNode(locateNodes: Array<Node>, step: GuideStep, assignedAction = null) {
         if (locateNodes.length > 0) {
-            let locateNode: cc.Node = locateNodes[0];
-            let rect = locateNode.getBoundingBoxToWorld();
-            let nodePos = this.node.convertToNodeSpaceAR(cc.v2(rect.x, rect.y));
+            let locateNode: Node = locateNodes[0];
+            let rect = locateNode.getComponent(UITransform).getBoundingBoxToWorld();
+            let nodePos = this.node.getComponent(UITransform).convertToNodeSpaceAR(v3(rect.x, rect.y));
             rect.x = nodePos.x;
             rect.y = nodePos.y;
             if (assignedAction) {
                 this._finger.active = false;
-                assignedAction(this.node, cc.v2(rect.x + rect.width * 0.5, rect.y + rect.height * 0.5));
+                assignedAction(this.node, v2(rect.x + rect.width * 0.5, rect.y + rect.height * 0.5));
             } else {
-                this._fingerToPointAction(cc.v2(rect.x + rect.width * 0.5, rect.y + rect.height * 0.5), step.repeatAction, step.fingerPosOffset);
+                this._fingerToPointAction(v2(rect.x + rect.width * 0.5, rect.y + rect.height * 0.5), step.repeatAction, step.fingerPosOffset);
             }
             if (step.showMask) {
                 this.showMask(rect);
@@ -53,19 +65,19 @@ export class GuideView extends Thor {
      * @param step 步骤的配置文件
      * @param round 是否
      */
-    fingerToNodeArray(locateNodes: Array<cc.Node>, step: GuideStep, isMoveBackAndForth = false) {
-        cc.log('fingerToNodeArray');
-        let locateNode: cc.Node = locateNodes[0];
+    fingerToNodeArray(locateNodes: Array<Node>, step: GuideStep, isMoveBackAndForth = false) {
+        log('fingerToNodeArray');
+        let locateNode: Node = locateNodes[0];
         let targetNode = locateNodes[1];
-        let rect = locateNode.getBoundingBoxToWorld();
-        let nodePos = this.node.convertToNodeSpaceAR(cc.v2(rect.x, rect.y));
+        let rect = locateNode.getComponent(UITransform).getBoundingBoxToWorld();
+        let nodePos = this.node.getComponent(UITransform).convertToNodeSpaceAR(v3(rect.x, rect.y));
         rect.x = nodePos.x;
         rect.y = nodePos.y;
         rect = rect;
         let points = [];
         for (let i in locateNodes) {
-            let _point = locateNodes[i].convertToWorldSpaceAR(cc.Vec2.ZERO);
-            points.push(this.node.convertToNodeSpaceAR(_point));
+            let _point = locateNodes[i].getComponent(UITransform).convertToWorldSpaceAR(Vec3.ZERO);
+            points.push(this.node.getComponent(UITransform).convertToNodeSpaceAR(_point));
         }
         if (isMoveBackAndForth) {
             this._fingerToPointArrayAndBackAction(points, step.fingerMoveSpeed, step.repeatAction);
@@ -81,33 +93,28 @@ export class GuideView extends Thor {
      * @param point
      * @param isAnimation
      */
-    _fingerToPointAction(point: cc.Vec2, isAnimation, posOffset?: cc.Vec2) {
-        cc.log('point', point.toString());
-        this._finger.stopAllActions();
-        this._finger.setScale(1);
+    _fingerToPointAction(point: Vec3, isAnimation, posOffset?: Vec3) {
+        log('point', point.toString());
+        Tween.stopAllByTarget(this._finger);
+        this._finger.setScale(v3(1, 1, 1));
         if (!!posOffset) {
             point = point.add(posOffset);
         }
-        this._finger.setPosition(point);
+        this._finger.setPosition(v3(point.x, point.y));
         this._finger.active = true;
-        this._finger.opacity = 255;
+        this._finger.getComponent(UIOpacity).opacity = 255;
         let moveTime = 0;
 
         if (point && isAnimation) {
-            let width = this._finger.x - point.x;
-            let height = this._finger.y - point.y;
+            let width = this._finger.position.x - point.x;
+            let height = this._finger.position.y - point.y;
             let length = Math.sqrt(Math.pow(width, 2) + Math.pow(height, 2));
             moveTime = length / (width * 1);
-            let moveTo = cc.moveTo(moveTime, point);
-            let action = cc.sequence(moveTo, cc.callFunc(() => {
-                let scaleBy = cc.scaleBy(0.3, 0.8);
-                let scaleBy2 = cc.scaleTo(0.3, 1);
-                let sequence = cc.sequence(scaleBy, scaleBy2);
-                this._finger.runAction(cc.repeatForever(sequence));
-            }, this));
-            this._finger.runAction(action);
+            tween(this._finger).to(moveTime, { position: v3(point.x, point.y) }).call(() => {
+                tween(this._finger).to(0.3, { scale: v3(1.3, 1.3, 1.3) }).to(0.3, { scale: v3(1, 1, 1) }).union().repeatForever().start();
+            }).start();
         } else if (point) {
-            this._finger.setPosition(point);
+            this._finger.setPosition(v3(point.x, point.y));
         }
     }
 
@@ -116,76 +123,67 @@ export class GuideView extends Thor {
      * @param pointArray
      * @param isRepeat
      */
-    _fingerToPointArrayAction(pointArray: Array<cc.Vec2>, fingerMoveSpeed, isRepeat) {
-
+    async _fingerToPointArrayAction(pointArray: Array<Vec3>, fingerMoveSpeed, isRepeat) {
         let array = [];
         let firstPoint = pointArray.shift();
         let point = firstPoint;
         this._finger.setPosition(firstPoint);
-        this._finger.stopAllActions();
+        // this._finger.stopAllActions();
+        Tween.stopAllByTarget(this._finger);
         this._finger.active = true;
         //按照speed去运动
         pointArray.forEach((pt, index) => {
-
-            let dis = cc.v2(point).sub(pt).mag();
+            let dis = point.clone().subtract(pt).length();
             let time = dis / fingerMoveSpeed;
             point = pt;
-
-            cc.log('dis', dis);
-            let moveTo = cc.moveTo(time, pt);
-            if (index === 0) {
-                array.push(cc.spawn(moveTo, cc.fadeIn(time)));
-            } else {
-                array.push(moveTo);
-            }
+            let moveTo = tween(this._finger).to(time, { position: pt });
+            array.push(moveTo);
         });
 
-        // //延时1秒
-        array.push(cc.spawn(cc.delayTime(0.5), cc.fadeOut(0.5)));
-        array.push(cc.callFunc(() => {
+        // // //延时1秒
+        let delay = tween(this._finger).delay(0.5).call(() => {
             this._finger.setPosition(firstPoint);
-            this._finger.opacity = 150;
-        }, this));
-        let action = cc.sequence(array);
-        if (isRepeat) {
-            action = cc.repeatForever(action);
-        }
+        });
+        array.push(delay);
 
-        this._finger.runAction(action);
+        let action = tween(this._finger).sequence(...array);
+        if (isRepeat) {
+            action = tween(this._finger).repeatForever(action);
+        }
+        tween(this._finger).then(action).start();
     }
     /**
      * 手型精灵依次在多个座标点中移动,正序播放之后在倒叙播放
      * @param pointArray
      * @param isRepeat
      */
-    _fingerToPointArrayAndBackAction(pointArray: Array<cc.Vec2>, fingerMoveSpeed, isRepeat) {
-        cc.log('pointArray', JSON.stringify(pointArray));
+    _fingerToPointArrayAndBackAction(pointArray: Array<Vec3>, fingerMoveSpeed, isRepeat) {
         let arr = JSON.parse(JSON.stringify(pointArray));
         this._finger.setPosition(arr[0]);
-        this._finger.stopAllActions();
+        Tween.stopAllByTarget(this._finger);
         this._finger.active = true;
         //先正向移动
-        let actions: cc.ActionInterval[] = new Array<cc.ActionInterval>()
+        let actions = [];
         for (let i = 1; i < arr.length; ++i) {
-            let dis = cc.v2(arr[i - 1]).sub(arr[i]).mag();
+            let dis = v2(arr[i - 1]).subtract(arr[i]).length();
             let time = dis / fingerMoveSpeed;
-            let moveAction = cc.moveTo(time, arr[i]);
+            let moveAction = tween(this._finger).to(time, { position: arr[i] });
             actions.push(moveAction);
         }
         //反向移动
-        let reversedActions: cc.ActionInterval[] = new Array<cc.ActionInterval>()
         for (let i = arr.length - 2; i >= 0; --i) {
-            let dis = cc.v2(arr[i + 1]).sub(arr[i]).mag();
+            let dis = v2(arr[i + 1]).subtract(arr[i]).length();
             let time = dis / fingerMoveSpeed;
-            let moveAction = cc.moveTo(time, arr[i]);
+            let moveAction = tween().to(time, { position: arr[i] });
             actions.push(moveAction);
         }
-        let totalAction = cc.sequence(actions);
+        let totalAction = tween().sequence(...actions);
         if (isRepeat) {
-            totalAction = cc.repeatForever(totalAction);
+            totalAction = tween().repeatForever(totalAction);
         }
+        // this._finger.runAction(totalAction);
+        tween(this._finger).then(totalAction).start();
 
-        this._finger.runAction(totalAction);
     }
 
 
@@ -194,7 +192,8 @@ export class GuideView extends Thor {
      * @param visible
      */
     stopFingerAction(visible = false) {
-        this._finger.stopAllActions();
+        // this._finger.stopAllActions();
+        Tween.stopAllByTarget(this._finger);
         this._finger.active = false;
     }
 
@@ -207,7 +206,7 @@ export class GuideView extends Thor {
     /**
      * 显示遮罩层
      */
-    showMask(rect: cc.Rect) {
+    showMask(rect: Rect) {
         this._clipper.active = true;
         this._clipper.setContentSize(rect.width, rect.height);
         this._clipper.setPosition(rect.x + rect.width / 2, rect.y + rect.height / 2);
@@ -218,13 +217,13 @@ export class GuideView extends Thor {
      * @param textHint
      * @private
      */
-    _showDescriptTextHint(step: GuideStep) {
+    _showDescriptionTextHint(step: GuideStep) {
         if (step.hintText.length === 0) {
             this._closeTextHint();
             return;
         }
         if (!step.hintText) {
-            cc.log('setDescriptTextHint', step.hintText);
+            log('setDescriptTextHint', step.hintText);
             this._text.active = false;
             return;
         }
@@ -237,7 +236,7 @@ export class GuideView extends Thor {
             this._textBg.scaleX *= -1;
         }
         this._text.active = true;
-        this._textLabel.getComponent(cc.RichText).string = step.hintText;
+        this._textLabel.getComponent(RichText).string = step.hintText;
         if (step.textPos) {
             this._text.setPosition(step.textPos.x, step.textPos.y);
         }
@@ -254,8 +253,8 @@ export class GuideView extends Thor {
             return;
         }
         this._text.active = true;
-        cc.log('_showCompleteTextHint', step.completeText)
-        this._textLabel.getComponent(cc.RichText).string = step.completeText;
+        log('_showCompleteTextHint', step.completeText)
+        this._textLabel.getComponent(RichText).string = step.completeText;
         if (step.textPos) {
             this._text.setPosition(step.textPos.x, step.textPos.y);
         }
@@ -268,6 +267,6 @@ export class GuideView extends Thor {
     }
 
     onDestroy() {
-        cc.log("----guide over----");
+        log("----guide over----");
     }
 }

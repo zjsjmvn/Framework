@@ -1,4 +1,4 @@
-import { TouchEvent } from '../../Guide/GuideHelper';
+import { Button, EditBox, Event, EventTouch, Node } from 'cc';
 import Thor from './Thor';
 
 /**
@@ -38,7 +38,7 @@ export default class UIKiller {
 
     /**
      * 绑定组件
-     * @param {cc.Component} component  要绑定的组件 
+     * @param {Component} component  要绑定的组件 
      * @param {Object} options          绑定选项
      */
     public static bindComponent(componentScript, options?) {
@@ -53,10 +53,10 @@ export default class UIKiller {
 
     /**
      * 递归绑定节点
-     * @param {cc.Node} nodeObject //当前要绑定的节点
+     * @param {Node} nodeObject //当前要绑定的节点
      * @param {Object} rootNodeScript // 根节点的脚本。主要用于下划线开头的子节点的触摸事件 绑定到根节点的脚本上。
      */
-    private static _bindNode(nodeObject: cc.Node, rootNodeScript) {
+    private static _bindNode(nodeObject: Node, rootNodeScript) {
 
         //绑定组件到自身node节点上,在node下直接使用$+组件类型即可访问。
         if (nodeObject.name[0] === this._prefix) {
@@ -75,7 +75,7 @@ export default class UIKiller {
         }
 
         //绑定子节点
-        nodeObject.children.forEach((child: cc.Node) => {
+        nodeObject.children.forEach((child: Node) => {
             let name = child.name;
             // 子节点绑定到父节点上。通过 父节点node.子节点名字访问。如：nodeA.nodeB.nodeC;
             if (!nodeObject[name]) {
@@ -89,12 +89,12 @@ export default class UIKiller {
                     child.$eventName = name.slice(0, index);
                     child.$ = name.slice(index + 1);
                     name = child.$eventName + child.$[0].toUpperCase() + child.$.slice(1);
-                    if (!CC_EDITOR) {
+                    if (!EDITOR) {
                         child.name = name;
                     }
                 }
                 if (rootNodeScript[name]) {
-                    cc.warn(`${rootNodeScript.name}.${name} property is already exists`);
+                    warn(`${rootNodeScript.name}.${name} property is already exists`);
                 } else {
                     this._bindTouchEvent(child, rootNodeScript);
                     rootNodeScript[name] = child;
@@ -109,14 +109,14 @@ export default class UIKiller {
     }
     /**
      * 获取组件名字
-     * @param {cc.Component} component 
+     * @param {Component} component 
      */
     static _getComponentName(component) {
         return component.name.match(/<.*>$/)[0].slice(1, -1);
     }
     /**
      * 绑定触摸事件
-     * @param {cc.Node} node 
+     * @param {Node} node 
      * @param {String} event 
      */
     private static _getTouchEventName(node, event?): any {
@@ -140,31 +140,31 @@ export default class UIKiller {
 
     /**
      * 绑定事件
-     * @param {cc.Node} node
+     * @param {Node} node
      */
-    private static _bindTouchEvent(node: cc.Node, rootNodeScript, defaultNames?) {
+    private static _bindTouchEvent(node: Node, rootNodeScript, defaultNames?) {
         //todo: EditBox 组件不能注册触摸事件,在原生上会导致不能被输入
-        if (node.getComponent(cc.EditBox)) {
+        if (node.getComponent(EditBox)) {
             return;
         }
 
         const eventNames = defaultNames || this._getTouchEventName(node);
 
         const eventTypes = [
-            cc.Node.EventType.TOUCH_START,
-            cc.Node.EventType.TOUCH_MOVE,
-            cc.Node.EventType.TOUCH_END,
-            cc.Node.EventType.TOUCH_CANCEL,
+            Node.EventType.TOUCH_START,
+            Node.EventType.TOUCH_MOVE,
+            Node.EventType.TOUCH_END,
+            Node.EventType.TOUCH_CANCEL,
         ];
 
         eventNames.forEach((eventName, index) => {
             const tempEvent = rootNodeScript[eventName];
-            if (!tempEvent && !node.getComponent(cc.Button)) {
+            if (!tempEvent && !node.getComponent(Button)) {
                 return;
             }
 
 
-            node.on(eventTypes[index], async (event: cc.Event.EventTouch) => {
+            node.on(eventTypes[index], async (event: EventTouch) => {
                 //被禁用的node 节点不响应事件
                 let eventNode = event.currentTarget;
                 if (eventNode.interactable === false || eventNode.active === false) {
@@ -172,7 +172,7 @@ export default class UIKiller {
                 }
 
                 //检查button组件是否有事件处理函数，有则执行插件事件处理
-                const button = eventNode.getComponent(cc.Button);
+                const button = eventNode.getComponent(Button);
                 if (button && button.interactable === false) {
                     return;
                 }
@@ -183,24 +183,24 @@ export default class UIKiller {
                 if (isValidEvent) {
                     this._beforeHandleEventByPlugins(eventNode, event, !!eventFunc);
                 } else {
-                    // cc.log('isValidEvent false')
+                    // log('isValidEvent false')
                 }
 
                 //执行事件函数，获取返回值
                 let eventResult;
                 if (eventFunc) {
-                    //cc.log("eventNode._touchListener"+eventNode._touchListener.swallowTouches+" eventFunc "+eventFunc);
-                    // if( event.type === cc.Node.EventType.TOUCH_START ||
-                    //     event.type != cc.Node.EventType.TOUCH_START && eventNode._touchListener.swallowTouches
+                    //log("eventNode._touchListener"+eventNode._touchListener.swallowTouches+" eventFunc "+eventFunc);
+                    // if( event.type === Node.EventType.TOUCH_START ||
+                    //     event.type != Node.EventType.TOUCH_START && eventNode._touchListener.swallowTouches
                     // )
                     {
 
 
                         eventResult = eventFunc.call(rootNodeScript, event);
 
-                        // cc.log(" eventResult", eventResult, await eventResult);
+                        // log(" eventResult", eventResult, await eventResult);
                         //只要是触摸事件返回fasle，都使节点可穿透
-                        //event.type === cc.Node.EventType.TOUCH_START &&
+                        //event.type === Node.EventType.TOUCH_START &&
 
 
 
@@ -237,7 +237,7 @@ export default class UIKiller {
 
     /**
      * 绑定长按事件
-     * @param {cc.Node} node
+     * @param {Node} node
      */
     private static _bindTouchLongEvent(nodeObject, rootNodeScript) {
         const node = nodeObject;
@@ -248,7 +248,7 @@ export default class UIKiller {
         }
 
         node._touchLongTimer = null;
-        node.on(cc.Node.EventType.TOUCH_END, () => {
+        node.on(Node.EventType.TOUCH_END, () => {
             if (node._touchLongTimer) {
                 clearTimeout(node._touchLongTimer);
                 node._touchLongTimer = 0;
@@ -256,7 +256,7 @@ export default class UIKiller {
             }
         });
 
-        node.on(cc.Node.EventType.TOUCH_START, (event) => {
+        node.on(Node.EventType.TOUCH_START, (event) => {
             node._touchLongTimer = setTimeout(() => {
                 //准备触发touchLong事件
                 node.interactable = !!touchLong.call(rootNodeScript, node, event);

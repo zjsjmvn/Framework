@@ -181,7 +181,7 @@ class StringFormat {
 /**格式化处理函数 */
 export let StringFormatFunction = new StringFormat();
 
-// cc.log(StringFormatFunction.deal('2.1111', 'fix2'));
+// log(StringFormatFunction.deal('2.1111', 'fix2'));
 
 // function parseTemplate(originText) {
 //     let regexAll = /\{\{(.+?)\}\}/g; //匹配： 所有的{{value}}
@@ -193,7 +193,7 @@ export let StringFormatFunction = new StringFormat();
 //         let arr = e.match(regex);
 //         let matchName = arr[1];
 //         let matchNameSplit = matchName.split(':');
-//         cc.log('matchNameSplit', matchNameSplit)
+//         log('matchNameSplit', matchNameSplit)
 //         let matchInfo = matchNameSplit[1] || '';
 //         let valueIndex = matchNameSplit[0];
 //         this.replaceStrArr[i] = e;

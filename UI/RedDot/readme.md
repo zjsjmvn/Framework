@@ -20,7 +20,7 @@ value，代表这个节点的值，用来显示红点上的数字。
     public updateValue(newValue?) {
         if (newValue !== undefined && newValue !== null) {
             if (this.childrenMap != null && this.childrenMap.size != 0) {
-                cc.error("不允许直接改变非叶子节点的值：" + this.fullPath);
+                error("不允许直接改变非叶子节点的值：" + this.fullPath);
             }
 
         } else {

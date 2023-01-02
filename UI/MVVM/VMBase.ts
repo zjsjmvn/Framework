@@ -1,5 +1,7 @@
-import { toStatePaths } from 'xstate/lib/utils';
+
+import { EDITOR } from 'cc/env';
 import { VM } from './VMManager';
+import { _decorator, Component } from 'cc';
 
 
 //用来处理通知数据的层级
@@ -12,11 +14,11 @@ import { VM } from './VMManager';
 const DEBUG_WATCH_PATH: boolean = true;
 
 
-const { ccclass, property } = cc._decorator;
+const { ccclass, property } = _decorator;
 
 
 @ccclass
-export default class VMBase extends cc.Component {
+export default class VMBase extends Component {
 
     /** watch 多路径 */
     public watchPathArr: Array<string> = [];
@@ -47,7 +49,7 @@ export default class VMBase extends cc.Component {
      * 如果需要重写onLoad 方法，请根据顺序调用 super.onLoad()，执行默认方法
      */
     onLoad() {
-        if (CC_EDITOR) return;
+        if (EDITOR) return;
         this.praseWatchPathArr();
     }
 
@@ -73,13 +75,13 @@ export default class VMBase extends cc.Component {
     }
 
     onEnable() {
-        if (CC_EDITOR) return;//编辑器模式不能判断
+        if (EDITOR) return;//编辑器模式不能判断
         this.bindPathEvent(true);
         this.onValueInit();
     }
 
     onDisable() {
-        if (CC_EDITOR) return;//编辑器模式不能判断
+        if (EDITOR) return;//编辑器模式不能判断
         this.bindPathEvent(false);
     }
 
@@ -91,7 +93,7 @@ export default class VMBase extends cc.Component {
     }
 
     private bindPathEvent(enabled: boolean = true) {
-        if (CC_EDITOR) return;
+        if (EDITOR) return;
         let arr = this.watchPathArr;
         for (let i = 0; i < arr.length; i++) {
             const path = arr[i];

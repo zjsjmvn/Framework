@@ -1,13 +1,14 @@
 import Thor from '../UIKiller/Thor';
+import { _decorator } from 'cc';
 const PREFAB_UI_DIR = 'Prefab/UI/';
 
-const { property, ccclass } = cc._decorator
+const { property, ccclass } = _decorator
 /**
  * @description TODO: 考虑动画添加进来。但是动画可能有animation 也可能有action。考虑show的时候的问题。
  * @export
  * @abstract
  * @class UIBase
- * @extends {cc.Component}
+ * @extends {Component}
  */
 @ccclass
 export default abstract class UIBase extends Thor {

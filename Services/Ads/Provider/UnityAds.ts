@@ -3,16 +3,16 @@
 //         var self = this;
 //         sdkbox.PluginUnityAds.setListener({
 //             unityAdsDidClick: function (placementId) {
-//                 cc.log('unityAdsDidClick ' + placementId);
+//                 log('unityAdsDidClick ' + placementId);
 //             },
 //             unityAdsPlacementStateChanged: function (placementId, oldState, newState) {
-//                 cc.log('unityAdsPlacementStateChanged:' + placementId + ' oldState:' + oldState + " newState:" + newState);
+//                 log('unityAdsPlacementStateChanged:' + placementId + ' oldState:' + oldState + " newState:" + newState);
 //             },
 //             unityAdsReady: function (placementId) {
-//                 cc.log('unityAdsReady ' + placementId);
+//                 log('unityAdsReady ' + placementId);
 //             },
 //             unityAdsDidError: function (error, message) {
-//                 cc.log('unityAdsDidError:' + error + ' message:' + message);
+//                 log('unityAdsDidError:' + error + ' message:' + message);
 //                 if (name == 'interstitial') {
 
 //                 }
@@ -21,10 +21,10 @@
 
 //             },
 //             unityAdsDidStart: function (placementId) {
-//                 cc.log('unityAdsDidStart=' + placementId);
+//                 log('unityAdsDidStart=' + placementId);
 //             },
 //             unityAdsDidFinish: function (placementId, state) {
-//                 cc.log('unityAdsDidFinish ' + placementId + ' state:' + state);
+//                 log('unityAdsDidFinish ' + placementId + ' state:' + state);
 //                 //csdkbox.PluginUnityAds.SBUnityAdsFinishState.kUnityAdsFinishStateCompleted = 2
 //                 if (state === sdkbox.PluginUnityAds.SBUnityAdsFinishState.kUnityAdsFinishStateCompleted && placementId === "rewardedVideo") {
 //                     self._reward(true);

@@ -82,7 +82,7 @@
 //             });
 //             this.rewardedVideoAd.onClose(res => {
 //                 if (!!res && res.isEnded || res === undefined) {
-//                     cc.log('qg rewardvideo success', JSON.stringify(res));
+//                     log('qg rewardvideo success', JSON.stringify(res));
 //                     if (!!this.rewardCallBack) {
 //                         this.rewardCallBack(true);
 //                     }
@@ -105,7 +105,7 @@
 //     showBanner(style: qg.RectanbleStyle): Promise<boolean> {
 //         return new Promise((resolve, reject) => {
 //             if (window.qg && window.qg.createBannerAd) {
-//                 cc.log(JSON.stringify(style));
+//                 log(JSON.stringify(style));
 //                 let param = {
 //                     adUnitId: this.bannerId,
 //                     style: style
@@ -134,7 +134,7 @@
 //     }
 //     showRewardVideo(): Promise<RewardVideoCallBackMsg> {
 //         return new Promise((resolve, reject) => {
-//             cc.log("OPPO showRewardVideo");
+//             log("OPPO showRewardVideo");
 //             this.rewardCallBack = (result: boolean) => {
 //                 let msg = new RewardVideoCallBackMsg();
 //                 if (result == true) {
@@ -142,7 +142,7 @@
 //                 } else {
 //                     msg.errMsg = "广告被关闭，奖励失败";
 //                 }
-//                 cc.log("showRewardVideo msg", msg.errMsg);
+//                 log("showRewardVideo msg", msg.errMsg);
 //                 resolve(msg);
 //                 this.rewardCallBack = null;
 //             }
@@ -157,7 +157,7 @@
 //                     resolve(msg);
 //                 });
 //             } else {
-//                 cc.error("rewardedVideoAd 无效");
+//                 error("rewardedVideoAd 无效");
 //             }
 
 //         })

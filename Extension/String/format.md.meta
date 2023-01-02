@@ -1,6 +1,12 @@
 {
-  "ver": "2.0.2",
+  "ver": "1.0.0",
+  "importer": "*",
+  "imported": true,
   "uuid": "462a5a03-36d0-4ef7-ab68-b28967cd7c72",
-  "importer": "markdown",
-  "subMetas": {}
+  "files": [
+    ".json",
+    ".md"
+  ],
+  "subMetas": {},
+  "userData": {}
 }

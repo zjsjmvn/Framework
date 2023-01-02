@@ -1,6 +1,7 @@
 import { IAdProvider } from './Provider/IAdProvider';
 import { IConfig } from '../../../GamePlay/LaunchConfigs';
 import { singleton } from '../../Utils/Decorator/Singleton';
+import { log, view } from 'cc';
 
 /**
  * @description 视频广告播放回调，如果失败就读取errMsg
@@ -84,9 +85,9 @@ export class AdsManager {
             let interstitialAdsMap = config.interstitialProviderAndPosIdsMap?.get(adProvider);
             let bannersMap: Map<string, string> = config.bannerProviderAndPosIdsMap?.get(adProvider);
             let provider = new adProvider(rewardVideosMap, interstitialAdsMap, bannersMap);
-            cc.log('rewardVideosMap', rewardVideosMap);
-            cc.log('interstitialAdsMap', interstitialAdsMap);
-            cc.log('bannersMap', bannersMap);
+            log('rewardVideosMap', rewardVideosMap);
+            log('interstitialAdsMap', interstitialAdsMap);
+            log('bannersMap', bannersMap);
             this.addAdProvider(provider);
         }
     }
@@ -143,7 +144,7 @@ export class AdsManager {
      */
     showInterstitial(posName: string = "Default") {
         try {
-            cc.log("AdsManager showInterstitial");
+            log("AdsManager showInterstitial");
             for (let i of this.adProviderArr) {
                 if (i.hasInterstitial(posName)) {
                     return i.showInterstitial(posName);
@@ -178,7 +179,7 @@ export class AdsManager {
      */
     showRewardVideo(posName: string = "Default"): Promise<RewardVideoCallBackMsg> {
         try {
-            cc.log("AdsManager showRewardVideo");
+            log("AdsManager showRewardVideo");
             for (let i of this.adProviderArr) {
                 if (i.hasRewardVideo(posName)) {
                     return i.showRewardVideo(posName);
@@ -228,8 +229,8 @@ export class AdsManager {
      * @memberof AdsManager
      */
     defaultBannerStyle() {
-        let width = cc.view.getFrameSize().width;
-        let height = cc.view.getFrameSize().height;
+        let width = view.getFrameSize().width;
+        let height = view.getFrameSize().height;
         return { width: width };
     }
 

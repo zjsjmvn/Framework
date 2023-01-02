@@ -1,7 +1,8 @@
 import UIBase from './UIBase';
 import { DialogParams } from './UIManager';
+import { _decorator } from 'cc';
 
-const { ccclass, menu, property } = cc._decorator;
+const { ccclass, menu, property } = _decorator;
 
 @ccclass
 @menu("UI/tips/UIConfirmDialog")

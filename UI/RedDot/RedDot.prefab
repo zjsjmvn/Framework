@@ -1,6 +1,6 @@
 [
   {
-    "__type__": "cc.Prefab",
+    "__type__": "Prefab",
     "_name": "",
     "_objFlags": 0,
     "_native": "",
@@ -12,7 +12,7 @@
     "readonly": false
   },
   {
-    "__type__": "cc.Node",
+    "__type__": "Node",
     "_name": "RedDot",
     "_objFlags": 0,
     "_parent": null,
@@ -35,19 +35,19 @@
     },
     "_opacity": 255,
     "_color": {
-      "__type__": "cc.Color",
+      "__type__": "Color",
       "r": 255,
       "g": 255,
       "b": 255,
       "a": 255
     },
     "_contentSize": {
-      "__type__": "cc.Size",
+      "__type__": "Size",
       "width": 22,
       "height": 22
     },
     "_anchorPoint": {
-      "__type__": "cc.Vec2",
+      "__type__": "Vec2",
       "x": 0.5,
       "y": 0.5
     },
@@ -68,7 +68,7 @@
       ]
     },
     "_eulerAngles": {
-      "__type__": "cc.Vec3",
+      "__type__": "Vec3",
       "x": 0,
       "y": 0,
       "z": 0
@@ -81,7 +81,7 @@
     "_id": ""
   },
   {
-    "__type__": "cc.Node",
+    "__type__": "Node",
     "_name": "Label",
     "_objFlags": 0,
     "_parent": {
@@ -99,19 +99,19 @@
     },
     "_opacity": 255,
     "_color": {
-      "__type__": "cc.Color",
+      "__type__": "Color",
       "r": 255,
       "g": 255,
       "b": 255,
       "a": 255
     },
     "_contentSize": {
-      "__type__": "cc.Size",
+      "__type__": "Size",
       "width": 15,
       "height": 15
     },
     "_anchorPoint": {
-      "__type__": "cc.Vec2",
+      "__type__": "Vec2",
       "x": 0.5,
       "y": 0.5
     },
@@ -132,7 +132,7 @@
       ]
     },
     "_eulerAngles": {
-      "__type__": "cc.Vec3",
+      "__type__": "Vec3",
       "x": 0,
       "y": 0,
       "z": 0
@@ -145,7 +145,7 @@
     "_id": ""
   },
   {
-    "__type__": "cc.Label",
+    "__type__": "Label",
     "_name": "",
     "_objFlags": 0,
     "node": {
@@ -178,7 +178,7 @@
     "_id": ""
   },
   {
-    "__type__": "cc.PrefabInfo",
+    "__type__": "PrefabInfo",
     "root": {
       "__id__": 1
     },
@@ -189,7 +189,7 @@
     "sync": false
   },
   {
-    "__type__": "cc.Sprite",
+    "__type__": "Sprite",
     "_name": "",
     "_objFlags": 0,
     "node": {
@@ -210,7 +210,7 @@
     "_sizeMode": 0,
     "_fillType": 0,
     "_fillCenter": {
-      "__type__": "cc.Vec2",
+      "__type__": "Vec2",
       "x": 0,
       "y": 0
     },
@@ -232,7 +232,7 @@
     "_id": ""
   },
   {
-    "__type__": "cc.PrefabInfo",
+    "__type__": "PrefabInfo",
     "root": {
       "__id__": 1
     },

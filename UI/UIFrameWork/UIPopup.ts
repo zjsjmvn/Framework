@@ -2,7 +2,8 @@ import UIBase from './UIBase';
 import UIManager from './UIManager';
 import { ClazzOrModelSchema } from '../../Utils/Serializer/Serializr/serializr';
 import Utils from '../../Utils/Utils';
-const { property, ccclass } = cc._decorator
+import { Enum, Node, Rect, _decorator, error, Sprite, SpriteFrame, resources, log, UIOpacity, v3, UITransform, tween, v2, EventTouch, rect, UITransformComponent } from 'cc';
+const { property, ccclass } = _decorator
 
 /**
  * @description 空白判断类型。
@@ -29,7 +30,7 @@ export default abstract class UIPopup<T = any> extends UIBase {
         if (this.node.getChildByName("Container")) {
             this._touchBlankToClose = value;
         } else {
-            cc.error('需要Container节点才行');
+            error('需要Container节点才行');
         }
     }
 
@@ -37,7 +38,7 @@ export default abstract class UIPopup<T = any> extends UIBase {
         visible: function () { return this.touchBlankToClose === true },
         displayName: "空白处判断方式",
         tooltip: "ContentSize就是使用container的大小来判断，BoundingBoxToWorld是使用包围盒来判断，会考虑子节点位置",
-        type: cc.Enum(BlankJudgeType)
+        type: Enum(BlankJudgeType)
     })
     blankJudgeType: BlankJudgeType = BlankJudgeType.BoundingBoxToWorld;
 
@@ -51,35 +52,38 @@ export default abstract class UIPopup<T = any> extends UIBase {
         return this._showNonBlankArea;
     }
     set showNonBlankArea(val) {
-        // cc.log('showNonBlankArea')
-        let containerNode: cc.Node = this.node.getChildByName("Container");
-
+        // log('showNonBlankArea')
+        let containerNode: Node = this.node.getChildByName("Container");
+        let containerNodeUiTransform = containerNode.getComponent(UITransform);
         if (!!!containerNode) {
-            cc.error("快速关闭需要container节点来判断是否点击ui外部。请参考其他弹框界面的层级结构。");
+            error("快速关闭需要container节点来判断是否点击ui外部。请参考其他弹框界面的层级结构。");
             return;
         }
-        let rect: cc.Rect = null;
+        let containerNodeRect: Rect = null;
         if (this.blankJudgeType == BlankJudgeType.BoundingBoxToWorld) {
-            rect = containerNode.getBoundingBoxToWorld();
-            let nodePos = this.node.convertToNodeSpaceAR(cc.v2(rect.x, rect.y));
-            rect.x = nodePos.x
-            rect.y = nodePos.y
+            containerNodeRect = containerNodeUiTransform.getBoundingBoxToWorld();
+            let nodePos = this.node.getComponent(UITransformComponent).convertToNodeSpaceAR(v3(containerNodeRect.x, containerNodeRect.y));
+            containerNodeRect.x = nodePos.x
+            containerNodeRect.y = nodePos.y
         } else if (this.blankJudgeType == BlankJudgeType.ContentSize) {
-            let contentSize = containerNode.getContentSize();
-            // rect = cc.rect(containerNode.x - contentSize.width / 2, containerNode.y - contentSize.height / 2, contentSize.width, contentSize.height);
-            rect = cc.rect(containerNode.x - contentSize.width / 2, containerNode.y - contentSize.height / 2, contentSize.width, contentSize.height);
+            let contentSize = containerNodeUiTransform.contentSize;
+            // rect = rect(containerNode.x - contentSize.width / 2, containerNode.y - contentSize.height / 2, contentSize.width, contentSize.height);
+            containerNodeRect = rect(containerNode.position.x - contentSize.width / 2, containerNode.position.y - contentSize.height / 2, contentSize.width, contentSize.height);
         }
 
-        let node = new cc.Node();
-        node.opacity = 100;
+        let node = new Node();
+        node.getComponent(UIOpacity).opacity = 100;
+        let nodeUiTransform = node.getComponent(UITransform);
+
         this.node.addChild(node);
-        let sp = node.addComponent(cc.Sprite);
+        let sp = node.addComponent(Sprite);
         if (sp) {
-            cc.resources.load({ uuid: 'a23235d1-15db-4b95-8439-a2e005bfff91', type: cc.SpriteFrame }, (e, r) => {
+
+            resources.load({ uuid: 'a23235d1-15db-4b95-8439-a2e005bfff91', type: SpriteFrame }, (e, r) => {
                 if (!e) {
                     sp.spriteFrame = r;
-                    node.setContentSize(rect.width, rect.height);
-                    node.setPosition(rect.x + rect.width / 2, rect.y + rect.height / 2);
+                    nodeUiTransform.setContentSize(containerNodeRect.width, containerNodeRect.height);
+                    node.setPosition(containerNodeRect.x + containerNodeRect.width / 2, containerNodeRect.y + containerNodeRect.height / 2);
                     setTimeout(() => {
                         node.removeFromParent();
                     }, 1000);
@@ -111,10 +115,10 @@ export default abstract class UIPopup<T = any> extends UIBase {
     show() {
         super.show();
         if (this._touchBlankToClose) {
-            this.node.on(cc.Node.EventType.TOUCH_END, this.onThisNodeTouchEnd_UsedFor_TouchMarginToClose, this, true);
+            this.node.on(Node.EventType.TOUCH_END, this.onThisNodeTouchEnd_UsedFor_TouchMarginToClose, this, true);
         }
         if (this.touchAnyWhereToClose) {
-            this.node.on(cc.Node.EventType.TOUCH_END, this.onThisNodeTouchEnd_UsedFor_TouchAnyWhereToClose, this, true);
+            this.node.on(Node.EventType.TOUCH_END, this.onThisNodeTouchEnd_UsedFor_TouchAnyWhereToClose, this, true);
         }
         this.node._touchListener?.setSwallowTouches(false);
 
@@ -129,14 +133,14 @@ export default abstract class UIPopup<T = any> extends UIBase {
     runBgAction() {
         const background = this.node.getChildByName('Bg');
         if (background) {
-            const oldOpacity = background.opacity;
+            const oldOpacity = background.getComponent(UIOpacity).opacity;
             if (!this.backgroundOriginalOpacity) {
                 this.backgroundOriginalOpacity = { opacity: oldOpacity }
             }
             background.active = true;
-            background.opacity = 0;
+            background.getComponent(UIOpacity).opacity = 0;
             // 播放背景遮罩动画
-            cc.tween(background)
+            tween(background.getComponent(UIOpacity))
                 .to(this.duration * 0.8, { opacity: this.backgroundOriginalOpacity.opacity })
                 .start();
         }
@@ -146,13 +150,18 @@ export default abstract class UIPopup<T = any> extends UIBase {
         const container = this.node.getChildByName('Container');
         if (container) {
             container.active = true;
-            container.scale = 0.5;
-            container.opacity = 0;
+            container.scale = v3(0.5, 0.5, 0.5);
+            container.getComponent(UIOpacity).opacity = 0;
             // 播放弹窗主体动画
-            cc.tween(container)
-                .to(this.duration, { scale: 1, opacity: 255 }, { easing: 'backOut' })
+            tween(container)
+                .to(this.duration, { scale: v3(1, 1, 1) }, { easing: 'backOut' })
                 .call(() => {
+                })
+                .start();
 
+            tween(container.getComponent(UIOpacity))
+                .to(this.duration, { opacity: 255 }, { easing: 'backOut' })
+                .call(() => {
                 })
                 .start();
         }
@@ -161,10 +170,10 @@ export default abstract class UIPopup<T = any> extends UIBase {
     // TODO: 解决show频繁注册的问题。解决之后hide就不用关闭注册的事件了。
     async hide() {
         if (this._touchBlankToClose) {
-            this.node.off(cc.Node.EventType.TOUCH_END, this.onThisNodeTouchEnd_UsedFor_TouchMarginToClose, this, true);
+            this.node.off(Node.EventType.TOUCH_END, this.onThisNodeTouchEnd_UsedFor_TouchMarginToClose, this, true);
         }
         if (this.touchAnyWhereToClose) {
-            this.node.off(cc.Node.EventType.TOUCH_END, this.onThisNodeTouchEnd_UsedFor_TouchAnyWhereToClose, this, true);
+            this.node.off(Node.EventType.TOUCH_END, this.onThisNodeTouchEnd_UsedFor_TouchAnyWhereToClose, this, true);
         }
 
         await this.disappearAction();
@@ -173,19 +182,23 @@ export default abstract class UIPopup<T = any> extends UIBase {
 
     async close() {
         if (this._touchBlankToClose) {
-            this.node.off(cc.Node.EventType.TOUCH_END, this.onThisNodeTouchEnd_UsedFor_TouchMarginToClose, this, true);
+            this.node.off(Node.EventType.TOUCH_END, this.onThisNodeTouchEnd_UsedFor_TouchMarginToClose, this, true);
         }
         if (this.touchAnyWhereToClose) {
-            this.node.off(cc.Node.EventType.TOUCH_END, this.onThisNodeTouchEnd_UsedFor_TouchAnyWhereToClose, this, true);
+            this.node.off(Node.EventType.TOUCH_END, this.onThisNodeTouchEnd_UsedFor_TouchAnyWhereToClose, this, true);
         }
         await this.disappearAction();
         super.close();
     }
-
+    /**
+     * @description
+     * @return {*}  {Promise<boolean>}
+     * @memberof UIPopup
+     */
     async disappearAction(): Promise<boolean> {
         const background = this.node.getChildByName('Bg')
         if (background) {
-            cc.tween(background)
+            tween(background.getComponent(UIOpacity))
                 .delay(this.duration * 0.2)
                 .to(this.duration * 0.8, { opacity: 0 })
                 .start();
@@ -194,12 +207,16 @@ export default abstract class UIPopup<T = any> extends UIBase {
         const container = this.node.getChildByName('Container');
         if (container) {
             // 播放弹窗主体动画
-            cc.tween(container)
-                .to(this.duration, { scale: 0.5, opacity: 0 }, { easing: 'backIn' })
+            tween(container)
+                .to(this.duration, { scale: v3(0.5, 0.5) }, { easing: 'backIn' })
                 .call(() => {
                     let blocker = this.node.getChildByName('blocker');
                     blocker && (blocker.active = false);
-
+                })
+                .start();
+            tween(container.getComponent(UIOpacity))
+                .to(this.duration, { opacity: 0 }, { easing: 'backIn' })
+                .call(() => {
                 })
                 .start();
         }
@@ -207,28 +224,31 @@ export default abstract class UIPopup<T = any> extends UIBase {
         return Promise.resolve(true);
     }
 
-    onThisNodeTouchEnd_UsedFor_TouchMarginToClose(event) {
+    onThisNodeTouchEnd_UsedFor_TouchMarginToClose(event: EventTouch) {
         // let pop = this.node.getComponentsInChildren(UIPopup);
-        // cc.log('onThisNodeTouchEnd_UsedFor_TouchMarginToClose', pop)
+        // log('onThisNodeTouchEnd_UsedFor_TouchMarginToClose', pop)
         // 判断是否点击的是外面,如果点击的是container外面。则关闭。
-        // if (event.eventPhase == cc.Event.CAPTURING_PHASE) return;
+        // if (event.eventPhase == Event.CAPTURING_PHASE) return;
         // 允许触摸穿透
-        let containerNode: cc.Node = this.node.getChildByName("Container");
+        let containerNode: Node = this.node.getChildByName("Container");
+        let containerNodeUiTransform = containerNode.getComponent(UITransform);
+
         if (!!!containerNode) {
-            cc.error("快速关闭需要container节点来判断是否点击ui外部。请参考其他弹框界面的层级结构。");
+            error("快速关闭需要container节点来判断是否点击ui外部。请参考其他弹框界面的层级结构。");
             return;
         }
-        let rect: cc.Rect = null;
+        let containerNodeRect: Rect = null;
         if (this.blankJudgeType == BlankJudgeType.BoundingBoxToWorld) {
-            rect = containerNode.getBoundingBoxToWorld();
-            let nodePos = this.node.convertToNodeSpaceAR(cc.v2(rect.x, rect.y));
-            rect.x = nodePos.x
-            rect.y = nodePos.y
+            containerNodeRect = containerNodeUiTransform.getBoundingBoxToWorld();
+            let nodePos = containerNodeUiTransform.convertToNodeSpaceAR(v3(containerNodeRect.x, containerNodeRect.y));
+            containerNodeRect.x = nodePos.x
+            containerNodeRect.y = nodePos.y
         } else if (this.blankJudgeType == BlankJudgeType.ContentSize) {
-            let contentSize = containerNode.getContentSize();
-            rect = cc.rect(containerNode.x - contentSize.width / 2, containerNode.y - contentSize.height / 2, contentSize.width, contentSize.height);
+            let contentSize = containerNodeUiTransform.contentSize;
+            containerNodeRect = rect(containerNode.position.x - contentSize.width / 2, containerNode.position.y - contentSize.height / 2, contentSize.width, contentSize.height);
         }
-        let contains = rect.contains(this.node.convertToNodeSpaceAR(event.getLocation()));
+        let nodePos = containerNodeUiTransform.convertToNodeSpaceAR(v3(event.getLocation().x, event.getLocation().y, 0))
+        let contains = containerNodeRect.contains(v2(nodePos.x, nodePos.y));
         if (!contains) {
             UIManager.instance.closeUI(this);
         }
@@ -236,7 +256,7 @@ export default abstract class UIPopup<T = any> extends UIBase {
     }
 
     onThisNodeTouchEnd_UsedFor_TouchAnyWhereToClose(event) {
-        cc.log('onThisNodeTouchEnd_UsedFor_TouchAnyWhereToClose');
+        log('onThisNodeTouchEnd_UsedFor_TouchAnyWhereToClose');
         UIManager.instance.closeUI(this);
 
     }

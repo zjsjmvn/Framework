@@ -1,6 +1,8 @@
 import UIKiller from "./uikiller";
 import Utils from '../../Utils/Utils';
-const { ccclass, property } = cc._decorator;
+import { _decorator, Component, log } from 'cc';
+import { EDITOR } from "cc/env";
+const { ccclass, property } = _decorator;
 /**
  * @description 
  * 继承于Thor的组件会在运行时自动绑定节点
@@ -21,11 +23,11 @@ const { ccclass, property } = cc._decorator;
             `_on${name}TouchCancel`,
       并且节点下添加$属性。$值为其后面的数字。   
  * @class Thor
- * @extends {cc.Component}
+ * @extends {Component}
  */
 @ccclass
 // @executeInEditMode
-export default class Thor extends cc.Component {
+export default class Thor extends Component {
 
     protected useController: Boolean = false;
     protected controllerName: String = '';
@@ -40,7 +42,7 @@ export default class Thor extends cc.Component {
     // @property
     set copyBindNodeName(val) {
 
-        if (CC_EDITOR) {
+        if (EDITOR) {
             this.bind();
             var text = '';
 
@@ -49,17 +51,17 @@ export default class Thor extends cc.Component {
                 // 读取node上绑定的节点信息，node上绑定的是所有子节点和下划线开头的节点。   
                 for (const key in this.node) {
                     const element = this.node[key];
-                    if (element instanceof cc.Node) {
+                    if (element instanceof Node) {
                         let comInfo = '';
                         for (const key$ in element) {
                             const val = element[key$];
-                            if (key$[0] == '$' && val instanceof cc.Component) {
-                                cc.log('val', key$[0], val.name)
+                            if (key$[0] == '$' && val instanceof Component) {
+                                log('val', key$[0], val.name)
 
                                 let index = val.name.indexOf('<');
                                 let name = val.name.slice(index + 1, -1);
                                 if (cc[name] != undefined && Utils.isValidVariableName(name)) {
-                                    comInfo += '$' + name + ':cc.' + name + ',';
+                                    comInfo += '$' + name + ':' + name + ',';
                                 }
                                 else {
                                     comInfo += '$' + name + ':any,';
@@ -70,31 +72,31 @@ export default class Thor extends cc.Component {
                             comInfo = '&{' + comInfo + '}';
                         }
                         if (Utils.isValidVariableName(key)) {
-                            text += '\n\t' + key + `: cc.Node${comInfo};` + '\n';
+                            text += '\n\t' + key + `: Node${comInfo};` + '\n';
                         }
                     }
                 }
                 if (text.length > 0) {
-                    text = `node:cc.Node &{${text}};`
+                    text = `node:Node &{${text}};`
                 }
                 // 读取脚本上绑定的node，脚本上绑定的是下划线开头的节点。
                 for (const key in this) {
                     const element = this[key];
-                    // cc.log('key', key)
+                    // log('key', key)
 
-                    if (key[0] == '_' && element instanceof cc.Node) {
+                    if (key[0] == '_' && element instanceof Node) {
                         let comInfo = '';
                         for (const key$ in element) {
                             const val = element[key$];
 
-                            if (key$[0] == '$' && val instanceof cc.Component) {
-                                // cc.log('val', key, key$, val.name, val instanceof cc.Component)
+                            if (key$[0] == '$' && val instanceof Component) {
+                                // log('val', key, key$, val.name, val instanceof Component)
 
                                 let index = val.name.indexOf('<');
                                 let name = val.name.slice(index + 1, -1);
 
                                 if (cc[name] != undefined) {
-                                    comInfo += '$' + name + ':cc.' + name + ',';
+                                    comInfo += '$' + name + ':' + name + ',';
                                 }
                                 else {
                                     comInfo += '$' + name + ':any,';
@@ -103,10 +105,10 @@ export default class Thor extends cc.Component {
                         }
 
                         element.children.forEach(element => {
-                            if (element instanceof cc.Node) {
+                            if (element instanceof Node) {
                                 if (Utils.isValidVariableName(element.name)) {
-                                    cc.log('element', element.name)
-                                    comInfo += element.name + ':cc.Node,';
+                                    log('element', element.name)
+                                    comInfo += element.name + ':Node,';
                                 }
                             }
                         });
@@ -114,20 +116,20 @@ export default class Thor extends cc.Component {
                         if (comInfo.length > 0) {
                             comInfo = '&{' + comInfo + '}';
                         }
-                        text += '\n\t' + key + `: cc.Node${comInfo};` + '\n';
+                        text += '\n\t' + key + `: Node${comInfo};` + '\n';
 
                     }
                 }
 
 
             } catch (error) {
-                cc.log(error);
+                log(error);
             }
 
 
-            cc.log("text");
+            log("text");
 
-            cc.log("text", text);
+            log("text", text);
             var tag = document.createElement('input');
             tag.setAttribute('id', 'cp_hgz_input');
             tag.value = text;
@@ -156,15 +158,10 @@ export default class Thor extends cc.Component {
         let start = Date.now();
         let options = this.getOptions();
         UIKiller.bindComponent(this, options);
-
-        if (CC_DEBUG) {
-            let duration = Date.now() - start;
-            // cc.log(`bindComponent ${this.node.name} duration ${duration}`);
-        }
     }
 
 
-    getChildNode(name): cc.Node {
+    getChildNode(name): Node {
         return this[name];
     }
 }
@@ -186,4 +183,4 @@ window.Thor = Thor
 //     return true;
 // }
 
-// cc.log(isValidVariableName('New Label'))
+// log(isValidVariableName('New Label'))

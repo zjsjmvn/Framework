@@ -59,7 +59,7 @@ export default class QQAds implements IAdProvider {
             });
             this.rewardedVideoAd.onClose(res => {
                 if (!!res && res.isEnded || res === undefined) {
-                    cc.log('qq rewardvideo success', JSON.stringify(res));
+                    log('qq rewardvideo success', JSON.stringify(res));
                     if (!!this.rewardCallBack) {
                         this.rewardCallBack(true);
                     }
@@ -88,7 +88,7 @@ export default class QQAds implements IAdProvider {
     showBanner(style: qq.RectanbleStyle): Promise<boolean> {
         return new Promise((resolve, reject) => {
             if (window.qq && window.qq.createBannerAd) {
-                cc.log(JSON.stringify(style));
+                log(JSON.stringify(style));
                 let param = {
                     adUnitId: this.bannerId,
                     style: style
@@ -107,8 +107,8 @@ export default class QQAds implements IAdProvider {
                 });
                 this.bannerAd.onResize(size => {
                     console.log('Resize后正式宽高:', size.width, size.height);
-                    let width = cc.view.getFrameSize().width;
-                    let height = cc.view.getFrameSize().height;
+                    let width = view.getFrameSize().width;
+                    let height = view.getFrameSize().height;
                     this.bannerAd.style.top = height - size.height;
                     this.bannerAd.style.left = (width - size.width) / 2;
                 });
@@ -216,7 +216,7 @@ export default class QQAds implements IAdProvider {
 
     showRewardVideo(): Promise<RewardVideoCallBackMsg> {
         return new Promise((resolve, reject) => {
-            cc.log("QQ showRewardVideo");
+            log("QQ showRewardVideo");
             this.rewardCallBack = (result: boolean) => {
                 let msg = new RewardVideoCallBackMsg();
                 if (result == true) {
@@ -224,7 +224,7 @@ export default class QQAds implements IAdProvider {
                 } else {
                     msg.errMsg = "广告被关闭，奖励失败";
                 }
-                cc.log("showRewardVideo msg", msg.errMsg);
+                log("showRewardVideo msg", msg.errMsg);
                 resolve(msg);
                 this.rewardCallBack = null;
             }
@@ -239,7 +239,7 @@ export default class QQAds implements IAdProvider {
                     resolve(msg);
                 });
             } else {
-                cc.error("rewardedVideoAd 无效");
+                error("rewardedVideoAd 无效");
             }
 
         })

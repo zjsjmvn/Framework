@@ -1,3 +1,4 @@
+import { Node, Rect, Vec2, v2 } from "cc";
 import { GuideHelper } from "./GuideHelper";
 import { GuideView } from "./GuideView";
 
@@ -9,7 +10,7 @@ export interface IGuideStep {
      * 
      * 配置文件步骤开始执行的回调
      */
-    onStepEnter(guideNode: cc.Node, callback);
+    onStepEnter(guideNode: Node, callback);
 
     /**
      * 
@@ -17,14 +18,14 @@ export interface IGuideStep {
      * @param callback 
      * 配置文件步骤执行失败的回调
      */
-    onStepFail(guideNode: cc.Node, callback);
+    onStepFail(guideNode: Node, callback);
 
     /**
     * 
     * @param nodes 
     * 定位到步骤的定位点的回调。
     */
-    onLocateNodes(nodes: cc.Node[])
+    onLocateNodes(nodes: Node[])
 
     /**
     * 
@@ -32,20 +33,20 @@ export interface IGuideStep {
     * @param callback 
     * 步骤开始处理时的回调
     */
-    onStepProcess(guideNode: cc.Node, callback)
+    onStepProcess(guideNode: Node, callback)
 
     /**
     * 
     * @param guideRoot 步骤完成验证。验证是否成功
     */
-    onStepFinishVerify(guideNode: cc.Node): boolean
+    onStepFinishVerify(guideNode: Node): boolean
 
     /**
      * 
      * @param guideRoot 
      * 步骤成功的回调
      */
-    onStepFinished(guideNode: cc.Node);
+    onStepFinished(guideNode: Node);
 
 
     /**
@@ -54,7 +55,7 @@ export interface IGuideStep {
      * @param callback 
      * 步骤退出时的回调
      */
-    onStepExit(guideNode: cc.Node, callback)
+    onStepExit(guideNode: Node, callback)
 
 
 }
@@ -75,9 +76,9 @@ export class GuideStep implements IGuideStep {
     public finishDelayTime: number = 0;                         //延时多久结束
     public fingerMoveSpeed: number = 500;                         //手指动画移动速度
     public repeatAction = true;                                 //手指动画是否repeat
-    public textPos: cc.Vec2 = cc.v2(0, 0);                      //文本位置
+    public textPos: Vec2 = v2(0, 0);                      //文本位置
     public textBgFlip: boolean = false;                          // 背景翻转，目的是让对话框的箭头翻转。
-    public fingerPosOffset: cc.Vec2 = cc.v2(0, 0);
+    public fingerPosOffset: Vec2 = v2(0, 0);
     public customFingerAction = null;                           //自定义引导动画
     public customTextAction = null;
     public finishCallback = null;                               // 完成时主动调用 结束当前step
@@ -87,11 +88,11 @@ export class GuideStep implements IGuideStep {
 
     /**
      * @description 当step enter时调用。 子类需要在执行完调用super.onSterEnter(node,cb);
-     * @param {cc.Node} guideNode
+     * @param {Node} guideNode
      * @param {Function} [callback]
      * @memberof GuideStep
      */
-    public onStepEnter(guideNode: cc.Node, callback?: Function) {
+    public onStepEnter(guideNode: Node, callback?: Function) {
         if (!!callback) {
             callback();
         }
@@ -99,11 +100,11 @@ export class GuideStep implements IGuideStep {
 
     /**
      * @description 子类需要在执行完调用
-     * @param {cc.Node} guideNode
+     * @param {Node} guideNode
      * @param {Function} [callback]
      * @memberof GuideStep
      */
-    public onStepFail(guideNode: cc.Node, callback?: Function) {
+    public onStepFail(guideNode: Node, callback?: Function) {
         if (!!callback) {
             callback();
         }
@@ -113,10 +114,10 @@ export class GuideStep implements IGuideStep {
     }
 
 
-    public onLocateNodes(nodes: cc.Node[]) {
+    public onLocateNodes(nodes: Node[]) {
     }
 
-    public onStepProcess(guideNode: cc.Node, callback?: Function) {
+    public onStepProcess(guideNode: Node, callback?: Function) {
         if (!!callback) {
             callback(null);
         }
@@ -125,27 +126,27 @@ export class GuideStep implements IGuideStep {
 
     /**
      * @description 当引导结束时调用，适合直接控制节点状态，如active opacity等.子类需要在执行完调用。
-     * @param {cc.Node} guideNode
+     * @param {Node} guideNode
      * @param {Function} [callback]
      * @memberof GuideStep
      */
-    public onStepExit(guideNode: cc.Node, callback?: Function) {
+    public onStepExit(guideNode: Node, callback?: Function) {
         if (!!callback) {
             callback(null);
         }
 
     }
 
-    public onStepFinishVerify(guideNode: cc.Node): boolean {
+    public onStepFinishVerify(guideNode: Node): boolean {
         return true;
     }
 
     /**
      * @description 子类需要在执行完调用，适合做一些动画
-     * @param {cc.Node} guideNode
+     * @param {Node} guideNode
      * @memberof GuideStep
      */
-    public onStepFinished(guideNode: cc.Node) {
+    public onStepFinished(guideNode: Node) {
         if (!!this.finishCallback) {
             this.finishCallback();
         }
@@ -181,7 +182,7 @@ export class GuideStepType_DragToDistance extends GuideStep {
  */
 export class GuideStepType_DragToTarget extends GuideStep {
     public targetName: string = null;
-    public targetSizeOffset: cc.Rect = null;
+    public targetSizeOffset: Rect = null;
 
 }
 /**

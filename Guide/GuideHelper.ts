@@ -1,6 +1,7 @@
 import { GuideController } from "./GuideController";
 import { GuideView } from "./GuideView";
 import { GuideStep } from "./GuideStep";
+import { log, resources, Prefab, v2, director, instantiate, Node, v3 } from 'cc';
 
 export module GuideHelper {
     export class Locator {
@@ -73,7 +74,7 @@ export module GuideHelper {
          * @param locateNodes
          * @param cb
          */
-        public static locateNode(root, locateNodes, cb = null): Array<cc.Node> {
+        public static locateNode(root, locateNodes, cb = null): Array<Node> {
 
             let nodes = [];
             //mmgg
@@ -83,7 +84,7 @@ export module GuideHelper {
 
                 for (let j = 0; j < segments.length; j++) {
                     let item = segments[j];
-                    cc.log('item', JSON.stringify(item));
+                    // log('item', JSON.stringify(item));
                     switch (item.symbol) {
                         case '/': child = node.getChildByName(item.name); break;
                         case '.': child = node[item.name]; break;
@@ -128,21 +129,19 @@ export module GuideHelper {
      * @param guidePrePath 引导层预制体路径
      */
     export function createGuide(target, guidConfig: GuideConfig, guidePrePath, exitCallback = null, childIndex = 0) {
-        cc.resources.load(guidePrePath, cc.Prefab, (error, data) => {
+        resources.load(guidePrePath, Prefab, (error, data) => {
             if (!error) {
-                let guideNode: cc.Node = cc.instantiate(data);
-                guideNode.position = cc.v2(0, 0);
+                let guideNode: Node = instantiate(data);
+                guideNode.setPosition(v3(0, 0));
                 let guideView = guideNode.getComponent(GuideView);
                 let guideController: GuideController = guideNode.getComponent(GuideController);
                 guideController._guideView = guideView;
                 guideController._target = target;
                 guideController._guideConfig = guidConfig;
                 guideController._exitCallback = exitCallback;
+                director.getScene().getChildByName('Canvas').addChild(guideNode);
                 if (childIndex) {
-                    cc.director.getScene().getChildByName('Canvas').addChild(guideNode, childIndex);
-                } else {
-                    cc.director.getScene().getChildByName('Canvas').addChild(guideNode);
-
+                    guideNode.setSiblingIndex(childIndex);
                 }
             } else {
                 console.error("Guide create: " + error);

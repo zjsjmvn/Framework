@@ -1,10 +1,11 @@
 {
-  "ver": "1.1.0",
-  "uuid": "ae65f622-731e-4654-852b-b3aeec496301",
+  "ver": "4.0.23",
   "importer": "typescript",
-  "isPlugin": false,
-  "loadPluginInWeb": true,
-  "loadPluginInNative": true,
-  "loadPluginInEditor": false,
-  "subMetas": {}
+  "imported": true,
+  "uuid": "ae65f622-731e-4654-852b-b3aeec496301",
+  "files": [],
+  "subMetas": {},
+  "userData": {
+    "simulateGlobals": []
+  }
 }

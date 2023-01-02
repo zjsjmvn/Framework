@@ -19,7 +19,7 @@ export class NumericComponent {
 
     public addByKey(key: NumericType, value: number) {
         if (key === NumericType.Base || key === NumericType.Final) {
-            cc.error(`NumericType.Base and NumericType.Final 不允许直接加`);
+            error(`NumericType.Base and NumericType.Final 不允许直接加`);
         }
         let oldValue = this.getByKey(key);
         let newValue = oldValue + value;
@@ -41,7 +41,7 @@ export class NumericComponent {
         if (type == NumericType.BaseAddPercent || type == NumericType.FinalAddPercent) {
             if (value <= -100) {
                 // value低于-100后base会计算出负值。
-                cc.warn(`NumericComponent: setByKey ${NumericType[type]} is less than -100`);
+                warn(`NumericComponent: setByKey ${NumericType[type]} is less than -100`);
             }
         }
         if (value === this.getByKey(type)) {
@@ -73,8 +73,8 @@ a.setByKey(NumericType.BaseAddPercent, 100);
 a.setByKey(NumericType.FinalAddValue, 500);
 a.setByKey(NumericType.FinalAddPercent, -150);
 
-cc.log(a.getByKey(NumericType.Final));
-cc.log(a.getBaseByFinal(a.getByKey(NumericType.Final)));
+log(a.getByKey(NumericType.Final));
+log(a.getBaseByFinal(a.getByKey(NumericType.Final)));
 
  */
 

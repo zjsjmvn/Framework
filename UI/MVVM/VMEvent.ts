@@ -1,4 +1,5 @@
 import VMBase from './VMBase';
+import { _decorator, CCString, Component, Enum, EventHandler } from 'cc';
 
 //todo
 
@@ -11,7 +12,7 @@ import VMBase from './VMBase';
 
 // 比较条件:,如果传入值 > /< />= /<= /== 某值时，执行的action类型
 
-const { ccclass, property, executeInEditMode, menu } = cc._decorator;
+const { ccclass, property, executeInEditMode, menu } = _decorator;
 
 // enum WatchMode {
 //     ccLabel,
@@ -48,14 +49,14 @@ export default class VMEvent extends VMBase {
 
     @property({
         tooltip: '监听获取值的多条路径,这些值的改变都会通过这个函数回调,请使用 pathArr 区分获取的值 ',
-        type: [cc.String],
+        type: [CCString],
         visible: function () { return true }
     })
     public watchPathArr: string[] = [];
 
     @property({
         tooltip: '过滤模式，会根据条件过滤掉时间的触发',
-        type: cc.Enum(FILTER_MODE)
+        type: Enum(FILTER_MODE)
     })
     public filterMode: FILTER_MODE = FILTER_MODE.none;
 
@@ -65,8 +66,8 @@ export default class VMEvent extends VMBase {
     public compareValue: string = '';
 
 
-    @property([cc.Component.EventHandler])
-    changeEvents: cc.Component.EventHandler[] = [];
+    @property([Component.EventHandler])
+    changeEvents: EventHandler[] = [];
 
 
     // LIFE-CYCLE CALLBACKS:

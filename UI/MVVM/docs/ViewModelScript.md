@@ -6,7 +6,7 @@ View Model 的脚本用法
 
 ### 方法
 
-VM是 VMManager 的实例, 用于管理所有的 ViewModel 实例。ViewModel实例 主要用于实现数据的双向绑定，内部使用了 cc.director.emit 方法  来发送数据变动的消息,在使用时你可以不用关注于这些细节。
+VM是 VMManager 的实例, 用于管理所有的 ViewModel 实例。ViewModel实例 主要用于实现数据的双向绑定，内部使用了 director.emit 方法  来发送数据变动的消息,在使用时你可以不用关注于这些细节。
 
 我们可以通过 import  VM（VMManager） 对象 来管理 所有的 ViewModel ，**不建议**直接去使用 ViewModel 实例。
 
@@ -90,10 +90,10 @@ vm.getValue('gold');
  //通过相对路径获取属性
 vm.getValue('info.id');
 
-//一旦修改值，将会通知 cc.director, 使用emit 发送消息 
+//一旦修改值，将会通知 director, 使用emit 发送消息 
 data.name = 'my_name'; 
 
-//关闭激活状态后，就不会通知 cc.director 传递信息了
+//关闭激活状态后，就不会通知 director 传递信息了
 vm.active = false; 
 
 //移除ViewModel，并且释放 data 的引用

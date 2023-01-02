@@ -1,3 +1,5 @@
+import { Canvas, Prefab, Sprite, SpriteFrame, assetManager, find, log, resources, view } from "cc";
+
 export default class Utils {
     constructor() { }
 
@@ -247,13 +249,13 @@ export default class Utils {
 
     /**
      * 定义加载框 在当前场景初始化的时候执行一次
-     * @param {cc.Node} node 加载框节点
-     * @param {cc.Node} scene 加载框 输出的场景 or 节点
+     * @param {Node} node 加载框节点
+     * @param {Node} scene 加载框 输出的场景 or 节点
      */
     setLoadingBox(node, scene) {
         this.loading_box = node;
         this.loading_box.zIndex = 99;
-        this.loading_text = cc.find('text', this.loading_box).getComponent(cc.Label);
+        this.loading_text = find('text', this.loading_box).getComponent(Label);
         this.loading_box.parent = scene;
         this.loading_box.active = false;
     }
@@ -266,7 +268,7 @@ export default class Utils {
     loadPrefab(name, callback = null) {
         this.loading_box.active = true;
         this.loading_text.string = '0%';
-        cc.resources.load('prefab/' + name, cc.Prefab, (count, total, item) => {
+        resources.load('prefab/' + name, Prefab, (count, total, item) => {
             let val = count / total;
             this.loading_text.string = Math.floor(val * 100) + '%';
             // console.log(val);
@@ -279,23 +281,23 @@ export default class Utils {
 
     /**
      * 图片加载 resources文件下
-     * @param {cc.Node} node 节点
+     * @param {Node} node 节点
      * @param {string} src 路径
      * @param {Function} callback 回调  
      */
-    public static loadImg(src: string, node?: cc.Node, callback?: Function) {
+    public static loadImg(src: string, node?: Node, callback?: Function) {
         let load_count = 0;
         /** 加载失败时，重复加载 直到次数为 3 */
         let load = () => {
             load_count += 1;
-            cc.resources.load(src, cc.SpriteFrame, (err, res: cc.SpriteFrame) => {
+            resources.load(src, SpriteFrame, (err, res: SpriteFrame) => {
                 if (err) {
                     console.log(`图片${src}加载错误重复加载次数 >>`, load_count);
                     if (load_count < 3) {
                         load();
                     }
                 } else {
-                    if (!!node) node.getComponent(cc.Sprite).spriteFrame = res;
+                    if (!!node) node.getComponent(Sprite).spriteFrame = res;
                     if (!!callback) callback(res);
                 }
             });
@@ -303,13 +305,13 @@ export default class Utils {
         load();
     }
 
-    public static loadImgAsync(src: string): Promise<cc.SpriteFrame> {
+    public static loadImgAsync(src: string): Promise<SpriteFrame> {
         return new Promise((resolve, reject) => {
             let load_count = 0;
             /** 加载失败时，重复加载 直到次数为 3 */
             let load = () => {
                 load_count += 1;
-                cc.resources.load(src, cc.SpriteFrame, (err, res: cc.SpriteFrame) => {
+                resources.load(src, SpriteFrame, (err, res: SpriteFrame) => {
                     if (err) {
                         console.log(`图片${src}加载错误重复加载次数 >>`, load_count);
                         if (load_count < 3) {
@@ -334,7 +336,7 @@ export default class Utils {
      * @param onComplete 获取后的回调
      */
     public static getAssetFromBundle(bundleName, assetPath, assetType, onComplete) {
-        let bundle = cc.assetManager.getBundle(bundleName);
+        let bundle = assetManager.getBundle(bundleName);
         let fun = (bundle) => {
             bundle.load(assetPath, assetType, (err, asset) => {
                 if (err) {
@@ -347,7 +349,7 @@ export default class Utils {
             fun(bundle);
         }
         else {
-            cc.assetManager.loadBundle(bundleName, (err, bundle) => {
+            assetManager.loadBundle(bundleName, (err, bundle) => {
                 if (err) {
                     console.log(`加载Bundle错误！`, bundleName, err);
                 } else {
@@ -366,7 +368,7 @@ export default class Utils {
  */
     public static getAssetFromBundleAsync(bundleName, assetPath, assetType): Promise<any> {
         return new Promise((resolve, reject) => {
-            let bundle = cc.assetManager.getBundle(bundleName);
+            let bundle = assetManager.getBundle(bundleName);
             let fun = (bundle) => {
                 bundle.load(assetPath, assetType, (err, asset) => {
                     if (err) {
@@ -379,7 +381,7 @@ export default class Utils {
                 fun(bundle);
             }
             else {
-                cc.assetManager.loadBundle(bundleName, (err, bundle) => {
+                assetManager.loadBundle(bundleName, (err, bundle) => {
                     if (err) {
                         console.log(`加载Bundle错误！`, bundleName, err);
                     } else {
@@ -393,13 +395,13 @@ export default class Utils {
 
     /**
      * 加载网络图片
-     * @param {cc.Node} node 节点
+     * @param {Node} node 节点
      * @param {string} src 资源路径
      * @param {string} type 加载图片类型
      */
     public static loadNetImg(node, src, type = 'jpg') {
-        cc.assetManager.loadRemote(src, (err, res) => {
-            node.getComponent(cc.Sprite).spriteFrame = new cc.SpriteFrame(res);
+        assetManager.loadRemote(src, (err, res) => {
+            node.getComponent(Sprite).spriteFrame = new SpriteFrame(res);
         });
     }
 
@@ -412,7 +414,7 @@ export default class Utils {
      */
     public static copy(dest, scr, ignore?) {
         for (let i in scr) {
-            cc.log(scr.constructor.name, i, scr[i])
+            log(scr.constructor.name, i, scr[i])
             if (!!ignore) {
                 if (ignore == i) {
                     continue;
@@ -424,19 +426,19 @@ export default class Utils {
 
     public static autoAdapt() {
 
-        let size = cc.find('Canvas').getComponent(cc.Canvas).designResolution;
+        let size = find('Canvas').getComponent(Canvas).designResolution;
 
 
-        let frameRatio = cc.view.getFrameSize().height / cc.view.getFrameSize().width;
+        let frameRatio = view.getFrameSize().height / view.getFrameSize().width;
         let designRation = size.height / size.width;
 
         if (frameRatio >= designRation) {
-            cc.Canvas.instance.fitWidth = true;
-            cc.Canvas.instance.fitHeight = false;
+            Canvas.instance.fitWidth = true;
+            Canvas.instance.fitHeight = false;
 
         } else {
-            cc.Canvas.instance.fitWidth = false;
-            cc.Canvas.instance.fitHeight = true;
+            Canvas.instance.fitWidth = false;
+            Canvas.instance.fitHeight = true;
         }
     }
 
@@ -466,12 +468,12 @@ export default class Utils {
         if (delayTime === 0) { delayTime = 100; }
         // delayTime -= 18;
         return new Promise(function (resolve, reject) {
-            // cc.delayTime(delayTime);
+            // delayTime(delayTime);
             // let a = {};
-            // cc.tween(a).delay(delayTime / 1000).call(() => {
+            // tween(a).delay(delayTime / 1000).call(() => {
             //     resolve();
             // }).start();
-            // cc.director.getScheduler().scheduleOnce()l
+            // director.getScheduler().scheduleOnce()l
             setTimeout(function () {
                 resolve();
             }, delayTime);
@@ -486,7 +488,7 @@ export default class Utils {
      */
     public static delayWithCallBack(delayTime, callback) {
         let a = {};
-        cc.tween(a).delay(delayTime / 1000).call(() => {
+        tween(a).delay(delayTime / 1000).call(() => {
             callback();
         }).start();
     }
@@ -502,7 +504,7 @@ export default class Utils {
         }
         let str = num.slice(0, length + 1);
         let str2 = num.slice(length + 1, length + fixedCount + 1);
-        // cc.log('str2', str2)
+        // log('str2', str2)
         if (num.length >= 3) {
 
         }
@@ -523,7 +525,7 @@ export default class Utils {
             }
             str += '.' + str2.slice(0, str2EndIndex + 1);
         }
-        // cc.log('length', length, num.slice(0, length + 1));
+        // log('length', length, num.slice(0, length + 1));
         if (indexOf1000 <= 3) {
             if (indexOf1000 < 1) {
                 return str += '';
@@ -534,7 +536,7 @@ export default class Utils {
             }
         }
         indexOf1000 -= 2;
-        // cc.log('-------------------')
+        // log('-------------------')
         //index表示全排列index个字母。通过 Math.pow(strArr.length, index)就能算出这个index有多少数量。
         /**
          * 
@@ -568,7 +570,7 @@ export default class Utils {
         if (row == 0) {
             row = strArr.length;
         }
-        // cc.log(index, columnCount)
+        // log(index, columnCount)
         while (index > 1) {
             let c = Math.pow(strArr.length, index - 2);
             let ss = Math.ceil(columnCount / c);
@@ -580,12 +582,12 @@ export default class Utils {
                 }
             }
             // columnCount -= c;
-            // cc.log('ss', ss, c, columnCount);
+            // log('ss', ss, c, columnCount);
             str += strArr[ss - 1];
             index--;
         }
         str += strArr[row - 1];
-        // cc.log('row', row);
+        // log('row', row);
         return str;
     }
     public static isValidNumber(value) {

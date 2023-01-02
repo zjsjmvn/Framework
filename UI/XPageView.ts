@@ -5,13 +5,13 @@
 // // Learn life-cycle callbacks:
 // //  - https://docs.cocos.com/creator/manual/en/scripting/life-cycle-callbacks.html
 
-// const { ccclass, property } = cc._decorator;
+// const { ccclass, property } = _decorator;
 
 // @ccclass
-// export default class XPageView extends cc.PageView {
+// export default class XPageView extends PageView {
 //     //this is for nested scrollview
 //     hasNestedViewGroup(event, captureListeners) {
-//         if (event.eventPhase !== cc.Event.CAPTURING_PHASE) return;
+//         if (event.eventPhase !== Event.CAPTURING_PHASE) return;
 
 //         var touch = event.touch;
 //         if (!touch) return;
@@ -26,13 +26,13 @@
 //                 var item = captureListeners[i];
 
 //                 if (this.node === item) {
-//                     if (event.target.getComponent(cc.ViewGroup)) {
+//                     if (event.target.getComponent(ViewGroup)) {
 //                         return true;
 //                     }
 //                     return false;
 //                 }
 
-//                 if (item.getComponent(cc.ViewGroup)) {
+//                 if (item.getComponent(ViewGroup)) {
 //                     return true;
 //                 }
 //             }

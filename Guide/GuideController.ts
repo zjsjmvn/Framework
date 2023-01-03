@@ -5,6 +5,9 @@ import { GuideStep, GuideStepType_TouchTimes, GuideStepType_LongTouch, GuideStep
 import { _decorator, log, Rect, UITransform, v3, EventTouch, Node, v2 } from 'cc';
 //@ts-ignore
 // let async = require("async");
+import { default as async } from "../Utils/async.js"
+
+
 const { ccclass, property } = _decorator;
 
 

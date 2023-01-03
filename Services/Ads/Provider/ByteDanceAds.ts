@@ -254,8 +254,8 @@ export default class ByteDanceAds implements IAdProvider {
                     //TODO: 这个地方会让广告在屏幕最下居中，被写死，需要修改
                     bundle.bannerInstance.onResize(size => {
                         console.log(size.width, size.height);
-                        let width = screen.windowSize().width;
-                        let height = screen.windowSize().height;
+                        let width = screen.windowSize.width;
+                        let height = screen.windowSize.height;
                         bundle.bannerInstance.style.top = height - size.height;
                         bundle.bannerInstance.style.left = (width - size.width) / 2;
                     });

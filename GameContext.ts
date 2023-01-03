@@ -43,6 +43,7 @@ export default class GameContext {
     }
 
     public static getService<T extends IService>(c: { new(): T; }): T {
+        //@ts-ignore
         let service = <T>GameContext._servicesDictionary.get(c.serviceName);
         if (!!service) {
             return service;

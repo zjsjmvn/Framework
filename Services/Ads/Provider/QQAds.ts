@@ -1,3 +1,4 @@
+import { screen } from 'cc';
 import { RewardVideoCallBackMsg } from '../AdsManager';
 import { IAdProvider } from './IAdProvider';
 
@@ -107,8 +108,8 @@ export default class QQAds implements IAdProvider {
                 });
                 this.bannerAd.onResize(size => {
                     console.log('Resize后正式宽高:', size.width, size.height);
-                    let width = view.getFrameSize().width;
-                    let height = view.getFrameSize().height;
+                    let width = screen.windowSize.width;
+                    let height = screen.windowSize.height;
                     this.bannerAd.style.top = height - size.height;
                     this.bannerAd.style.left = (width - size.width) / 2;
                 });

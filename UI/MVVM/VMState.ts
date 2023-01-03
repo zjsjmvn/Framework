@@ -45,7 +45,7 @@ export default class VMState extends VMBase {
         type: [CCString],
         visible: function () { return true }
     })
-    protected watchPathArr: string[] = [];
+    public watchPathArr: string[] = [];
 
     @property({
         tooltip: '遍历子节点,根据子节点的名字或名字转换为值，判断值满足条件 来激活'

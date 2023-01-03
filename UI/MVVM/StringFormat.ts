@@ -100,8 +100,11 @@ class StringFormat {
             }
         }
         // 补位
+        //@ts-ignore
         hour = ('0' + hour).slice(-2);
+        //@ts-ignore
         minute = ('0' + minute).slice(-2);
+        //@ts-ignore
         totalSeconds = ('0' + totalSeconds).slice(-2);
         return hour + ':' + minute + ":" + totalSeconds;
     }

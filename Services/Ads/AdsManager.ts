@@ -1,7 +1,7 @@
 import { IAdProvider } from './Provider/IAdProvider';
 import { IConfig } from '../../../GamePlay/LaunchConfigs';
 import { singleton } from '../../Utils/Decorator/Singleton';
-import { log, view } from 'cc';
+import { log, screen, view } from 'cc';
 
 /**
  * @description 视频广告播放回调，如果失败就读取errMsg
@@ -229,8 +229,8 @@ export class AdsManager {
      * @memberof AdsManager
      */
     defaultBannerStyle() {
-        let width = view.getFrameSize().width;
-        let height = view.getFrameSize().height;
+        let width = screen.windowSize.width;
+        let height = screen.windowSize.height;
         return { width: width };
     }
 

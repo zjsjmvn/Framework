@@ -1,4 +1,4 @@
-import { _decorator, Component, Enum, log, CCString } from 'cc';
+import { _decorator, Component, Enum, log, CCString, Node } from 'cc';
 import { EDITOR } from 'cc/env';
 
 
@@ -170,16 +170,17 @@ export default class MVCompsEdit extends Component {
         log('[' + className + ']:');
         comps.forEach(v => {
             let ext = '';
-
             if (state <= 3) {
                 //区分模板模式路径
+                //@ts-ignore
                 if (v.templateMode === true) {
+                    //@ts-ignore
                     ext = v.watchPathArr ? ':[Path:' + v.watchPathArr.join('|') + ']' : ''
                 } else {
+                    //@ts-ignore
                     ext = v.watchPath ? ':[Path:' + v.watchPath + ']' : ''
                 }
             }
-
             log(this.getNodePath(v.node) + ext);
             switch (state) {
                 case 0://寻找组件
@@ -202,16 +203,19 @@ export default class MVCompsEdit extends Component {
 
                     let targetPath = this.targetPath;
                     let replacePath = this.replacePath;
+                    //@ts-ignore
                     if (v.templateMode === true) {
+                        //@ts-ignore
                         for (let i = 0; i < v.watchPathArr.length; i++) {
+                            //@ts-ignore
                             const path = v.watchPathArr[i];
+                            //@ts-ignore
                             v.watchPathArr[i] = this.replaceNodePath(path, targetPath, replacePath);
                         }
                     } else {
+                        //@ts-ignore
                         v.watchPath = this.replaceNodePath(v.watchPath, targetPath, replacePath);
                     }
-
-
                 default:
                     break;
             }

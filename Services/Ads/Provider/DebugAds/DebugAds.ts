@@ -1,5 +1,5 @@
 import { RewardVideoCallBackMsg, AdsManager } from '../../AdsManager';
-import DebugAdsView from './DebugAdsUI';
+import DebugAdsView from './DebugAdsView';
 import { IAdProvider } from '../IAdProvider';
 import { Node, _decorator, director, log } from 'cc';
 

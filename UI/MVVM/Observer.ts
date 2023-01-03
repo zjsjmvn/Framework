@@ -50,7 +50,9 @@ export class Observer<T> {
         if (!!Entity && obj instanceof Entity) {
             obj._components.forEach((value) => {
                 if (value == null) return;
+                //@ts-ignore
                 if (!!!value.mvvmPath) return;
+                //@ts-ignore
                 this.observe(value, [value.mvvmPath]);
             }, this)
         }

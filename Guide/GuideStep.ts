@@ -108,9 +108,6 @@ export class GuideStep implements IGuideStep {
         if (!!callback) {
             callback();
         }
-
-
-
     }
 
 

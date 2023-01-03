@@ -1,4 +1,4 @@
-import { Canvas, Prefab, Sprite, SpriteFrame, assetManager, find, log, resources, view } from "cc";
+import { Canvas, Prefab, Sprite, SpriteFrame, assetManager, find, log, resources, screen, view } from "cc";
 
 export default class Utils {
     constructor() { }
@@ -429,7 +429,7 @@ export default class Utils {
         let size = find('Canvas').getComponent(Canvas).designResolution;
 
 
-        let frameRatio = view.getFrameSize().height / view.getFrameSize().width;
+        let frameRatio = screen.windowSize.height / screen.windowSize.width;
         let designRation = size.height / size.width;
 
         if (frameRatio >= designRation) {

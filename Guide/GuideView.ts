@@ -2,7 +2,8 @@ import Thor from "../UI/UIKiller/Thor";
 import Utils from "../Utils/Utils";
 import { GuideHelper } from "./GuideHelper";
 import { GuideStep } from "./GuideStep";
-import { Vec2, _decorator, log, v2, Rect, UIOpacity, v3, UITransform, Node, Vec3, tween, Tween, TweenAction, utils } from 'cc';
+import { Vec2, _decorator, log, v2, Rect, UIOpacity, v3, UITransform, Node, Vec3, tween, Tween, TweenAction, utils, RichText } from 'cc';
+import { default as async } from "../Utils/async.js"
 
 const { ccclass, property } = _decorator;
 @ccclass
@@ -20,13 +21,17 @@ export class GuideView extends Thor {
 
         this._finger = this.node.getChildByName('finger');
 
+        // 测试
 
-        setTimeout(() => {
+        // setTimeout(() => {
 
 
-            // this.fingerToNode([this.node.getChildByName('Node1')], { showMask: false, repeatAction: true, fingerPosOffset: v2(1, 1) });
-            this._fingerToPointArrayAndBackAction([this.node.getChildByName('Node1').getPosition(), this.node.getChildByName('Node2').getPosition(), this.node.getChildByName('Node3').getPosition()], 500, true)
-        }, 1000);
+        //     // this.fingerToNode([this.node.getChildByName('Node1')], { showMask: false, repeatAction: true, fingerPosOffset: v2(1, 1) });
+        //     this._fingerToPointArrayAndBackAction([this.node.getChildByName('Node1').getPosition(), this.node.getChildByName('Node2').getPosition(), this.node.getChildByName('Node3').getPosition()], 500, true)
+        // }, 1000);
+
+
+        // async.eachSeries([]);
     }
     onEnable() {
 
@@ -52,7 +57,7 @@ export class GuideView extends Thor {
                 this._finger.active = false;
                 assignedAction(this.node, v2(rect.x + rect.width * 0.5, rect.y + rect.height * 0.5));
             } else {
-                this._fingerToPointAction(v2(rect.x + rect.width * 0.5, rect.y + rect.height * 0.5), step.repeatAction, step.fingerPosOffset);
+                this._fingerToPointAction(v3(rect.x + rect.width * 0.5, rect.y + rect.height * 0.5), step.repeatAction, step.fingerPosOffset);
             }
             if (step.showMask) {
                 this.showMask(rect);
@@ -231,10 +236,10 @@ export class GuideView extends Thor {
         if (!!step.customTextAction) {
             step.customTextAction(this._text);
         }
-        this._textBg.scaleX = Math.abs(this._textBg.scaleX);
-        if (step.textBgFlip) {
-            this._textBg.scaleX *= -1;
-        }
+        // this._textBg.scaleX = Math.abs(this._textBg.scaleX);
+        // if (step.textBgFlip) {
+        //     this._textBg.scaleX *= -1;
+        // }
         this._text.active = true;
         this._textLabel.getComponent(RichText).string = step.hintText;
         if (step.textPos) {

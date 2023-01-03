@@ -48,7 +48,7 @@ export default class VMLabel extends VMBase {
             }
         }
     })
-    protected watchPathArr: Array<string> = new Array<string>();
+    public watchPathArr: Array<string> = new Array<string>();
 
     protected templateValueArr: Array<any> = new Array<any>();
 
@@ -151,10 +151,12 @@ export default class VMLabel extends VMBase {
     }
 
     setLabelValue(value) {
+        //@ts-ignore
         this.getComponent(this.labelType).string = value + '';
     }
 
     getLabelValue(): string {
+        //@ts-ignore
         return this.getComponent(this.labelType).string;
     }
 

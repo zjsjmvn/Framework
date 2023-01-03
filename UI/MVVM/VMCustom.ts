@@ -128,10 +128,10 @@ export default class VMCustom extends VMBase {
         //如果遇到Toggle 组件就调用上面的方法解决
         if (this.componentName == "Toggle") {
             if (value == true) {
-                this.node.getComponent(Toggle).check();
+                this.node.getComponent(Toggle).isChecked = true;
             }
             if (value == false) {
-                this.node.getComponent(Toggle).uncheck();
+                this.node.getComponent(Toggle).isChecked = false;
             }
         } else {
             this._watchComponent[this.componentProperty] = value;

@@ -1,6 +1,6 @@
 import { RewardVideoCallBackMsg, AdsManager } from '../../AdsManager';
 import { DebugAdsEnum } from './DebugAds';
-import { _decorator, Component, game, log, resources, Sprite, SpriteFrame, director, BlockInputEvents, Label, Color, Node, UITransform, view, v2, v3, error } from 'cc';
+import { _decorator, Component, game, log, resources, Sprite, SpriteFrame, director, BlockInputEvents, Label, Color, Node, UITransform, view, v2, v3, error, screen } from 'cc';
 
 
 const { ccclass, property } = _decorator;
@@ -20,8 +20,8 @@ export default class DebugAdsView extends Component {
         uiTransform.anchorY = 1;
         //使用百度方案
         style = style || AdsManager.instance.defaultBannerStyle();
-        let scaleX = view.getVisibleSize().width / view.getFrameSize().width;
-        let scaleY = view.getVisibleSize().height / view.getFrameSize().height;
+        let scaleX = view.getVisibleSize().width / screen.windowSize.width;
+        let scaleY = view.getVisibleSize().height / screen.windowSize.height;
         log('scalex', scaleX)
         uiTransform.width = style.width / 2 * scaleX;
         uiTransform.height = uiTransform.width / 16 * 9;
@@ -63,9 +63,9 @@ export default class DebugAdsView extends Component {
             } break;
             case DebugAdsEnum.Reward: {
                 this.addTitle('视频');
-                this.addBtn('成功播放', this._onRewardAdsSuccessTouchEnd).x = 100;
-                this.addBtn('失败播放', this._onFailTouchEnd).x = -100;
-                this.addBtn('wx&tt视频上限', this._onNonAdsTouchEnd).y = -50;
+                this.addBtn('成功播放', this._onRewardAdsSuccessTouchEnd).setPosition(-100, 0);
+                this.addBtn('失败播放', this._onFailTouchEnd).setPosition(-100, 0);
+                this.addBtn('wx&tt视频上限', this._onNonAdsTouchEnd).setPosition(0, -50);
             } break;
         }
     }

@@ -1,7 +1,7 @@
 
 import VMBase from './VMBase';
 import { VM } from './VMManager';
-import { _decorator, Enum, CCInteger, UIOpacity, Node } from 'cc';
+import { _decorator, Enum, CCInteger, UIOpacity, Node, Color, color } from 'cc';
 
 const { ccclass, property, menu } = _decorator;
 
@@ -61,7 +61,7 @@ export class VMStateDynamicConfig {
 export default class VMStateNew extends VMBase {
 
     //#region property
-    protected watchPathArr: string[] = [];
+    public watchPathArr: string[] = [];
     protected templateValueMap: Map<string, any> = new Map();
 
     @property({

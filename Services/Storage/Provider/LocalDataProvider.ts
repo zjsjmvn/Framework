@@ -82,9 +82,12 @@ export default class LocalDataProvider implements IStorageProvider {
             key = md5(key);
         }
         let str: string | null = cc.sys.localStorage.getItem(key);
+
         if (null != str && '' !== str && null != this._key && null != this._iv && this.encrypted) {
             try {
                 str = EncryptUtil.aesDecrypt(str, this._key, this._iv);
+                cc.log('read2', key, str);
+
             } catch (e) {
                 str = null;
             }
@@ -99,7 +102,7 @@ export default class LocalDataProvider implements IStorageProvider {
             return Number(str) || 0;
         }
         if (typeof defaultValue === 'boolean') {
-            return "true" == str;
+            return "true" == str || str == true;
         }
         return str;
     }

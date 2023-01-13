@@ -53,10 +53,11 @@ export class StringUtil {
         var k = 10000;
         var sizes = ['', '万', '亿', '万亿'];
         if (value < k) {
-            return value.toString();
+            return value.toFixed(fixed);
         }
         else {
             var i = Math.floor(Math.log(value) / Math.log(k));
+            cc.log(fixed)
             return ((value / Math.pow(k, i))).toFixed(fixed) + sizes[i];
         }
     }

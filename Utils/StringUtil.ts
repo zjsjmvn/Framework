@@ -1,3 +1,4 @@
+import { parse } from './Encrypt/crypto-js';
 /** 字符串工具 */
 export class StringUtil {
     /** 获取一个唯一标识的字符串 */
@@ -53,12 +54,13 @@ export class StringUtil {
         var k = 10000;
         var sizes = ['', '万', '亿', '万亿'];
         if (value < k) {
-            return value.toFixed(fixed);
+            let fixedValue = value.toFixed(fixed)
+            return parseFloat(fixedValue).toString();
         }
         else {
             var i = Math.floor(Math.log(value) / Math.log(k));
             cc.log(fixed)
-            return ((value / Math.pow(k, i))).toFixed(fixed) + sizes[i];
+            return parseFloat(((value / Math.pow(k, i))).toFixed(fixed)) + sizes[i];
         }
     }
 

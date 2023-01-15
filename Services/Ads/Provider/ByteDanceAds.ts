@@ -15,6 +15,13 @@ export const TTRewardVideoErrMsg = {
     1008: '广告单元已关闭',
 };
 
+export interface ByteDanceRewardedVideoOptions {
+    adUnitId: string;//"xxxxxxxxxxx",
+    multiton?: boolean;//true,
+    multitonRewardMsg?: Array<string>;// ['更多奖励1', '更多奖励2', '更多奖励3'],
+    multitonRewardTimes?: number;// 3,
+    progressTip?: boolean;//false,
+}
 
 
 export default class ByteDanceAds implements IAdProvider {
@@ -26,6 +33,12 @@ export default class ByteDanceAds implements IAdProvider {
         this.initRewardVideos(rewardVideosMap);
         this.initInterstitialAds(interstitialAdsMap);
         this.initBanners(bannersMap);
+    }
+    hasMultitonRewardVideo(posName: string): boolean {
+
+        let bundle = this.rewardVideoInstanceMap.get(posName);
+        return bundle.hasRewardVideoInCache;
+
     }
 
 
@@ -126,8 +139,28 @@ export default class ByteDanceAds implements IAdProvider {
             console.error("ByteDanceAds：并不是头条平台，却引用了头条的广告组件");
             return null;
         }
-
     }
+    private initMultitonRewardVideo(rewardVideoId, rewardVideoBundle: RewardVideoBundle) {
+        if (!!window.tt && !!window.tt.createRewardedVideoAd) {
+            //视频
+            let adInfo = {
+                adUnitId: rewardVideoId
+            };
+            rewardVideoBundle.rewardVideoInstance = window.tt.createRewardedVideoAd(adInfo);
+            rewardVideoBundle.rewardVideoInstance.onLoad(() => {
+                console.log('激励视频 广告加载成功')
+                rewardVideoBundle.hasRewardVideoInCache = true;
+            });
+            rewardVideoBundle.rewardVideoInstance.onError(err => {
+                console.log('激励视频播放失败', err)
+                rewardVideoBundle.hasRewardVideoInCache = false;
+            });
+        } else {
+            console.error("ByteDanceAds：并不是头条平台，却引用了头条的广告组件");
+            return null;
+        }
+    }
+
 
     private initRewardVideos(rewardVideosMap: Map<string, string>) {
         rewardVideosMap?.forEach((value, key) => {

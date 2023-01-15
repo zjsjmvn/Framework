@@ -303,10 +303,10 @@ export class GuideController extends Thor {
 
     private _saveProgress(index, cb?) {
         cc.log("_saveProgress", index);
-        cc.sys.localStorage.setItem(this._guideConfig.guideName, index);
-        if (cb) {
-            cb();
-        }
+        // cc.sys.localStorage.setItem(this._guideConfig.guideName, index);
+        // if (cb) {
+        //     cb();
+        // }
     }
 
     /**

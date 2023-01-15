@@ -1,5 +1,4 @@
 import { IAdProvider } from '../Ads/Provider/IAdProvider';
-import { IdComponent } from '../../../GamePlay/ECS/components/Components';
 export default abstract class BasePlatform {
     private adProviders: Array<IAdProvider>;
     init() {
@@ -17,6 +16,8 @@ export default abstract class BasePlatform {
     public removeAdProvider(providerName: string) {
 
     }
+    public showRewardVideo() {
 
+    }
 
 }

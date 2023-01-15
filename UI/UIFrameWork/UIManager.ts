@@ -71,7 +71,7 @@ export default class UIManager {
 
     private uiPrefabNameAndPathMap: Map<string, string> = new Map();
 
-    public openUIClass<T extends UIBase>(uiClass: { new(): T }, zOrder: number = ViewZOrder.UI, showCallback?: Function, onProgress?: Function, data?: any, closeCallback?: Function) {
+    public openUIClass<T extends UIBase>(uiClass: { new(): T }, zOrder: number = ViewZOrder.UI, data?: any, showCallback?: Function, onProgress?: Function) {
         if (this.hasUI(uiClass)) {
             if (!this.getUI(uiClass).allowMultiThisUI) {
                 console.warn(`UIManager OpenUI 1: ui ${cc.js.getClassName(uiClass)} is already exist, please check`);
@@ -92,12 +92,10 @@ export default class UIManager {
             uiInstance.node.parent = uiRoot;
             uiInstance.node.setPosition(0, 0);
             uiInstance.init(data);
-            uiInstance.closeCallback = closeCallback;
             uiInstance.node.zIndex = zOrder;
             uiInstance.show();
             this.dynamicUIStack.push(uiInstance);
             showCallback && showCallback(uiInstance);
-
         }
 
         let uiInstance = this.getUIFromCachedMap(uiClass);
@@ -140,7 +138,7 @@ export default class UIManager {
      * @param {Function} [callback]
      * @memberof UIManager
      */
-    public openUINode(uiNode: cc.Node, zOrder: number = ViewZOrder.UI, callback?: Function, data?: any, closeCallback?: Function) {
+    public openUINode(uiNode: cc.Node, zOrder: number = ViewZOrder.UI, data?: any, callback?: Function) {
         if (!uiNode.active) {
             uiNode.active = true;
         }
@@ -148,7 +146,6 @@ export default class UIManager {
         uiNode.zIndex = zOrder;
         uiNode.getComponent(UIBase).init(data);
         uiNode.getComponent(UIBase).show();
-        uiNode.getComponent(UIBase).closeCallback = closeCallback;
         this.staticUIStack.push(uiNode);
     }
 
@@ -184,7 +181,42 @@ export default class UIManager {
             }
         }
     }
-    public async closeUI(ui: UIBase | cc.Node): Promise<boolean> {
+
+    public closeUI(ui: UIBase | cc.Node): boolean {
+        //节点类型就是在场景中直接存在的
+        if (ui instanceof cc.Node) {
+            let index = this.staticUIStack.indexOf(ui);
+            if (index >= 0) {
+                this.staticUIStack.splice(index, 1);
+            }
+            ui.getComponent(UIBase).hide();
+            return true;
+        } else {
+            // 不在uiStack的ui都是由节点自己管理。
+            let index = this.dynamicUIStack.indexOf(ui);
+            if (index < 0) {
+                ui.hide();
+                return true
+            } else {
+                if (index >= 0) {
+                    this.dynamicUIStack.splice(index, 1);
+                }
+                if (cc.isValid(ui)) {
+                    if (ui.needCache) {
+                        ui.hide();
+                        this.setUIToCachedMap(ui);
+                        return true
+                    } else {
+                        ui.close();
+                        return true
+                    }
+                }
+            }
+        }
+    }
+
+
+    public async closeUIAsync(ui: UIBase | cc.Node): Promise<boolean> {
         //节点类型就是在场景中直接存在的
         if (ui instanceof cc.Node) {
             let index = this.staticUIStack.indexOf(ui);
@@ -216,7 +248,6 @@ export default class UIManager {
             }
         }
     }
-
     public closeAllUI() {
         if (this.dynamicUIStack.length == 0) {
             return;
@@ -271,24 +302,36 @@ export default class UIManager {
 
     // 暂时没用到。先private 这个地方需要处理缓存ui
     private showUI<T extends UIBase>(uiClass: { new(): T }, callback?: Function, data?: any) {
-        this.openUIClass(uiClass, ViewZOrder.UI, callback, null, data);
+        this.openUIClass(uiClass, ViewZOrder.UI, data, callback, null);
     }
 
     public showTips(uiClass, data: any) {
-        this.openUIClass(uiClass, ViewZOrder.Tips, null, null, data);
+        this.openUIClass(uiClass, ViewZOrder.Tips, data, null, null);
     }
 
-    public showPopup(ui, data?: any, showCallback?, closeCallback?) {
+    public showPopup(ui, data?: any, showCallback?) {
         if (ui instanceof cc.Node) {
-            this.openUINode(ui, ViewZOrder.Popup, showCallback, data);
+            this.openUINode(ui, ViewZOrder.Popup, data, showCallback);
         } else {
-            this.openUIClass(ui, ViewZOrder.Popup, showCallback, null, data, closeCallback);
+            this.openUIClass(ui, ViewZOrder.Popup, data, showCallback, null);
         }
     }
 
+    public showPopupAsync(ui, data?: any): Promise<void> {
+        return new Promise((resolve, reject) => {
+            let callback = () => {
+                resolve();
+            }
+            if (ui instanceof cc.Node) {
+                this.openUINode(ui, ViewZOrder.Popup, data, callback);
+            } else {
+                this.openUIClass(ui, ViewZOrder.Popup, data, callback);
+            }
+        })
+    }
 
     public showNotice(ui, data?: any, callback?: Function) {
-        this.openUIClass(ui, ViewZOrder.Notice, callback, null, data);
+        this.openUIClass(ui, ViewZOrder.Notice, data, callback, null);
 
     }
 
@@ -301,17 +344,13 @@ export default class UIManager {
     //     ui.node.active = true;
     // }
 
-    public ShowConfirmDialog(uiClass, data?: any) {
-        this.openUIClass(uiClass, ViewZOrder.Popup, null, null, data);
-    }
-
 
     public registerUIPrefab(path: string) {
         let infos = [];
         cc.resources.getDirWithPath(path, cc.Prefab, infos);
         infos.forEach((info) => {
             let splitPathArr = (info.path as string).split('/')
-            cc.log("splitPathArr", splitPathArr)
+            // cc.log("splitPathArr", splitPathArr)
             if (splitPathArr.length > 0) {
                 let lastPath = splitPathArr.slice(-1)
                 if (lastPath.length > 0) {

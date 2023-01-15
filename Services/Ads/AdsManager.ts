@@ -192,6 +192,17 @@ export class AdsManager {
             console.error(`showRewardVideo: ${e}`);
         }
     }
+
+
+    hasMultitonRewardVideo(posName: string): boolean {
+        for (let i of this.adProviderArr) {
+            if (i.hasMultitonRewardVideo(posName)) {
+                return true;
+            }
+        }
+        return false;
+
+    }
     /**
      * @description 预加载广告
      * @param {boolean} [parallel] 是否并行加载，并行可能会导致卡顿。但是会调用所有广告平台的预加载功能。

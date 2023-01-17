@@ -1,4 +1,5 @@
 import { parse } from './Encrypt/crypto-js';
+import { singleton } from './Decorator/Singleton';
 /** 字符串工具 */
 export class StringUtil {
     /** 获取一个唯一标识的字符串 */
@@ -53,14 +54,15 @@ export class StringUtil {
     static numberToTenThousand(value: number, fixed: number = 2): string {
         var k = 10000;
         var sizes = ['', '万', '亿', '万亿'];
+        var sign = Math.sign(value);
+        value = Math.abs(value)
         if (value < k) {
             let fixedValue = value.toFixed(fixed)
-            return parseFloat(fixedValue).toString();
+            return (sign * parseFloat(fixedValue)).toString();
         }
         else {
             var i = Math.floor(Math.log(value) / Math.log(k));
-            cc.log(fixed)
-            return parseFloat(((value / Math.pow(k, i))).toFixed(fixed)) + sizes[i];
+            return parseFloat((sign * value / Math.pow(k, i)).toFixed(fixed)) + sizes[i];
         }
     }
 

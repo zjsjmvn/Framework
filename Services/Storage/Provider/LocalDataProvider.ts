@@ -95,7 +95,7 @@ export default class LocalDataProvider implements IStorageProvider {
         if (null == defaultValue || typeof defaultValue === 'string') {
             return str;
         }
-        if (null === str) {
+        if (null === str || str === '') {
             return defaultValue;
         }
         if (typeof defaultValue === 'number') {
@@ -106,6 +106,7 @@ export default class LocalDataProvider implements IStorageProvider {
         }
         return str;
     }
+
     readObj<T>(key: string, def?: T): T {
         let str = this.read(key);
         try {

@@ -74,14 +74,12 @@ export default class VMEvent extends VMBase {
     // onLoad () {}
 
     onValueInit() {
-
-        // let newVar = this.VM.getValue(this.watchPathArr[0]);
-
-        // if(Array.isArray(this.changeEvents)){
-        //     this.changeEvents.forEach(v=>{
-        //         v.emit([newVar]);
-        //     })
-        // }
+        let newVar = this.VM.getValue(this.watchPathArr[0]);
+        if (Array.isArray(this.changeEvents)) {
+            this.changeEvents.forEach(v => {
+                v.emit([newVar]);
+            })
+        }
     }
 
     onValueChanged(newVar: any, oldVar: any, pathArr: any[]) {

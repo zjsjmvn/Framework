@@ -31,8 +31,7 @@ export class StringUtil {
      * @example
      * 12345 = 12.35K
      */
-    static numberToThousand(value: number, fixed: number = 2): string {
-        var k = 1000;
+    static numberToThousand(value: number, fixed: number = 2, k = 1000): string {
         var sizes = ['', 'K', 'M', 'G'];
         if (value < k) {
             return value.toString();

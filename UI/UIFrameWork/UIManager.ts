@@ -1,6 +1,7 @@
 import { singleton } from '../../Utils/Decorator/Singleton';
 import UIBase from './UIBase';
 import UITips from './UITips';
+import { dynamicAtlasManager } from '../../../../../creator';
 
 export class ViewZOrder {
     /**场景层 */
@@ -300,6 +301,9 @@ export default class UIManager {
         return ui.node.active;
     }
 
+    public isShowingAnyUI() {
+        return this.dynamicUIStack.length > 0
+    }
     // 暂时没用到。先private 这个地方需要处理缓存ui
     private showUI<T extends UIBase>(uiClass: { new(): T }, callback?: Function, data?: any) {
         this.openUIClass(uiClass, ViewZOrder.UI, data, callback, null);

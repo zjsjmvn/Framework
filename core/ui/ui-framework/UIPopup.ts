@@ -19,22 +19,25 @@ export default abstract class UIPopup<T = any> extends UIBase {
 
     //#region  animation
     @property
-    _hasAnimation: boolean = false;
-    @property({ displayName: "是否有动画" })
-    get hasAnimation() {
-        return this._hasAnimation;
+    _useAnimation: boolean = false;
+    @property({ displayName: "使用animation" })
+    get useAnimation() {
+        return this._useAnimation;
     }
-    set hasAnimation(value) {
-        this._hasAnimation = value;
+    set useAnimation(value) {
+        this._useAnimation = value;
         if (value == true) {
             if (EDITOR) {
                 let anim: Animation = this.node.getComponent(Animation);
                 if (!anim) {
                     anim = this.node.addComponent(Animation);
                 }
-                this.animation = anim;
-                EditorTool.load<AnimationClip>("script/Framework/core/ui/ui-framework/default_uipopup_open_animation.anim").then((v) => { this.openClip = v; });
-                EditorTool.load<AnimationClip>("script/Framework/core/ui/ui-framework/default_uipopup_close_animation.anim").then((v) => { this.closeClip = v; });
+                if (this.openClip == null) {
+                    EditorTool.load<AnimationClip>("script/Framework/core/ui/ui-framework/default_uipopup_open_animation.anim").then((v) => { this.openClip = v; });
+                }
+                if (this.closeClip == null) {
+                    EditorTool.load<AnimationClip>("script/Framework/core/ui/ui-framework/default_uipopup_close_animation.anim").then((v) => { this.closeClip = v; });
+                }
             }
         } else {
             let anim = this.node.getComponent(Animation);
@@ -276,14 +279,14 @@ export default abstract class UIPopup<T = any> extends UIBase {
         let nodePos = this.node.getComponent(UITransform).convertToNodeSpaceAR(v3(event.getUILocation().x, event.getUILocation().y, 0))
         let contains = containerNodeRect.contains(v2(nodePos.x, nodePos.y));
         if (!contains) {
-            UIManager.instance.closeUI(this);
+            UIManager.instance.closePopup(this);
         }
         return;
     }
 
     private onThisNodeTouchEnd_UsedFor_TouchAnyWhereToClose(event) {
         log('onThisNodeTouchEnd_UsedFor_TouchAnyWhereToClose', this.node.name);
-        UIManager.instance.closeUI(this);
+        UIManager.instance.closePopup(this);
 
     }
 

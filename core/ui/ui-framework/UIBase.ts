@@ -25,6 +25,11 @@ export default abstract class UIBase extends Thor {
     // @property({ displayName: "此ui是否允许多个", tooltip: "勾选后，ui管理器不会处理重复此ui" })
     // allowMany: boolean = false;
 
+    /**
+     * @description init 在onLoad之后，beforeShow之前调用
+     * @param {*} args
+     * @memberof UIBase
+     */
     public init(...args) {
 
     }

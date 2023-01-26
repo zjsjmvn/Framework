@@ -25,6 +25,11 @@ export default abstract class UIBase extends Thor {
     // @property({ displayName: "此ui是否允许多个", tooltip: "勾选后，ui管理器不会处理重复此ui" })
     // allowMany: boolean = false;
 
+    /**
+     * @description init 在onLoad之后，beforeShow之前调用
+     * @param {*} args
+     * @memberof UIBase
+     */
     public init(...args) {
 
     }
@@ -59,16 +64,24 @@ export default abstract class UIBase extends Thor {
         return new Promise(res => res());
     }
 
-    protected afterShow() {
+    protected afterShow(): Promise<void> {
+        return new Promise(res => res());
 
     }
-
-    protected beforeClose(suspended: boolean): Promise<void> {
+    protected beforeHide(): Promise<void> {
         return new Promise(res => res());
     }
 
-    protected afterClose(suspended: boolean) {
+    protected afterHide(): Promise<void> {
+        return new Promise(res => res());
 
+    }
+    protected beforeClose(): Promise<void> {
+        return new Promise(res => res());
+    }
+
+    protected afterClose(): Promise<void> {
+        return new Promise(res => res());
     }
 
     protected onSuspended(): Promise<void> {

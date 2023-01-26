@@ -1,6 +1,7 @@
 import { singleton } from '../../Utils/Decorator/Singleton';
 import UIBase from './UIBase';
-import { Prefab, director, error, instantiate, js, resources, log, Node, Label, isValid } from 'cc';
+import { Prefab, director, error, instantiate, js, resources, log, Node, Label, isValid, warn } from 'cc';
+import UIPopup from './UIPopup';
 
 export class ViewZOrder {
     /**场景层 */
@@ -32,17 +33,7 @@ enum CacheMode {
     Frequent
 }
 
-/**
- * 弹窗请求结果类型
- */
-enum ShowResultType {
-    /** 展示成功（已关闭） */
-    Done = 1,
-    /** 展示失败（加载失败） */
-    Failed,
-    /** 等待中（已加入等待队列） */
-    Waiting
-}
+
 class PopupParams {
     /** 缓存模式 */
     mode?: CacheMode = CacheMode.Normal;
@@ -50,8 +41,14 @@ class PopupParams {
     priority?: number = 0;
     /** 立刻展示（将会挂起当前展示中的弹窗） */
     immediately?: boolean = false;
+    /**
+     * @description 是否挂起当前
+     * @type {boolean}
+     * @memberof PopupParams
+     */
+    suspendCurrent?: boolean = false;
 }
-class PopupRequest {
+class PopupDataBundle {
     /** 弹窗选项 */
     uiClass: any;
     /**
@@ -76,20 +73,43 @@ export default class UIManager {
     public static instance: UIManager;
 
     /**
-     * @description 动态ui栈放的是动态加载的ui
-     * @private
-     * @type {UIBase[]}
+     * @description  当前弹窗
+     * @readonly
      * @memberof UIManager
      */
-    private dynamicUIStack: UIBase[] = [];
+    public get currentShowingPopup() {
+        return this._currentShowingPopup;
+    }
+    private _currentShowingPopup: PopupDataBundle = null;
 
     /**
-     * @description 静态ui栈，放的是静态ui，比如弹框里的弹框，就没必要在分出去预制体了,否则太乱。
+     * @description 正在显示的ui栈，可能ui会叠好几层
      * @private
-     * @type {Node[]}
+     * @type {PopupDataBundle[]}
      * @memberof UIManager
      */
-    private staticUIStack: Node[] = [];
+    private showingUIStack: PopupDataBundle[] = [];
+
+    /**
+     * @description 等待队列
+     * @readonly
+     * @memberof UIManager
+     */
+    public get waitingQueue() {
+        return this._waitingQueue;
+    }
+    private _waitingQueue: PopupDataBundle[] = [];
+
+
+    /**
+     * @description 被挂起的弹窗队列
+     * @readonly
+     * @memberof UIManager
+     */
+    public get suspendedQueue() {
+        return this._suspendedQueue;
+    }
+    private _suspendedQueue: PopupDataBundle[] = [];
 
     /**
      * @description 缓存的ui，如果ui标记needCache那么就会在存到这里。
@@ -99,7 +119,6 @@ export default class UIManager {
      */
     private cachedUI: Map<string, UIBase> = new Map();
 
-
     /**
      * @description 扫描到的弹框预制体都放在这里。
      * @private
@@ -108,167 +127,71 @@ export default class UIManager {
      */
     private uiPrefabNameAndPathMap: Map<string, string> = new Map();
 
-    /**
-        * 当前弹窗请求
-        */
-    public get current() {
-        return this._current;
+    public closeAllUI() {
+        // if (this.showingUIStack.length == 0) {
+        //     return;
+        // }
+        // while (this.showingUIStack.length > 0) {
+        //     this.closeUI(this.showingUIStack[0]);
+        // }
+        // while (this._suspendedQueue.length > 0) {
+        //     //@ts-ignore
+        //     this.closeUI(this._suspendedQueue[0].node.getComponent(UIBase));
+        // }
+        // this._queue = [];
     }
-    private _current: PopupRequest = null;
 
-    /**
-     * 等待队列
-     */
-    public get queue() {
-        return this._queue;
-    }
-    private _queue: PopupRequest[] = [];
-
-    /**
-     * 被挂起的弹窗队列
-     */
-    public get suspended() {
-        return this._suspended;
-    }
-    private _suspended: PopupRequest[] = [];
-
-    /**
-     * 锁定状态
-     */
-    private locked: boolean = false;
-
-    /**
-     * 连续展示弹窗的时间间隔（秒）
-     */
-    public interval: number = 0.05;
-
-    public async openUIClass<T extends UIBase>(uiClass: { new(): T }, zOrder: ViewZOrder = ViewZOrder.UI, data?: any, params?: PopupParams): Promise<ShowResultType> {
-        return new Promise(async res => {
-            console.log("================================ ")
-            if (this._current) {
-                // 是否立即强制展示
-                if (params && params.immediately) {
-                    // this.locked = false;
-                    await this.suspend();
-                } else {
-                    // 将请求推入等待队列
-                    this.push(uiClass, zOrder, data, params);
-                    res(ShowResultType.Waiting);
-                    return;
-                }
-            }
-            // 保存为当前弹窗，阻止新的弹窗请求
-            this._current = { uiClass, data: data, params, zOrder };
-
-            let initUI = (uiInstance: UIBase) => {
-                if (!uiInstance) {
-                    console.error(`${js.getClassName(uiClass)}没有绑定UI脚本!!!`);
-                    return;
-                }
-                let uiRoot = director.getScene().getChildByName('Canvas');
-                if (!uiRoot) {
-                    console.error(`当前场景没有${director.getScene().name}Canvas!!!`);
-                    return;
-                }
-                uiInstance.node.parent = uiRoot;
-                uiInstance.node.setPosition(0, 0);
-                uiInstance.init(data);
-                uiInstance.node.setSiblingIndex(zOrder);
-                uiInstance.show();
-                this.dynamicUIStack.push(uiInstance);
-                res(ShowResultType.Done);
-            }
-
-            let uiInstance = this.getUIFromCachedMap(uiClass);
-            let node = uiInstance?.node;
+    public async showTips(uiClass, data: any) {
+        let initUI = (uiInstance: UIBase) => {
             if (!uiInstance) {
-                let path = this.uiPrefabNameAndPathMap.get(js.getClassName(uiClass));
-                if (!path) {
-                    error(`没有找到uiClass = ${js.getClassName(uiClass)}对应的预制体路径`)
-                    return;
-                }
-                let prefab = await this.load(path);
-                node = instantiate(prefab);
-                uiInstance = node.getComponent(UIBase);
+                console.error(`${js.getClassName(uiClass)}没有绑定UI脚本!!!`);
+                return;
             }
-            this._current.node = node;
-            initUI(uiInstance);
-        });
-    }
-    /**
-     * 挂起当前展示中的弹窗
-     */
-    private async suspend() {
-        console.log("Suspending...");
-        if (!this._current) {
+            let uiRoot = director.getScene().getChildByName('Canvas');
+            if (!uiRoot) {
+                console.error(`当前场景没有${director.getScene().name}Canvas!!!`);
+                return;
+            }
+            uiInstance.node.parent = uiRoot;
+            uiInstance.init(data);
+            uiInstance.node.setSiblingIndex(ViewZOrder.Tips as number);
+            uiInstance.show();
+        }
+        let path = this.uiPrefabNameAndPathMap.get(js.getClassName(uiClass));
+        if (!path) {
+            error(`没有找到uiClass = ${js.getClassName(uiClass)}对应的预制体路径`)
             return;
         }
-        const request = this._current;
-        // 将当前弹窗推入挂起队列
-        this._suspended.push(request);
-        // @ts-ignore
-        await request.node.getComponent(UIBase).onSuspended();
-        // 关闭当前弹窗（挂起）
-        await request.node.getComponent(UIBase).hide();
-        // 置空当前
-        this._current = null;
+        let prefab = await this.loadPrefab(path);
+        let node = instantiate(prefab);
+        //@ts-ignore
+        let uiInstance = node.getComponent(UIBase);
+        this._currentShowingPopup.node = node;
+        initUI(uiInstance);
     }
 
-    /**
-     * 加载并缓存弹窗预制体资源
-     * @param path 弹窗路径
-     */
-    public load(path: string): Promise<Prefab> {
-        return new Promise(res => {
-            resources.load(path, (error, prefab: Prefab) => {
-                if (error) {
-                    console.error(`UIManager OpenUI: load ui error: ${error}`);
-                    return;
-                }
-                res(prefab);
-            });
-        });
-    }
+    //#region popup
 
-    private push(uiClass, zOrder, data?: any, params?: PopupParams) {
-        // 直接展示
-
-        if (!this._current && !this.locked) {
-            this.openUIClass(uiClass, zOrder, data, params);
-            return;
-        }
-        // 加入队列
-        this._queue.push({ uiClass, data, params, zOrder });
-        // 按照优先级从小到大排序
-        this._queue.sort((a, b) => (a.params.priority - b.params.priority));
-    }
-
-    /**
-     * 展示挂起或等待队列中的下一个弹窗
-     */
-    private next() {
-        console.log("next")
-        if (this._current || (this._suspended.length === 0 && this._queue.length === 0)) {
-            return;
-        }
-        let request: PopupRequest = null;
-        if (this._suspended.length > 0) {
-            request = this._suspended.shift();
+    public async showPopup(ui, data?: any, params?: PopupParams) {
+        if (ui instanceof Node) {
+            await this.openNodeTypePopup(ui, data, ViewZOrder.Popup);
         } else {
-            request = this._queue.shift();
+            let bundle = this.generatePopupDataBundle(ui, data, null, ViewZOrder.Popup, params);
+            await this.openClassTypePopup(bundle);
         }
-        // 解除锁定
-        this.locked = false;
-        // 已有实例
-        if (isValid(request.node)) {
-            // 设为当前弹窗
-            this._current = request;
-            // 直接展示
-            request.node.getComponent(UIBase).show();
-            return;
-        }
-        // 加载并展示
-        this.openUIClass(request.uiClass, request.zOrder, request.data, request.params);
+    }
+
+    public closePopupByClass<T extends UIBase>(uiClass: { new(): T }) {
+        // for (let i = 0; i < this.showingUIStack.length; ++i) {
+        //     if (js.getClassName(this.showingUIStack[i]) === js.getClassName(uiClass)) {
+        //         if (isValid(this.showingUIStack[i].node)) {
+        //             this.showingUIStack[i].close();
+        //             // return this.closeUI(this.dynamicUIStack[i]);
+        //         }
+        //         this.showingUIStack.splice(i, 1);
+        //         return;
+        //     }
+        // }
     }
 
     /**
@@ -278,20 +201,138 @@ export default class UIManager {
      * @param {Function} [callback]
      * @memberof UIManager
      */
-    public async openUINode(uiNode: Node, data?: any, zOrder: number = ViewZOrder.UI) {
+    public async openNodeTypePopup(uiNode: Node, data?: any, zOrder: number = ViewZOrder.UI) {
         if (!uiNode.active) {
             uiNode.active = true;
         }
         uiNode.setPosition(0, 0);
-        uiNode.setSiblingIndex(zOrder);
+        //@ts-ignore
         uiNode.getComponent(UIBase).init(data);
-        await uiNode.getComponent(UIBase).beforeShow();
+        //@ts-ignore
         uiNode.getComponent(UIBase).show();
-        uiNode.getComponent(UIBase).afterShow();
-        this.staticUIStack.push(uiNode);
+
+    }
+
+    private pushQueue(popupDataBundle: PopupDataBundle) {
+        console.log("pushQueue")
+
+        if (!this._currentShowingPopup) {
+            this.openClassTypePopup(popupDataBundle);
+            return;
+        }
+        // 加入队列
+        this._waitingQueue.push(popupDataBundle);
+        // 按照优先级从小到大排序
+        this._waitingQueue.sort((a, b) => (a.params.priority - b.params.priority));
     }
 
 
+    private showNext() {
+        console.log("showNext")
+        if (this._currentShowingPopup || (this._suspendedQueue.length === 0 && this._waitingQueue.length === 0 && this.showingUIStack.length == 0)) {
+            return;
+        }
+        let request: PopupDataBundle = null;
+        if (this._suspendedQueue.length > 0) {
+            request = this._suspendedQueue.shift();
+        } else {
+            request = this._waitingQueue.shift();
+        }
+        // 已有实例
+        if (isValid(request.node)) {
+            // 设为当前弹窗
+            this._currentShowingPopup = request;
+            // 直接展示
+            request.node.getComponent(UIBase).show();
+            return;
+        }
+        // 加载并展示
+        this.openClassTypePopup(request);
+    }
+
+    private async openClassTypePopup(popupDataBundle: PopupDataBundle): Promise<void> {
+        return new Promise(async res => {
+            if (this._currentShowingPopup) {
+                // 是否立即强制展示
+                if (popupDataBundle.params && popupDataBundle.params.immediately) {
+                    // this.locked = false;
+                    if (popupDataBundle.params.suspendCurrent) {
+                        await this.suspendCurrentPopup();
+                    }
+                } else {
+                    // 将请求推入等待队列
+                    this.pushQueue(popupDataBundle);
+                    res();
+                    return;
+                }
+            }
+            this._currentShowingPopup = popupDataBundle;
+            let initUI = (uiInstance: UIBase) => {
+                if (!uiInstance) {
+                    console.error(`${js.getClassName(popupDataBundle.uiClass)}没有绑定UI脚本!!!`);
+                    return;
+                }
+                let uiRoot = director.getScene().getChildByName('Canvas');
+                if (!uiRoot) {
+                    console.error(`当前场景没有${director.getScene().name}Canvas!!!`);
+                    return;
+                }
+                uiInstance.node.parent = uiRoot;
+                uiInstance.node.setPosition(0, 0);
+                uiInstance.init(popupDataBundle.data);
+                uiInstance.node.setSiblingIndex(popupDataBundle.zOrder as number);
+                uiInstance.show();
+                this.showingUIStack.push(this._currentShowingPopup);
+                res();
+            }
+
+            let uiInstance = this.getUIFromCachedMap(popupDataBundle.uiClass);
+            let node = uiInstance?.node;
+            if (!uiInstance) {
+                let path = this.uiPrefabNameAndPathMap.get(js.getClassName(popupDataBundle.uiClass));
+                if (!path) {
+                    error(`没有找到uiClass = ${js.getClassName(popupDataBundle.uiClass)}对应的预制体路径`)
+                    return;
+                }
+                let prefab = await this.loadPrefab(path);
+                node = instantiate(prefab);
+                //@ts-ignore
+                uiInstance = node.getComponent(UIBase);
+            }
+            this._currentShowingPopup.node = node;
+            initUI(uiInstance);
+        });
+    }
+
+
+    private generatePopupDataBundle(uiClass, data, node, zOrder, params: PopupParams) {
+        let bundle = new PopupDataBundle();
+        bundle.data = data;
+        bundle.uiClass = uiClass;
+        bundle.zOrder = zOrder;
+        bundle.node = node;
+        bundle.params = params;
+        if (bundle.params == undefined) {
+            bundle.params = new PopupParams();
+        }
+        // 缓存模式
+        if (bundle.params.mode == undefined) {
+            bundle.params.mode = CacheMode.Normal;
+        }
+        // 优先级
+        if (bundle.params.priority == undefined) {
+            bundle.params.priority = 0;
+        }
+        // 立刻展示
+        if (bundle.params.immediately == undefined) {
+            bundle.params.immediately = false;
+        }
+        // 是否隐藏当前ui
+        if (bundle.params.suspendCurrent == undefined) {
+            bundle.params.suspendCurrent = false;
+        }
+        return bundle;
+    }
     public getUIFromCachedMap<T extends UIBase>(uiClass: { new(): T }): T {
         let ui = null;
         let uiName = js.getClassName(uiClass);
@@ -308,111 +349,100 @@ export default class UIManager {
         } else {
             this.cachedUI.set(uiName, ui);
         }
-
     }
-
-
-    public closeAllUI() {
-        if (this.dynamicUIStack.length == 0) {
+    /**
+     * 挂起当前展示中的弹窗
+     */
+    private async suspendCurrentPopup() {
+        if (!this._currentShowingPopup) {
             return;
         }
-        while (this.dynamicUIStack.length > 0) {
-            this.closeUI(this.dynamicUIStack[0]);
+        // 从showingStack移除
+        let index = this.showingUIStack.findIndex((x) => {
+            return x == this._currentShowingPopup
+        })
+        if (index >= 0) {
+            this.showingUIStack.splice(index, 1);
         }
+        // 将当前弹窗推入挂起队列
+        this._suspendedQueue.push(this._currentShowingPopup);
+        // @ts-ignore
+        await this._currentShowingPopup.node.getComponent(UIPopup).onSuspended();
+        // 关闭当前弹窗（挂起）
+        // @ts-ignore
+        await this._currentShowingPopup.node.getComponent(UIPopup).hide();
+        // 置空当前
+        this._currentShowingPopup = null;
     }
 
 
-    /**
-     * @description 当一个界面关闭的时候。其附带的子界面都要关闭。
-     * @memberof UIManager
-     */
-    public closeToUI() {
-
-    }
-
-    public hideUI(uiClass: { new(): UIBase }) {
-        let ui = this.getUI(uiClass);
-        if (ui) {
-            ui.node.active = false;
-        }
-    }
-
-    public hasUI(uiClass: { new(): UIBase }): boolean {
-        let uiName = js.getClassName(uiClass);
-        for (let i = 0; i < this.dynamicUIStack.length; ++i) {
-            if (js.getClassName(this.dynamicUIStack[i]) == uiName) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    public getUI<T extends UIBase>(uiClass: { new(): T }): T {
-        for (let i = 0; i < this.dynamicUIStack.length; ++i) {
-            if (js.getClassName(this.dynamicUIStack[i]) === js.getClassName(uiClass)) {
-                return this.dynamicUIStack[i];
-            }
-        }
-        return null;
-    }
-
-    public isShowing(uiClass: { new(): UIBase }) {
-        let ui = this.getUI(uiClass);
-        if (!ui) {
-            return false;
-        }
-        return ui.node.active;
-    }
-
-    public isShowingAnyUI() {
-        return this.dynamicUIStack.length > 0
-    }
-
-    // public showTips(uiClass, data: any) {
-    //     this.openUIClass(uiClass, ViewZOrder.Tips, null, null, data);
-    // }
-
-    public async showPopup(ui, data?: any, params?: PopupParams) {
+    public async closePopup(ui: UIPopup | Node): Promise<void> {
+        //节点类型就是在场景中直接存在的
         if (ui instanceof Node) {
-            this.openUINode(ui, data, ViewZOrder.Popup);
+            //@ts-ignore
+            //node一般都属于弹框里的弹框，不能销毁。否则没办法再次显示了
+            await ui.getComponent(UIBase).hide();
+            return Promise.resolve();
         } else {
-            await this.openUIClass(ui, ViewZOrder.Popup, data, params);
-        }
-    }
-
-
-
-    public closeUIByUIClass<T extends UIBase>(uiClass: { new(): T }) {
-        for (let i = 0; i < this.dynamicUIStack.length; ++i) {
-            if (js.getClassName(this.dynamicUIStack[i]) === js.getClassName(uiClass)) {
-                if (isValid(this.dynamicUIStack[i].node)) {
-                    this.dynamicUIStack[i].close();
-                    // return this.closeUI(this.dynamicUIStack[i]);
+            let clear = (arr) => {
+                let index = arr.findIndex((bundle: PopupDataBundle) => {
+                    //@ts-ignore
+                    return bundle.node?.getComponent(UIPopup) == ui;
+                })
+                if (index >= 0) {
+                    return arr.splice(index, 1);
                 }
-                this.dynamicUIStack.splice(i, 1);
-                return;
+                return null;
+            }
+            // 清理栈  // 清理等待队列   // 清理挂起队列
+            clear(this.showingUIStack) || clear(this._waitingQueue) || clear(this._suspendedQueue);
+            if (isValid(ui)) {
+                //@ts-ignore           
+                if (this._currentShowingPopup.node.getComponent(UIPopup) == ui) {
+                    this._currentShowingPopup = null;
+                    log('this._currentShowingPopup set to  null')
+                }
+                if (ui.needCache) {
+                    await ui.hide();
+                    this.setUIToCachedMap(ui);
+                    return Promise.resolve();
+                } else {
+                    await ui.close();
+                    this.showNext();
+                    return Promise.resolve();
+                }
+            } else {
+                error("ui is not available");
             }
         }
     }
+
+
+
+    //#endregion
+
 
     public async closeUI(ui: UIBase | Node): Promise<boolean> {
         //节点类型就是在场景中直接存在的
         if (ui instanceof Node) {
-            let index = this.staticUIStack.indexOf(ui);
-            if (index >= 0) {
-                this.staticUIStack.splice(index, 1);
-            }
+            //@ts-ignore
+            //node一般都属于弹框里的弹框，不能销毁。否则没办法再次显示了
             await ui.getComponent(UIBase).hide();
             return Promise.resolve(true);
         } else {
             // 不在uiStack的ui都是由节点自己管理。
-            let index = this.dynamicUIStack.indexOf(ui);
+            let index = this.showingUIStack.indexOf(ui);
             if (index < 0) {
+                // 判断是否在队列
+
+                // 判断是否挂起
+
+
                 await ui.hide();
                 return Promise.resolve(true);
             } else {
                 if (index >= 0) {
-                    this.dynamicUIStack.splice(index, 1);
+                    this.showingUIStack.splice(index, 1);
                 }
                 if (isValid(ui)) {
                     if (ui.needCache) {
@@ -421,8 +451,8 @@ export default class UIManager {
                         return Promise.resolve(true);
                     } else {
                         await ui.close();
-                        this._current = null;
-                        this.next();
+                        this._currentShowingPopup = null;
+                        this.showNext();
                         return Promise.resolve(true);
                     }
                 }
@@ -461,4 +491,18 @@ export default class UIManager {
             }
         })
     }
+
+    private loadPrefab(path: string): Promise<Prefab> {
+        return new Promise(res => {
+            resources.load(path, (error, prefab: Prefab) => {
+                if (error) {
+                    console.error(`UIManager loadPrefab error: ${error}`);
+                    return;
+                }
+                res(prefab);
+            });
+        });
+    }
+
+
 }

@@ -2,8 +2,8 @@ import { DEV, EDITOR } from 'cc/env';
 import UIBase from './UIBase';
 import UIManager from './UIManager';
 import { Enum, Node, Rect, _decorator, error, Sprite, SpriteFrame, resources, log, UIOpacity, v3, UITransform, tween, v2, EventTouch, rect, AnimationClip, Animation, AnimationState, ValueType, assetManager, Texture2D } from 'cc';
-import EditorTool from '../../utils/EditorUtil';
 import { Asset } from '../../../../../../@types/packages/engine-extends/@types/glTF';
+import EditorTool from '../../utils/EditorUtil';
 const { property, ccclass } = _decorator
 
 /**
@@ -33,10 +33,10 @@ export default abstract class UIPopup<T = any> extends UIBase {
                     anim = this.node.addComponent(Animation);
                 }
                 if (this.openClip == null) {
-                    EditorTool.load<AnimationClip>("script/Framework/core/ui/ui-framework/default_uipopup_open_animation.anim").then((v) => { this.openClip = v; });
+                    EditorTool.load<AnimationClip>("script/framework/core/ui/ui-framework/default_uipopup_open_animation.anim").then((v) => { this.openClip = v; });
                 }
                 if (this.closeClip == null) {
-                    EditorTool.load<AnimationClip>("script/Framework/core/ui/ui-framework/default_uipopup_close_animation.anim").then((v) => { this.closeClip = v; });
+                    EditorTool.load<AnimationClip>("script/framework/core/ui/ui-framework/default_uipopup_close_animation.anim").then((v) => { this.closeClip = v; });
                 }
             }
         } else {

@@ -1,6 +1,6 @@
-import UIKiller from "./uikiller";
-import { _decorator, Component, log } from 'cc';
+import { _decorator, Component, log, Node, sp, ValueType } from 'cc';
 import { EDITOR } from "cc/env";
+import UIKiller from './uikiller';
 const { ccclass, property } = _decorator;
 /**
  * @description 
@@ -27,11 +27,7 @@ const { ccclass, property } = _decorator;
 @ccclass
 // @executeInEditMode
 export default class Thor extends Component {
-    protected useController: Boolean = false;
-    protected controllerName: String = '';
     _binding: Boolean = false;
-    $controller: Object = null;
-
     _copyBindNodeName: boolean = false;
     @property({ displayName: "勾选拷贝绑定节点信息", tooltip: "勾选后自动存储在剪切板里。主要用于编辑器智能提示" })
     get copyBindNodeName() {
@@ -39,85 +35,81 @@ export default class Thor extends Component {
     }
     // @property
     set copyBindNodeName(val) {
-
         if (EDITOR) {
             this.bind();
             var text = '';
-
-
             try {
-                // 读取node上绑定的节点信息，node上绑定的是所有子节点和下划线开头的节点。   
-                for (const key in this.node) {
-                    const element = this.node[key];
-                    if (element instanceof Node) {
-                        let comInfo = '';
-                        for (const key$ in element) {
-                            const val = element[key$];
-                            if (key$[0] == '$' && val instanceof Component) {
-                                log('val', key$[0], val.name)
-
-                                let index = val.name.indexOf('<');
-                                let name = val.name.slice(index + 1, -1);
-                                if (cc[name] != undefined && this.isValidVariableName(name)) {
-                                    comInfo += '$' + name + ':' + name + ',';
-                                }
-                                else {
-                                    comInfo += '$' + name + ':any,';
-                                }
+                let r = (node) => {
+                    let comInfo = '';
+                    for (const key2 in node) {
+                        const val = node[key2];
+                        // 绑定组件
+                        if (val instanceof Component) {
+                            let index = val.name.indexOf('<');
+                            let name = val.name.slice(index + 1, -1);
+                            if (comInfo !== '') {
+                                comInfo += ', ';
+                            }
+                            if (sp[name] != undefined) {
+                                comInfo += '$' + name + ': sp.' + name;
+                            }
+                            else {
+                                comInfo += '$' + name + ': ' + name;
                             }
                         }
-                        if (comInfo.length > 0) {
-                            comInfo = '&{' + comInfo + '}';
-                        }
-                        if (this.isValidVariableName(key)) {
-                            text += '\n\t' + key + `: Node${comInfo};` + '\n';
+                        // 绑定节点
+                        if (val instanceof Node
+                            && key2 != '_parent'
+                            && !/^[0-9]*$/.test(val.name[0])
+                            && val.name.indexOf('New') != 0
+                            // 中间没空格
+                            && val.name.indexOf(' ') === -1
+                            && val.name.indexOf('-') === -1) {
+                            if (val.name.toLocaleLowerCase() == '_name' || val.name.indexOf(' ') !== -1) {
+                                // 不能为_name
+                                console.log('名字不能为 _name');
+                            }
+                            else {
+                                if (comInfo !== '') {
+                                    comInfo += ', ';
+                                }
+                                let nextChildInfo = r(val);
+                                let childInfo = val.name + ': Node';
+                                if (nextChildInfo.length > 0) {
+                                    childInfo += ' & { ' + nextChildInfo + ' }';
+                                }
+                                comInfo += childInfo;
+                            }
                         }
                     }
+                    return comInfo;
                 }
-                if (text.length > 0) {
-                    text = `node:Node &{${text}};`
-                }
-                // 读取脚本上绑定的node，脚本上绑定的是下划线开头的节点。
+                var text = '';
                 for (const key in this) {
                     const element = this[key];
-                    // log('key', key)
-
-                    if (key[0] == '_' && element instanceof Node) {
+                    if (element instanceof Node) {
                         let comInfo = '';
-                        for (const key$ in element) {
-                            const val = element[key$];
-
-                            if (key$[0] == '$' && val instanceof Component) {
-                                // log('val', key, key$, val.name, val instanceof Component)
-
-                                let index = val.name.indexOf('<');
-                                let name = val.name.slice(index + 1, -1);
-
-                                if (cc[name] != undefined) {
-                                    comInfo += '$' + name + ':' + name + ',';
-                                }
-                                else {
-                                    comInfo += '$' + name + ':any,';
-                                }
-                            }
-                        }
-
-                        element.children.forEach(element => {
-                            if (element instanceof Node) {
-                                if (this.isValidVariableName(element.name)) {
-                                    log('element', element.name)
-                                    comInfo += element.name + ':Node,';
-                                }
-                            }
-                        });
-
+                        comInfo += r(element);
                         if (comInfo.length > 0) {
-                            comInfo = '&{' + comInfo + '}';
+                            comInfo = ' & { ' + comInfo + ' }';
                         }
-                        text += '\n\t' + key + `: Node${comInfo};` + '\n';
-
+                        if (key.indexOf(' ') === -1 && key.indexOf('-') === -1) {
+                            let accessModifier = key === '_touchSwallow' ? 'protected' : 'private';
+                            text += 'public ' + ' ' + key + `: Node${comInfo};` + '\n';
+                        }
                     }
                 }
+
+                var tag = document.createElement('textarea');
+                tag.setAttribute('id', 'cp_hgz_input');
+                tag.value = `    //#region uikiller\n ${text}    //#endregion\n`;
+                document.getElementsByTagName('body')[0].appendChild(tag);
+                // @ts-ignore
+                document.getElementById('cp_hgz_input').select();
+                document.execCommand('copy');
+                document.getElementById('cp_hgz_input').remove();
+                log(text)
+                console.log('uiKiller 拷贝成功');
 
 
             } catch (error) {
@@ -125,16 +117,7 @@ export default class Thor extends Component {
             }
 
 
-            log("text");
 
-            log("text", text);
-            var tag = document.createElement('input');
-            tag.setAttribute('id', 'cp_hgz_input');
-            tag.value = text;
-            document.getElementsByTagName('body')[0].appendChild(tag);
-            document.getElementById('cp_hgz_input').select();
-            document.execCommand('copy');
-            document.getElementById('cp_hgz_input').remove();
         }
     }
 
@@ -142,40 +125,14 @@ export default class Thor extends Component {
         this.bind();
     }
 
-    getOptions() {
-        return {
-            debug: false
-        }
-    }
-
     bind() {
         if (this._binding) {
             return;
         }
         this._binding = true;
-        let start = Date.now();
-        let options = this.getOptions();
-        UIKiller.bindComponent(this, options);
+        UIKiller.bind(this);
     }
 
-
-    getChildNode(name): Node {
-        return this[name];
-    }
-    public isValidVariableName(str) {
-        if (typeof str !== 'string') {
-            return false;
-        }
-        if (str.trim() !== str) {
-            return false;
-        }
-        try {
-            new Function(str, 'var ' + str);
-        } catch (_) {
-            return false;
-        }
-        return true;
-    }
 }
 window.Thor = Thor
 

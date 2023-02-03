@@ -1,7 +1,7 @@
 import Thor from "../UI/UIKiller/Thor";
 import { GuideHelper } from "./GuideHelper";
 import { GuideView } from "./GuideView";
-import { GuideStep, GuideStepType_TouchTimes, GuideStepType_LongTouch, GuideStepType_DragToDistance, GuideStepType_MoveAmongMultipleNodes, GuideStepType_DragToTarget } from './GuideStep';
+import { GuideStep, GuideStepType_TouchTimes, GuideStepType_LongTouch, GuideStepType_DragToDistance, GuideStepType_MoveAmongMultipleNodes, GuideStepType_DragToTarget, GuideStepType_DirectRun } from './GuideStep';
 let async = require("async");
 const { ccclass, property } = cc._decorator;
 
@@ -76,7 +76,6 @@ export class GuideController extends Thor {
         };
 
         let stepEnd = () => {
-
             this._guideView.hideMask();
             this._saveProgress(step.index);
             if (step.onStepExit) {
@@ -138,8 +137,9 @@ export class GuideController extends Thor {
                 let targetNode = GuideHelper.Locator.locateNode(this._target, [step.targetName]);
                 this._locateNodes.push(targetNode[0]);
                 this._guideView.fingerToNodeArray(this._locateNodes, step);
-
             }
+        } else if (step instanceof GuideStepType_DirectRun) {
+            step.onStepFinished(this.node);
         }
         else {
             throw Error("GuideController 没有该类型的判断，请主动添加");

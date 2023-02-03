@@ -204,3 +204,7 @@ export class GuideStepType_UIAction extends GuideStep {
 
 }
 
+
+export class GuideStepType_DirectRun extends GuideStep {
+
+}

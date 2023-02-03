@@ -1,5 +1,6 @@
 import { parse } from './Encrypt/crypto-js';
 import { singleton } from './Decorator/Singleton';
+import Utils from './Utils';
 /** 字符串工具 */
 export class StringUtil {
     /** 获取一个唯一标识的字符串 */
@@ -50,8 +51,8 @@ export class StringUtil {
      * @example
      * 12345 = 1.23万
      */
-    static numberToTenThousand(value: number, fixed: number = 2): string {
-        var k = 10000;
+    static numberToTenThousand(value: number, fixed: number = 2, k = 10000): string {
+        // var k = 10000;
         var sizes = ['', '万', '亿', '万亿'];
         var sign = Math.sign(value);
         value = Math.abs(value)

@@ -15,10 +15,8 @@ const { ccclass, property } = cc._decorator;
  *
  * ```
  *      // 假设第二步回调接受函数为 onTouch() 那么在这个函数的参数如下：
- *
  *      @param touchCounter 本次触摸次数
  *      @param customEventData 在属性检查器中传入进来的 CustomEventData
- *
  *      onTouch(touchCounter: number, customEventData?: any) { }
  *  ```
  */
@@ -89,10 +87,10 @@ export default class LongTouchComponent extends cc.Component {
         //     this._isTouching = false;
         // }
         let delay = this.longTouchStartDelay * 1000;
-        cc.log('delay', delay)
         this._touchLongTimer = setTimeout(() => {
             //准备触发touchLong事件
             // 第一次触摸立即回调一次
+            this.unscheduleAllCallbacks();
             this.publishOneTouch(event);
             // 然后开启计时器，计算后续的长按相当于触摸了多少次
             this.schedule(this._touchCounterCallback.bind(this, event), this.touchInterval);

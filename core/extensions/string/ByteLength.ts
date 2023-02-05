@@ -1,4 +1,4 @@
-export const ByteLength = (str) => {
+export const ByteLength = (str: string) => {
   var length = 0;
   for (var i = 0; i < str.length; i++) {
     if (str.charCodeAt(i) < 0 || str.charCodeAt(i) > 255)

@@ -1,5 +1,4 @@
 import { BuffSkill } from "./BuffSkill";
-import { Entity } from '../../ECS/Entitas/Entity';
 
 /**
  * 持续一定时间类型的buff
@@ -7,8 +6,8 @@ import { Entity } from '../../ECS/Entitas/Entity';
 export default class DurationTypeBuff extends BuffSkill {
     public lifeTime: number = 0;    //生命时长
 
-    constructor(caster: Entity, target: Entity, lifeTime: number) {
-        super(caster, target);
+    constructor(lifeTime: number) {
+        super();
         this.lifeTime = lifeTime;
     }
     public onUpdate(dt) {

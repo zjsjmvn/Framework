@@ -1,5 +1,4 @@
 import { BuffSkill } from "./BuffSkill";
-import { Entity } from '../../ECS/Entitas/Entity';
 
 
 
@@ -15,8 +14,8 @@ export default abstract class TickTypeBuff extends BuffSkill {
     public tick: number = 0;
     public currentTick: number = 0;
 
-    constructor(caster: Entity, target: Entity, tick: number) {
-        super(caster, target);
+    constructor(tick: number) {
+        super();
         this.tick = tick;
         this.currentTick = this.tick;
     }

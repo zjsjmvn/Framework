@@ -224,7 +224,10 @@ export default abstract class UIPopup<T = any> extends UIBase {
     public async close() {
         await this.beforeClose();
         this.playCloseAnimation();
-        super.close();
+        // 不需要缓存才destroy。
+        if (!this.needCache) {
+            super.close();
+        }
         await this.afterClose();
     }
 

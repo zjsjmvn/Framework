@@ -2,6 +2,7 @@ import { singleton } from '../../Utils/Decorator/Singleton';
 import UIBase from './UIBase';
 import { Prefab, director, error, instantiate, js, resources, log, Node, Label, isValid, warn } from 'cc';
 import UIPopup from './UIPopup';
+import { NodeGraph } from '../../../../../../@types/editor';
 
 export class ViewZOrder {
     /**场景层 */
@@ -44,18 +45,14 @@ class PopupParams {
     /**
      * @description 是否挂起当前
      * @type {boolean}
-     * @memberof PopupParams
+     * @memberof PopupParams 
      */
-    suspendCurrent?: boolean = false;
+    suspendCurrent?: boolean = true;
 }
 class PopupDataBundle {
     /** 弹窗选项 */
     uiClass: any;
-    /**
-     * @description 数据
-     * @type {*}
-     * @memberof PopupRequest
-     */
+
     data: any;
     /** 缓存模式 */
     params: PopupParams;
@@ -174,7 +171,7 @@ export default class UIManager {
 
     public async showPopup(ui, data?: any, params?: PopupParams) {
         if (ui instanceof Node) {
-            await this.openNodeTypePopup(ui, data, ViewZOrder.Popup);
+            await this.openNodeTypePopup(ui, data);
         } else {
             let bundle = this.generatePopupDataBundle(ui, data, null, ViewZOrder.Popup, params);
             await this.openClassTypePopup(bundle);
@@ -201,7 +198,7 @@ export default class UIManager {
      * @param {Function} [callback]
      * @memberof UIManager
      */
-    public async openNodeTypePopup(uiNode: Node, data?: any, zOrder: number = ViewZOrder.UI) {
+    public async openNodeTypePopup(uiNode: Node, data?: any) {
         if (!uiNode.active) {
             uiNode.active = true;
         }
@@ -210,44 +207,40 @@ export default class UIManager {
         uiNode.getComponent(UIBase).init(data);
         //@ts-ignore
         uiNode.getComponent(UIBase).show();
-
     }
 
     private pushQueue(popupDataBundle: PopupDataBundle) {
-        console.log("pushQueue")
-
         if (!this._currentShowingPopup) {
             this.openClassTypePopup(popupDataBundle);
             return;
         }
         // 加入队列
         this._waitingQueue.push(popupDataBundle);
-        // 按照优先级从小到大排序
-        this._waitingQueue.sort((a, b) => (a.params.priority - b.params.priority));
+        // 按照优先级从大到小排序
+        this._waitingQueue.sort((a, b) => (b.params.priority - a.params.priority));
     }
 
-
-    private showNext() {
-        console.log("showNext")
+    private showNextPopup() {
         if (this._currentShowingPopup || (this._suspendedQueue.length === 0 && this._waitingQueue.length === 0 && this.showingUIStack.length == 0)) {
             return;
         }
-        let request: PopupDataBundle = null;
+        let bundle: PopupDataBundle = null;
         if (this._suspendedQueue.length > 0) {
-            request = this._suspendedQueue.shift();
+            bundle = this._suspendedQueue.shift();
         } else {
-            request = this._waitingQueue.shift();
+            bundle = this._waitingQueue.shift();
         }
         // 已有实例
-        if (isValid(request.node)) {
+        if (isValid(bundle.node)) {
             // 设为当前弹窗
-            this._currentShowingPopup = request;
+            this._currentShowingPopup = bundle;
             // 直接展示
-            request.node.getComponent(UIBase).show();
+            //@ts-ignore
+            bundle.node.getComponent(UIPopup).show();
             return;
         }
         // 加载并展示
-        this.openClassTypePopup(request);
+        this.openClassTypePopup(bundle);
     }
 
     private async openClassTypePopup(popupDataBundle: PopupDataBundle): Promise<void> {
@@ -255,7 +248,6 @@ export default class UIManager {
             if (this._currentShowingPopup) {
                 // 是否立即强制展示
                 if (popupDataBundle.params && popupDataBundle.params.immediately) {
-                    // this.locked = false;
                     if (popupDataBundle.params.suspendCurrent) {
                         await this.suspendCurrentPopup();
                     }
@@ -304,7 +296,6 @@ export default class UIManager {
         });
     }
 
-
     private generatePopupDataBundle(uiClass, data, node, zOrder, params: PopupParams) {
         let bundle = new PopupDataBundle();
         bundle.data = data;
@@ -329,10 +320,11 @@ export default class UIManager {
         }
         // 是否隐藏当前ui
         if (bundle.params.suspendCurrent == undefined) {
-            bundle.params.suspendCurrent = false;
+            bundle.params.suspendCurrent = true;
         }
         return bundle;
     }
+
     public getUIFromCachedMap<T extends UIBase>(uiClass: { new(): T }): T {
         let ui = null;
         let uiName = js.getClassName(uiClass);
@@ -345,8 +337,10 @@ export default class UIManager {
     private setUIToCachedMap(ui: UIBase) {
         let uiName = js.getClassName(ui);
         if (this.cachedUI.has(uiName)) {
+            ui.node.destroy();
             return;
         } else {
+            ui.node.removeFromParent();
             this.cachedUI.set(uiName, ui);
         }
     }
@@ -402,20 +396,20 @@ export default class UIManager {
                     this._currentShowingPopup = null;
                     log('this._currentShowingPopup set to  null')
                 }
+                await ui.close();
+                this.showNextPopup();
                 if (ui.needCache) {
-                    await ui.hide();
                     this.setUIToCachedMap(ui);
-                    return Promise.resolve();
-                } else {
-                    await ui.close();
-                    this.showNext();
-                    return Promise.resolve();
                 }
+                return Promise.resolve();
+
+
             } else {
                 error("ui is not available");
             }
         }
     }
+    // public async suspendCurrentP
 
 
 
@@ -452,7 +446,7 @@ export default class UIManager {
                     } else {
                         await ui.close();
                         this._currentShowingPopup = null;
-                        this.showNext();
+                        this.showNextPopup();
                         return Promise.resolve(true);
                     }
                 }
@@ -506,3 +500,6 @@ export default class UIManager {
 
 
 }
+
+
+

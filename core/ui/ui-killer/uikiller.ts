@@ -185,10 +185,11 @@ export default class UIKiller {
                             result = eventResult;
                         }
                         if (result === false) {
-                            eventNode._touchListener.setSwallowTouches(false);
+                            event.preventSwallow = false;
+                            event.propagationStopped = true
+
                         } else {
-                            eventNode._touchListener.setSwallowTouches(true);
-                            event.stopPropagation();
+                            event.preventSwallow = true;
                         }
                     }
                 }

@@ -69,5 +69,5 @@ quick_gen_project_*_autogen.sh.meta
 .vscode/
 *.meta
 !LongTouchComponent.ts.meta
-
+!EntityLink.ts.meta
 

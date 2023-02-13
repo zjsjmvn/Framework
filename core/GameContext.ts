@@ -1,6 +1,5 @@
-import IService from "./Services/IService";
-import { singleton } from './Utils/Decorator/Singleton';
 import { log, director, warn } from 'cc';
+import IService from './services/IService';
 
 /**
  * @description 

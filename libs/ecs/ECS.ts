@@ -21,7 +21,7 @@ export module ECS {
          * 组件的类型id，-1表示未给该组件分配id
          */
         static tid: number = -1;
-        static compName: string;
+        static componentName: string;
         /**
          * 拥有该组件的实体
          */

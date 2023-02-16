@@ -1,6 +1,7 @@
 import { _decorator, Component, log, Node, sp, ValueType } from 'cc';
 import { EDITOR } from "cc/env";
 import UIKiller from './uikiller';
+import { ExtendCCComponent } from '../components/ExtendCCComponent';
 const { ccclass, property } = _decorator;
 /**
  * @description 
@@ -26,7 +27,7 @@ const { ccclass, property } = _decorator;
  */
 @ccclass
 // @executeInEditMode
-export default class Thor extends Component {
+export default class Thor extends ExtendCCComponent {
     _binding: Boolean = false;
     _copyBindNodeName: boolean = false;
     @property({ displayName: "勾选拷贝绑定节点信息", tooltip: "勾选后自动存储在剪切板里。主要用于编辑器智能提示" })
@@ -99,7 +100,6 @@ export default class Thor extends Component {
                         }
                     }
                 }
-
                 var tag = document.createElement('textarea');
                 tag.setAttribute('id', 'cp_hgz_input');
                 tag.value = `    //#region uikiller\n ${text}    //#endregion\n`;
@@ -110,14 +110,9 @@ export default class Thor extends Component {
                 document.getElementById('cp_hgz_input').remove();
                 log(text)
                 console.log('uiKiller 拷贝成功');
-
-
             } catch (error) {
                 log(error);
             }
-
-
-
         }
     }
 
@@ -135,21 +130,3 @@ export default class Thor extends Component {
 
 }
 window.Thor = Thor
-
-
-// function isValidVariableName(str) {
-//     if (typeof str !== 'string') {
-//         return false;
-//     }
-//     if (str.trim() !== str) {
-//         return false;
-//     }
-//     try {
-//         new Function(str, 'var ' + str);
-//     } catch (_) {
-//         return false;
-//     }
-//     return true;
-// }
-
-// log(isValidVariableName('New Label'))

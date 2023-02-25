@@ -285,3 +285,4 @@ oops.res.loadDir("game", onProgressCallback, onCompleteCallback);
         }
     }
 }
+export let resLoader = new ResLoader();

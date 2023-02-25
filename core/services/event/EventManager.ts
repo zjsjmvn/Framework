@@ -55,6 +55,10 @@ export class EventManager {
         }
         return true;
     }
+    on(eventName: string, callBack: Function, target?: any): boolean {
+        return this.addEventListener(eventName, callBack, target);
+    }
+
 
     removeEventListener(eventName: string, callBack: Function, target?: any) {
         const handlers = this._eventListeners.get(eventName);
@@ -65,7 +69,9 @@ export class EventManager {
             }
         }
     }
-
+    off(eventName: string, callBack: Function, target?: any) {
+        return this.removeEventListener(eventName, callBack, target);
+    }
     /**
      * @description 
      * @param {string} eventName
@@ -73,7 +79,7 @@ export class EventManager {
      * @param {number} [pickTimes]  被拾取的次数。
      * @memberof EventManager
      */
-    fireEvent(eventName: string, eventData?: any, pickTimes?: number) {
+    public fireEvent(eventName: string, eventData?: any, pickTimes?: number) {
         // 如果获取不到，不代表要丢弃，有可能战斗场景中发出的消息需要在主场景中监听，但是主场景当前不存在
         if (null != this._eventListeners.get(eventName)) {
             // 将所有回调提取出来，再调用，避免调用回调的时候操作了事件的删除
@@ -92,6 +98,10 @@ export class EventManager {
         }
     }
 
+    public emit(eventName: string, eventData?: any, pickTimes?: number) {
+        this.fireEvent(eventName, eventData, pickTimes);
+    }
+
     /** 
     主动拾取事件，主要用途：如玩家在游戏内获得金币，回到主界面时，主界面的金币Label要显示一些动画。这时，在回到主界面时，先注册事件，然后在主动拾取事件。
     eg:
@@ -100,7 +110,7 @@ export class EventManager {
         // 主动拾取事件
         EventManager.instance.pickAndFireEvent(EventNames.MainCoin);
     */
-    pickEvent(eventName: string) {
+    public pickEvent(eventName: string) {
         let event = this._unattendedEventsMap.get(eventName);
         if (event) {
             event.pickTimes--;
@@ -110,4 +120,7 @@ export class EventManager {
             }
         }
     }
+
+
+
 }

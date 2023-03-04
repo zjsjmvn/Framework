@@ -155,11 +155,12 @@ export class GuideController extends Thor {
      * @returns {boolean}
      */
     _onTouchStart(event) {
-        if (!!this._locateNodes && this._locateNodes.length === 0) return false;
+        if (!!!this._locateNodes && this._locateNodes.length == 0) return false;
         // if (this._currentStep.listenTouchEventType !== GuideHelper.TouchEvent.START){
 
         //     return false;
         // }
+
         let rect = this._locateNodes[0].getBoundingBoxToWorld();
         let nodePos = this.node.convertToNodeSpaceAR(cc.v2(rect.x, rect.y));
         rect.x = nodePos.x;

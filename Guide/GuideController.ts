@@ -241,6 +241,7 @@ export class GuideController extends Thor {
         //     // this._processTasks()
         //     return true
         // }
+        if (!!!this._currentStep) return false;
         if (this._currentStep.listenTouchEventType === GuideHelper.TouchEvent.LONG && this._currentStep instanceof GuideStepType_LongTouch) {
             // if (this._currentStep._touchLongTimer){
             clearTimeout(this._currentStep._touchLongTimer);

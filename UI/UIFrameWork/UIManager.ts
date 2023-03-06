@@ -1,7 +1,6 @@
 import { singleton } from '../../Utils/Decorator/Singleton';
 import UIBase from './UIBase';
 import UITips from './UITips';
-import { dynamicAtlasManager } from '../../../../../creator';
 
 export class ViewZOrder {
     /**场景层 */
@@ -72,7 +71,7 @@ export default class UIManager {
 
     private uiPrefabNameAndPathMap: Map<string, string> = new Map();
 
-    public openUIClass<T extends UIBase>(uiClass: { new(): T }, zOrder: number = ViewZOrder.UI, data?: any, showCallback?: Function, onProgress?: Function) {
+    public openUIClass<T extends UIBase>(uiClass: { new(): T }, zOrder: number = ViewZOrder.UI, data?: any, showCallback?: Function, closeCallback?: Function, onProgress?: Function) {
         if (this.hasUI(uiClass)) {
             if (!this.getUI(uiClass).allowMultiThisUI) {
                 console.warn(`UIManager OpenUI 1: ui ${cc.js.getClassName(uiClass)} is already exist, please check`);
@@ -93,6 +92,7 @@ export default class UIManager {
             uiInstance.node.parent = uiRoot;
             uiInstance.node.setPosition(0, 0);
             uiInstance.init(data);
+            uiInstance.closeCallback = closeCallback;
             uiInstance.node.zIndex = zOrder;
             uiInstance.show();
             this.dynamicUIStack.push(uiInstance);
@@ -313,15 +313,15 @@ export default class UIManager {
         this.openUIClass(uiClass, ViewZOrder.Tips, data, null, null);
     }
 
-    public showPopup(ui, data?: any, showCallback?) {
+    public showPopup(ui, data?: any, showCallback?, closeCallback?) {
         if (ui instanceof cc.Node) {
             this.openUINode(ui, ViewZOrder.Popup, data, showCallback);
         } else {
-            this.openUIClass(ui, ViewZOrder.Popup, data, showCallback, null);
+            this.openUIClass(ui, ViewZOrder.Popup, data, showCallback, closeCallback, null);
         }
     }
 
-    public showPopupAsync(ui, data?: any): Promise<void> {
+    public showPopupAsync(ui, data?: any, closeCallback?): Promise<void> {
         return new Promise((resolve, reject) => {
             let callback = () => {
                 resolve();
@@ -329,7 +329,7 @@ export default class UIManager {
             if (ui instanceof cc.Node) {
                 this.openUINode(ui, ViewZOrder.Popup, data, callback);
             } else {
-                this.openUIClass(ui, ViewZOrder.Popup, data, callback);
+                this.openUIClass(ui, ViewZOrder.Popup, data, callback, closeCallback);
             }
         })
     }

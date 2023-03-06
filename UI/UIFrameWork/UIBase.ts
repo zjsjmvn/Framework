@@ -50,6 +50,7 @@ export default abstract class UIBase extends Thor {
      * @memberof UIBase
      */
     public hide() {
+        this.closeCallback && this.closeCallback();
         this.node.active = false;
     }
 

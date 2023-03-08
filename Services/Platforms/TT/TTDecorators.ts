@@ -13,9 +13,11 @@ export const TTCanIUse: MethodDecorator = (target: Object, propertyKey: string, 
 export const TT_onTouchEnd: MethodDecorator = (target: Object, propertyKey: string, descriptor: PropertyDescriptor) => {
     const sourceMethod = descriptor.value;
     descriptor.value = function (...args: any) {
-        tt.onTouchEnd(() => {
+        let func = () => {
             cc.log('tt.onTouchEnd');
             sourceMethod.apply(this, args);
-        });
+            tt.offTouchEnd(func);
+        }
+        tt.onTouchEnd(func);
     }
 }

@@ -24,6 +24,11 @@ export default class TTPlatform extends BasePlatform {
 
 
 
+
+
+    public static canIUse(functionName: string) {
+        return tt.canIUse(functionName);
+    }
     /**
      * @description  长震动
      * @memberof TTPlatform
@@ -46,22 +51,53 @@ export default class TTPlatform extends BasePlatform {
      * @description 可以将小游戏快捷方式添加到手机桌面上。
      * @memberof TTPlatform
      */
-    @TT_onTouchEnd
-    @TTCanIUse
-    public static addShortcut(callback) {
-        tt.addShortcut({
-            success() {
-                console.log("添加桌面成功");
-                callback && callback(0);
-            },
-            fail(err) {
-                console.log("添加桌面失败", err.errMsg);
-                callback && callback(-1)
-            },
-        });
+    // @TT_onTouchEnd
+    // @TTCanIUse
+    public static addShortcut(verifyFunc, callback) {
+        let func = (touches: []) => {
+            if (verifyFunc(touches)) {
+                cc.log('在点击范围内');
+                tt.addShortcut({
+                    success() {
+                        console.log("添加桌面成功");
+                        callback && callback(0);
+                    },
+                    fail(err) {
+                        console.log("添加桌面失败", err.errMsg);
+                        callback && callback(-1)
+                    },
+                    complete(sss) {
+                        console.log("添加桌面完成", sss);
+                        // tt.offTouchEnd(func)
+                    }
+                });
+            }
+        }
+        this.addTouchEndListener(func);
     }
 
+    private static touchListener = null;
+    public static addTouchEndListener(callFunc: Function) {
+        this.touchListener = (event: { touches: [], changedTouches: [], timeStamp: number }) => {
+            cc.log('tt.onTouchEnd', event, cc.view.getFrameSize());
+            let touches = [];
+            for (var i = 0; i < event.changedTouches.length; i++) {
+                let touch_event = event.changedTouches[i];
+                let ps = cc.view.convertToLocationInView(touch_event.clientX, touch_event.clientY, { top: 0, left: 0, width: cc.view.getFrameSize().width, height: cc.view.getFrameSize().height })
+                cc.view._convertPointWithScale(ps);
+                touches.push(ps);
+            }
+            callFunc(touches);
+        }
+        tt.onTouchEnd(this.touchListener);
+    }
 
+    public static removeTouchEndListener() {
+        if (this.touchListener) {
+            tt.offTouchEnd(this.touchListener);
+        }
+    }
+    public static removeAddShortcutTouchEndListener() { }
     /**
      * @description 检查快捷方式
      * @param {(res: { status: { exist: boolean, needUpdate: boolean }, errMsg: string }) => void} successCallback
@@ -80,6 +116,8 @@ export default class TTPlatform extends BasePlatform {
             },
         });
     }
+
+
 
 
     /**
@@ -149,3 +187,4 @@ export default class TTPlatform extends BasePlatform {
 
 // let t = new TTPlatform();
 // t.addShortcut();
+

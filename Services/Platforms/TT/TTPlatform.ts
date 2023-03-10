@@ -144,8 +144,7 @@ export default class TTPlatform extends BasePlatform {
 
     // @TTCanIUse
     public static setImRankData(dataType: number, value: string, priority: number = 0, extra?) {
-        let sdkVersion = tt.getSystemInfoSync().SDKVersion;
-        if (versionCompare(sdkVersion, '2.70.0', true)) {
+        if (this.canIUseImRankList) {
             tt.setImRankData({
                 dataType: dataType,
                 value: value,
@@ -159,14 +158,11 @@ export default class TTPlatform extends BasePlatform {
                 },
             });
         }
-
     }
-
 
     // @TTCanIUse
     public static getImRankList(relationType, dataType, rankType, suffix, rankTitle) {
-        let sdkVersion = tt.getSystemInfoSync().SDKVersion;
-        if (versionCompare(sdkVersion, '2.70.0', true)) {
+        if (this.canIUseImRankList) {
             tt.getImRankList({
                 relationType: relationType, //只展示好友榜
                 dataType: dataType, //只圈选type为数字类型的数据进行排序
@@ -180,11 +176,22 @@ export default class TTPlatform extends BasePlatform {
                     console.log(`getImRankData fail res: ${res.errMsg}`);
                 },
             });
+        } else {
+            cc.warn("app版本不够，无法使用排行榜");
         }
     }
 
+    public static get canIUseImRankList() {
+        if (cc.sys.platform == cc.sys.BYTEDANCE_GAME) {
+            let systemInfos = tt.getSystemInfoSync();
+            if (systemInfos.appName = "Douyin" || systemInfos.appName == "douyin_lite") {
+                let sdkVersion = systemInfos.SDKVersion;
+                if (versionCompare(sdkVersion, '2.70.0', true)) {
+                    return true;
+                }
+                return false;
+            }
+        }
+        return false;
+    }
 }
-
-// let t = new TTPlatform();
-// t.addShortcut();
-

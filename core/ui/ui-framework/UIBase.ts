@@ -87,8 +87,9 @@ export default abstract class UIBase extends Thor {
     protected onSuspended(): Promise<void> {
         return new Promise(res => res());
     }
-
-
+    protected onResume(): Promise<void> {
+        return new Promise(res => res());
+    }
 
 
 }

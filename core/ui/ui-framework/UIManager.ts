@@ -2,7 +2,7 @@ import { singleton } from '../../Utils/Decorator/Singleton';
 import UIBase from './UIBase';
 import { Prefab, director, error, instantiate, js, resources, log, Node, Label, isValid, warn } from 'cc';
 import UIPopup from './UIPopup';
-import { NodeGraph } from '../../../../../../@types/editor';
+import UITips from './UITips';
 
 export class ViewZOrder {
     /**场景层 */
@@ -43,7 +43,7 @@ class PopupParams {
     /** 立刻展示（将会挂起当前展示中的弹窗） */
     immediately?: boolean = false;
     /**
-     * @description 是否挂起当前
+     * @description 是否挂起当前,比如展示loading的时候就不要挂起。
      * @type {boolean}
      * @memberof PopupParams 
      */
@@ -163,7 +163,7 @@ export default class UIManager {
         let node = instantiate(prefab);
         //@ts-ignore
         let uiInstance = node.getComponent(UIBase);
-        this._currentShowingPopup.node = node;
+        // this._currentShowingPopup.node = node;
         initUI(uiInstance);
     }
 
@@ -359,7 +359,7 @@ export default class UIManager {
             this.showingUIStack.splice(index, 1);
         }
         // 将当前弹窗推入挂起队列
-        this._suspendedQueue.push(this._currentShowingPopup);
+        this._suspendedQueue.unshift(this._currentShowingPopup);
         // @ts-ignore
         await this._currentShowingPopup.node.getComponent(UIPopup).onSuspended();
         // 关闭当前弹窗（挂起）
@@ -367,6 +367,20 @@ export default class UIManager {
         await this._currentShowingPopup.node.getComponent(UIPopup).hide();
         // 置空当前
         this._currentShowingPopup = null;
+    }
+
+    // 恢复挂起的弹窗
+    public async resumeSuspendPopup() {
+        if (this._suspendedQueue.length <= 0) {
+            return;
+        }
+        let bundle = this._suspendedQueue.shift();
+        // @ts-ignore
+        await bundle.node.getComponent(UIPopup).onResume();
+        // @ts-ignore
+        await bundle.node.getComponent(UIPopup).show();
+        this._currentShowingPopup = bundle;
+        this.showingUIStack.push(this._currentShowingPopup);
     }
 
 
@@ -402,8 +416,6 @@ export default class UIManager {
                     this.setUIToCachedMap(ui);
                 }
                 return Promise.resolve();
-
-
             } else {
                 error("ui is not available");
             }
@@ -416,6 +428,35 @@ export default class UIManager {
     //#endregion
 
 
+
+
+    /**
+    //  * @description 暂时先这样用。
+    //  * @param {(UITips | Node)} ui
+    //  * @return {*}  {Promise<void>}
+    //  * @memberof UIManager
+    //  */
+    // public async closeTip(ui: UITips | Node): Promise<void> {
+    //     if (ui instanceof Node) {
+    //         //@ts-ignore
+    //         //node一般都属于弹框里的弹框，不能销毁。否则没办法再次显示了
+    //         await ui.getComponent(UITips).hide();
+    //     } else {
+    //         ui.close();
+    //     }
+    //     return Promise.resolve();
+    // }
+
+
+
+
+    /**
+     * @description
+     * @param {(UIBase | Node)} ui
+     * @return {*}  {Promise<boolean>}
+     * @memberof UIManager
+     * @deprecated
+     */
     public async closeUI(ui: UIBase | Node): Promise<boolean> {
         //节点类型就是在场景中直接存在的
         if (ui instanceof Node) {

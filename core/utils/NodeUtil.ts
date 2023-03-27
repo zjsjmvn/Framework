@@ -2,26 +2,33 @@ import { Node, UITransform, Vec2, Vec3 } from 'cc';
 export default class NodeUtil {
 
 
+
+    public static getNodeWorldPosition(a: Node) {
+        return a.parent.getComponent(UITransform).convertToWorldSpaceAR(a.getPosition());
+    }
+
+
     /**
-     * 节点之间坐标互转
-     * @param a         A节点
-     * @param b         B节点
-     * @param aPos      A节点空间中的相对位置
+     * @description 转换A自己的坐标为b的子节点的坐标
+     * @param {Node} a
+     * @param {Node} b
+     * @memberof NodeUtil
      */
-    public static calculateASpaceToBSpacePos(a: Node, b: Node, aPos?: Vec3) {
+    public static convertASelfPosToBChildPos(a: Node, b: Node) {
         let nodePos: Vec3;
-        if (aPos) {
-            nodePos = a.getComponent(UITransform).convertToWorldSpaceAR(aPos);
-        } else {
-            nodePos = a.getComponent(UITransform).convertToWorldSpaceAR(a.getPosition());
-        }
+        nodePos = a.parent.getComponent(UITransform).convertToWorldSpaceAR(a.getPosition());
         return b.getComponent(UITransform).convertToNodeSpaceAR(nodePos);
     }
 
-
-    public static getNodeWorldPosition(a: Node) {
-        return a.getComponent(UITransform).convertToWorldSpaceAR(a.getPosition());
+    /**
+     * @description 转换A子节点的坐标到b子节点的坐标
+     * @param {Node} a
+     * @param {Node} b
+     * @memberof NodeUtil
+     */
+    public static convertAChildPosToBChildPos(a: Node, b: Node, aChildPos: Vec3) {
+        let nodePos: Vec3;
+        nodePos = a.getComponent(UITransform).convertToWorldSpaceAR(aChildPos);
+        return b.getComponent(UITransform).convertToNodeSpaceAR(nodePos);
     }
-
-    // public static convertToNodeSpaceAR()
 }

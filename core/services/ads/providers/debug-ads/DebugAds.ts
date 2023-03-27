@@ -1,7 +1,7 @@
-import { RewardVideoCallBackMsg, AdsManager } from '../../AdsManager';
+import { ShowRewardVideoCallBackMsg, AdsManager } from '../../AdsManager';
 import DebugAdsView from './DebugAdsView';
 import { IAdProvider } from '../IAdProvider';
-import { Node, _decorator, director, log } from 'cc';
+import { Node, _decorator, director, log, UITransform } from 'cc';
 
 export enum DebugAdsEnum {
     Banner = 0,
@@ -15,6 +15,7 @@ const { ccclass, property } = _decorator;
 
 export default class DebugAds implements IAdProvider {
     name: string;
+    private banner: Node = null;
     showInterstitial() {
         return new Promise((resolve, reject) => {
             let node = new Node('DebugAds');
@@ -26,35 +27,26 @@ export default class DebugAds implements IAdProvider {
         })
     }
     showBanner(style: any): Promise<boolean> {
-        if (director.getScene()) {
-            let banner = director.getScene().getChildByName('Banner');
-            if (!banner) {
-                let node = new Node('Banner');
-                let debugAdsView = node.addComponent(DebugAdsView);
-                debugAdsView.initBanner();
-                log('showBanner', node.parent);
-                director.getScene().addChild(node);
-                return Promise.resolve(true);
-            }
+        if (!this.banner) {
+            this.banner = new Node('Banner');
+            let debugAdsView = this.banner.addComponent(DebugAdsView);
+            debugAdsView.initBanner();
         }
+        return Promise.resolve(true);
     }
     hideBanner() {
-        if (director.getScene()) {
-            let banner = director.getScene().getChildByName('Banner');
-            if (banner) {
-                banner.getComponent(DebugAdsView).close();
-            }
-        }
+        this.banner.removeFromParent();
     }
     hasRewardVideo(position: any): boolean {
         return true;
     }
-    showRewardVideo(position: any): Promise<RewardVideoCallBackMsg> {
+    showRewardVideo(position: any): Promise<ShowRewardVideoCallBackMsg> {
         return new Promise((resolve, reject) => {
             log("DebugAds showVideo ")
             let node = new Node('DebugAdsView');
+            node.addComponent(UITransform);
             let debugAdsView: DebugAdsView = node.addComponent(DebugAdsView);
-            let callback = (result: RewardVideoCallBackMsg) => {
+            let callback = (result: ShowRewardVideoCallBackMsg) => {
                 resolve(result);
             }
             debugAdsView.initRewardAds(callback);
@@ -73,3 +65,5 @@ export default class DebugAds implements IAdProvider {
 
 
 }
+
+

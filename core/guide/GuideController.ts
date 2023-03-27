@@ -158,11 +158,9 @@ export class GuideController extends Thor {
      * @returns {boolean}
      */
     _onTouchStart(event: EventTouch) {
-        if (!!this._locateNodes && this._locateNodes.length === 0) return false;
-        // if (this._currentStep.listenTouchEventType !== GuideHelper.TouchEvent.START){
+        if (!!!this._locateNodes) return false;
+        if (this._locateNodes && this._locateNodes.length <= 0) return false;
 
-        //     return false;
-        // }
         let rect = this._locateNodes[0].getComponent(UITransform).getBoundingBoxToWorld();
         let nodePos = this.node.getComponent(UITransform).convertToNodeSpaceAR(v3(rect.x, rect.y, 0));
         rect.x = nodePos.x;
@@ -236,6 +234,7 @@ export class GuideController extends Thor {
         //     // this._processTasks()
         //     return true
         // }
+        if (!!!this._currentStep) return false;
         if (this._currentStep.listenTouchEventType === GuideHelper.TouchEvent.LONG && this._currentStep instanceof GuideStepType_LongTouch) {
             // if (this._currentStep._touchLongTimer){
             clearTimeout(this._currentStep._touchLongTimer);

@@ -1,7 +1,7 @@
 import { _decorator, Component, log, Node, sp, ValueType } from 'cc';
 import { EDITOR } from "cc/env";
 import UIKiller from './uikiller';
-import { ExtendCCComponent } from '../components/ExtendCCComponent';
+import { ExtendCCComponent } from '../components/extend-cc-component';
 const { ccclass, property } = _decorator;
 /**
  * @description 

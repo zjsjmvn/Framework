@@ -1,9 +1,10 @@
-import { ECS } from '../../../libs/ecs/ECS';
 
 /**
  * 实现动态绑定的核心部分，
  * 每次修改属性值，都会调用对应函数，并且获取值的路径
  */
+
+import { ECS } from "../../../libs/ecs/ecs";
 
 const types = {
     obj: '[object Object]',

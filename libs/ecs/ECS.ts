@@ -4,7 +4,7 @@ export module ECS {
         canRecycle: boolean;
         ent: Entity;
 
-        reset(): void;
+        init(): void;
     }
 
     export interface ComponentCtor<T> {
@@ -38,7 +38,7 @@ export module ECS {
          * 
          * **不要偷懒，除非你能确定并保证组件在复用时，里面的数据是先赋值然后再使用。**
          */
-        abstract reset(): void;
+        abstract init(): void;
     }
 
     //#region 类型声明
@@ -569,7 +569,7 @@ export module ECS {
                     let comp = this[ctor.componentName] as IComponent;
                     comp.ent = null;
                     if (isRecycle) {
-                        comp.reset();
+                        comp.init();
                         if (comp.canRecycle) {
                             componentPools.get(componentTypeId).push(comp);
                         }

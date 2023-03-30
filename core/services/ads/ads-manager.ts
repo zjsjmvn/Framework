@@ -1,13 +1,13 @@
 
 import { log, screen, view } from 'cc';
-import { singleton } from '../../utils/decorator/singleton';
 import { IAdProvider } from './providers/iad-provider';
+import { singleton } from '../../utils/decorator/singleton';
 
 /**
  * @description 视频广告播放回调，如果失败就读取errMsg
  * @date 2019-09-09
  * @export
- * @class RewardVideoCallBackMsg
+ * @class ShowRewardVideoCallBackMsg
  */
 export class ShowRewardVideoCallBackMsg {
     /**
@@ -174,7 +174,7 @@ export class AdsManager {
     /**
      * @description
      * @param {string} [position] 广告位
-     * @return {*}  {Promise<RewardVideoCallBackMsg>}
+     * @return {*}  {Promise<ShowRewardVideoCallBackMsg>}
      * @memberof AdsManager
      */
     showRewardVideo(posName: string = "Default"): Promise<ShowRewardVideoCallBackMsg> {

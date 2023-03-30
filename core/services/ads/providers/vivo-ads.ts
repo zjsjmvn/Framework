@@ -1,4 +1,4 @@
-import { RewardVideoCallBackMsg, RewardVideoBundle, InterstitialAdBundle, BannerAdBundle } from '../ads-manager';
+import { ShowRewardVideoCallBackMsg, RewardVideoBundle, InterstitialAdBundle, BannerAdBundle } from '../ads-manager';
 import { IAdProvider } from './iad-provider';
 import { error, log } from 'cc';
 export const VivoRewardVideoErrMsg = {
@@ -201,17 +201,17 @@ export default class VivoAds implements IAdProvider {
         }
     }
 
-    showRewardVideo(posName: string): Promise<RewardVideoCallBackMsg> {
+    showRewardVideo(posName: string): Promise<ShowRewardVideoCallBackMsg> {
         return new Promise((resolve, reject) => {
             let bundle = this.rewardVideoInstanceMap.get(posName);
-            let msg = new RewardVideoCallBackMsg();
+            let msg = new ShowRewardVideoCallBackMsg();
             if (bundle) {
                 log(">> VivoAds::showRewardVideo");
                 if (!!bundle.rewardVideoInstance) {
                     let onCloseFunc = (res) => {
                         // 用户点击了【关闭广告】按钮
                         if (!!res && res.isEnded) {
-                            msg.result = true;
+                            msg.success = true;
                         } else {
                             msg.errMsg = "广告被关闭，奖励失败";
                         }
@@ -226,7 +226,7 @@ export default class VivoAds implements IAdProvider {
                         bundle.hasRewardVideoInCache = false;
                     }).catch((err) => {
                         console.error('>> VivoAds::showRewardVideo 广告组件出现问题', JSON.stringify(err));
-                        msg.result = false;
+                        msg.success = false;
                         msg.errMsg = VivoRewardVideoErrMsg[err.errCode] || '广告播放失败';
                         bundle.hasRewardVideoInCache = false;
                         bundle.rewardVideoInstance.load();
@@ -234,7 +234,7 @@ export default class VivoAds implements IAdProvider {
                     });
                 } else {
                     error(`>> VivoAds::rewardedVideoAd rewardVideoInstance为空`);
-                    msg.result = false;
+                    msg.success = false;
                     msg.errMsg = '广告初始化失败，实例为空';
                     resolve(msg);
                 }
@@ -247,7 +247,7 @@ export default class VivoAds implements IAdProvider {
                     error(`>> VivoAds::rewardedVideoAd 基础库版本不满足，无法展示`);
                     msg.errMsg = `基础库版本太低，需要更新`;
                 }
-                msg.result = false;
+                msg.success = false;
                 resolve(msg);
             }
         })

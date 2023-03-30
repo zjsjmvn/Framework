@@ -1,3 +1,5 @@
+import { log } from "cc";
+
 export type Singleton<T extends new (...args: any[]) => any> = T & {
     instance: T extends new (...args: any[]) => infer I ? I : never
 }

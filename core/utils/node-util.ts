@@ -31,4 +31,23 @@ export default class NodeUtil {
         nodePos = a.getComponent(UITransform).convertToWorldSpaceAR(aChildPos);
         return b.getComponent(UITransform).convertToNodeSpaceAR(nodePos);
     }
+
+    public static setPosX(node: Node, x) {
+        let pos = node.getPosition();
+        pos.x = x;
+        node.setPosition(pos);
+    }
+
+    //setPosY
+    public static setPosY(node: Node, y) {
+        let pos = node.getPosition();
+        pos.y = y;
+        node.setPosition(pos);
+    }
+
+    setPosZ(node: Node, z) {
+        let pos = node.getPosition();
+        pos.z = z;
+        node.setPosition(pos);
+    }
 }

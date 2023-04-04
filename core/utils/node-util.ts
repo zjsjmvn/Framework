@@ -1,4 +1,4 @@
-import { Node, UITransform, Vec2, Vec3 } from 'cc';
+import { Component, Node, UITransform, Vec2, Vec3 } from 'cc';
 export default class NodeUtil {
 
 
@@ -18,6 +18,10 @@ export default class NodeUtil {
         let nodePos: Vec3;
         nodePos = a.parent.getComponent(UITransform).convertToWorldSpaceAR(a.getPosition());
         return b.getComponent(UITransform).convertToNodeSpaceAR(nodePos);
+    }
+
+    static positionInTarget(node: Node, targetParent: Node): Vec3 {
+        return this.convertASelfPosToBChildPos(node, targetParent);
     }
 
     /**
@@ -45,9 +49,38 @@ export default class NodeUtil {
         node.setPosition(pos);
     }
 
-    setPosZ(node: Node, z) {
+    public static setPosZ(node: Node, z) {
         let pos = node.getPosition();
         pos.z = z;
         node.setPosition(pos);
     }
+
+    public static setWidth(node: Node, width) {
+        node.getComponent(UITransform).width = width;
+    }
+    public static setHeight(node: Node, height) {
+        node.getComponent(UITransform).height = height;
+    }
+
+    // 将 node 节点移动到 targetParent 节点，保持当前的位置不变
+    static changeNodeParentTo(node: Node, targetParent: Node) {
+        if (node.parent === targetParent) {
+            return
+        }
+        let np = targetParent.getComponent(UITransform).convertToNodeSpaceAR(node.getComponent(UITransform).convertToWorldSpaceAR(Vec3.ZERO));
+        node.removeFromParent();
+        node.position = np
+        targetParent.addChild(node)
+    }
+    // 获取组件，没有该组件时，添加一个；
+    static getOrAddComponent<T extends Component>(node: Node, typ: { new(): T }): T {
+        let comp = node.getComponent<T>(typ);
+        if (!comp) {
+            comp = node.addComponent<T>(typ);
+        }
+        return comp;
+    }
+
+
+
 }

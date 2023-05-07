@@ -26,14 +26,16 @@ export default class PromiseUtil {
         // delayTime -= 18;
         return new Promise(function (resolve, reject) {
             // delayTime(delayTime);
-            // let a = {};
-            // tween(a).delay(delayTime / 1000).call(() => {
-            //     resolve();
-            // }).start();
-            // director.getScheduler().scheduleOnce()l
-            setTimeout(function () {
+            let a = {};
+            tween(a).delay(delayTime / 1000).call(() => {
                 resolve();
-            }, delayTime);
+            }).start();
+
+            // settimeout不准。、
+            // director.getScheduler().scheduleOnce()l
+            // setTimeout(function () {
+            // resolve();
+            // }, delayTime);
         });
     }
 

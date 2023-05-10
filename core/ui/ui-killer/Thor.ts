@@ -40,27 +40,28 @@ export default class Thor extends ExtendCCComponent {
             this.bind();
             var text = '';
             try {
-                let r = (node) => {
-                    let comInfo = '';
-                    for (const key2 in node) {
-                        const val = node[key2];
+                let handler = (node) => {
+                    let info = '';
+                    for (const k in node) {
+                        const val = node[k];
                         // 绑定组件
                         if (val instanceof Component) {
                             let index = val.name.indexOf('<');
                             let name = val.name.slice(index + 1, -1);
-                            if (comInfo !== '') {
-                                comInfo += ', ';
+                            if (info !== '') {
+                                info += ', ';
                             }
                             if (sp[name] != undefined) {
-                                comInfo += '$' + name + ': sp.' + name;
+                                info += '$' + name + ': sp.' + name;
                             }
                             else {
-                                comInfo += '$' + name + ': ' + name;
+                                //$UITransform: UITransform
+                                info += '$' + name + ': ' + name;
                             }
                         }
                         // 绑定节点
                         if (val instanceof Node
-                            && key2 != '_parent'
+                            && k != '_parent'
                             && !/^[0-9]*$/.test(val.name[0])
                             && val.name.indexOf('New') != 0
                             // 中间没空格
@@ -71,32 +72,34 @@ export default class Thor extends ExtendCCComponent {
                                 console.log('名字不能为 _name');
                             }
                             else {
-                                if (comInfo !== '') {
-                                    comInfo += ', ';
+                                if (info !== '') {
+                                    //加逗号 $UITransform: UITransform, $Sprite: Sprite
+                                    info += ', ';
                                 }
-                                let nextChildInfo = r(val);
+                                let nextChildInfo = handler(val);
                                 let childInfo = val.name + ': Node';
                                 if (nextChildInfo.length > 0) {
+                                    // ScrollView: Node & { view: Node & { _content: Node & { $UITransform: UITransform } } } };
                                     childInfo += ' & { ' + nextChildInfo + ' }';
                                 }
-                                comInfo += childInfo;
+                                info += childInfo;
                             }
                         }
                     }
-                    return comInfo;
+                    return info;
                 }
                 var text = '';
                 for (const key in this) {
                     const element = this[key];
                     if (element instanceof Node) {
-                        let comInfo = '';
-                        comInfo += r(element);
-                        if (comInfo.length > 0) {
-                            comInfo = ' & { ' + comInfo + ' }';
+                        let info = '';
+                        info += handler(element);
+                        if (info.length > 0) {
+                            info = ' & { ' + info + ' }';
                         }
                         if (key.indexOf(' ') === -1 && key.indexOf('-') === -1) {
                             let accessModifier = key === '_touchSwallow' ? 'protected' : 'private';
-                            text += 'public ' + ' ' + key + `: Node${comInfo};` + '\n';
+                            text += 'public ' + ' ' + key + `: Node${info};` + '\n';
                         }
                     }
                 }
@@ -125,7 +128,9 @@ export default class Thor extends ExtendCCComponent {
             return;
         }
         this._binding = true;
+        console.time('bind');
         UIKiller.bind(this);
+        console.timeEnd('bind');
     }
 
 }

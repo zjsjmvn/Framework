@@ -20,13 +20,14 @@ const DEFAULT_EVENT_NAMES = [
  * - 自身会绑定触摸事件。为_onTouchStart,_onTouchMove,_onTouchEnd,_onTouchCancel。
  * - 其子节点按顺序绑定其node上。如nodeA.nodeB.nodeC.nodeD。可以链式访问。
  * - 特别的:
- *  - 如果子节点是下划线_开头，则会监听触摸事件。并且直接绑定到脚本上。可以使用脚本直接访问。
+ *  - 如果子节点是下划线_开头，则会监听触摸事件。并且直接绑定到脚本上。可以使用脚本直接访问：节点名为 "_image"，那么可以使用this._image访问。
  *  - 如果子节点是下划线+名字+$+数字。如：_image$1，则为其绑定触摸事件。事件类型为           
  *          `_on${name}TouchStart`,
             `_on${name}TouchMove`,
             `_on${name}TouchEnd`,
             `_on${name}TouchCancel`,
       并且节点下添加$属性。$值为其后面的数字。   
+    如果一个节点上的组件继承于Thor,那么将只会把这个组件直接绑定在node上，其他内容会跳过绑定，由这个node的脚本自己去绑定。eg: public _LevelGroup4: Node & { $LevelGroupView: LevelGroupView };LevelGroupView就是继承Thor的。
  * @example
  * ```js
  * 
@@ -97,8 +98,13 @@ export default class UIKiller {
                     rootNodeScript[name] = child;
                 }
             }
-            // 如果子节点自己有Thor绑定，那么return
-            if (child.getComponent(Thor) && !EDITOR) {
+            // 如果子节点自己有Thor绑定，那么只绑定thor脚本，然后return
+            if (child.getComponent(Thor)) {
+                let component = child.getComponent(Thor);
+                if (child[name]) {
+                    return;
+                }
+                child[name] = component;
                 return;
             }
             this._bindNode(child, rootNodeScript);

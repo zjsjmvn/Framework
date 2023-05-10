@@ -1,4 +1,4 @@
-import { Canvas, tween } from "cc";
+import { Canvas, Component, director, tween } from "cc";
 
 export default class PromiseUtil {
 
@@ -15,7 +15,7 @@ export default class PromiseUtil {
     }
 
     /**
-     * @description ms
+     * @description ms,注意：最小值不会低于一帧。时间越小，精度越差。
      * @static
      * @param {*} delayTime ms
      * @returns {Promise<void>}
@@ -23,14 +23,11 @@ export default class PromiseUtil {
      */
     public static delay(delayTime): Promise<void> {
         if (delayTime === 0) { delayTime = 100; }
-        // delayTime -= 18;
         return new Promise(function (resolve, reject) {
-            // delayTime(delayTime);
             let a = {};
             tween(a).delay(delayTime / 1000).call(() => {
                 resolve();
             }).start();
-
             // settimeout不准。、
             // director.getScheduler().scheduleOnce()l
             // setTimeout(function () {

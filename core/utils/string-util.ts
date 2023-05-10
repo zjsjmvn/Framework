@@ -1,3 +1,5 @@
+import { log } from "cc";
+
 /** 字符串工具 */
 export class StringUtil {
     /** 获取一个唯一标识的字符串 */
@@ -267,4 +269,5 @@ export class StringUtil {
         return str;
     }
 }
+
 

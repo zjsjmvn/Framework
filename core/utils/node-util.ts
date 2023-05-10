@@ -15,9 +15,9 @@ export default class NodeUtil {
      * @memberof NodeUtil
      */
     public static convertASelfPosToBChildPos(a: Node, b: Node) {
-        let nodePos: Vec3;
-        nodePos = a.parent.getComponent(UITransform).convertToWorldSpaceAR(a.getPosition());
-        return b.getComponent(UITransform).convertToNodeSpaceAR(nodePos);
+        let worldPos: Vec3;
+        worldPos = a.parent.getComponent(UITransform).convertToWorldSpaceAR(a.getPosition());
+        return b.getComponent(UITransform).convertToNodeSpaceAR(worldPos);
     }
 
     static positionInTarget(node: Node, targetParent: Node): Vec3 {
@@ -31,9 +31,9 @@ export default class NodeUtil {
      * @memberof NodeUtil
      */
     public static convertAChildPosToBChildPos(a: Node, b: Node, aChildPos: Vec3) {
-        let nodePos: Vec3;
-        nodePos = a.getComponent(UITransform).convertToWorldSpaceAR(aChildPos);
-        return b.getComponent(UITransform).convertToNodeSpaceAR(nodePos);
+        let worldPos: Vec3;
+        worldPos = a.getComponent(UITransform).convertToWorldSpaceAR(aChildPos);
+        return b.getComponent(UITransform).convertToNodeSpaceAR(worldPos);
     }
 
     public static setPosX(node: Node, x) {

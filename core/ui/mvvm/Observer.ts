@@ -4,6 +4,7 @@
  * 每次修改属性值，都会调用对应函数，并且获取值的路径
  */
 
+import { Node, log } from "cc";
 import { ECS } from "../../../libs/ecs/ecs";
 
 const types = {
@@ -48,7 +49,7 @@ export class Observer<T> {
         }
         this._callback = callback;
         if (!!ECS.Entity && obj instanceof ECS.Entity) {
-            obj._components.forEach((value) => {
+            obj.componentTid2Obj.forEach((value, key) => {
                 if (value == null) return;
                 //@ts-ignore
                 if (!!!value.mvvmPath) return;
@@ -72,10 +73,13 @@ export class Observer<T> {
      * @memberof Observer
      */
     private observe<T>(obj: T, path?: Array<string>) {
-        if (Object.prototype.toString.call(obj) === types.array) {
-            // log('Object.prototype.toString', Object.prototype.toString.call(obj), path, Object.prototype.toString.call(obj) == typeof Bag);
-            // this.overrideArrayProto(obj, path);
-        }
+        // 数组不处理
+        if (Object.prototype.toString.call(obj) === types.array) return;
+        // Node不处理
+        if (obj instanceof Node) return;
+        // Entity不处理
+        if (obj instanceof ECS.Entity) return;
+
         Object.keys(obj).forEach((key) => {
             let self = this;
             let oldVal = obj[key];
@@ -86,7 +90,9 @@ export class Observer<T> {
             else {
                 pathArray = [key];
             }
+            log('key', key)
             Object.defineProperty(obj, key, {
+
                 get: () => {
                     return oldVal;
                 },
@@ -147,7 +153,5 @@ export class Observer<T> {
 
 
 }
-
-
 
 

@@ -1,4 +1,3 @@
-// 重构原则：如无必要，勿增实体。
 export module ECS {
     export interface IComponent {
         canRecycle: boolean;
@@ -422,7 +421,7 @@ export module ECS {
          */
         private componentTid2Ctor: Map<number, ComponentType<IComponent>> = new Map();
 
-        private componentTid2Obj: Map<number, IComponent> = new Map();
+        public componentTid2Obj: Map<number, IComponent> = new Map();
 
         constructor() { }
 
@@ -471,6 +470,7 @@ export module ECS {
                 // @ts-ignore
                 this[ctor.componentName] = component;
                 this.componentTid2Ctor.set(componentTid, ctor);
+                this.componentTid2Obj.set(componentTid, component);
                 component.ent = this;
                 // 广播实体添加组件的消息
                 broadcastComponentAddOrRemove(this, componentTid);
@@ -584,6 +584,7 @@ export module ECS {
                 this[compName] = null;
                 this.mask.delete(componentTypeId);
                 this.componentTid2Ctor.delete(componentTypeId);
+                // TODO： componentTid2Obj没有移除？
                 broadcastComponentAddOrRemove(this, componentTypeId);
             }
         }

@@ -1,3 +1,4 @@
+import { log } from "cc"
 
 
 abstract class RandBase {

@@ -1,5 +1,5 @@
 import { director } from 'cc';
-import { ViewModel, getValueFromPath, setValueFromPath } from './view-model';
+import { VM_EMIT_HEAD, ViewModel, getValueFromPath, setValueFromPath } from './view-model';
 /**
  * VM 对象管理器(工厂)
  */

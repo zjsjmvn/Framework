@@ -6,9 +6,9 @@ import { StringFormatFunction } from './string-format';
 const { ccclass, property, menu, executeInEditMode } = _decorator;
 
 export enum LABEL_TYPE {
-    CC_LABEL = 'Label',
-    CC_RICH_TEXT = 'RichText',
-    CC_EDIT_BOX = 'EditBox'
+    CC_LABEL = 'cc.Label',
+    CC_RICH_TEXT = 'cc.RichText',
+    CC_EDIT_BOX = 'cc.EditBox'
 }
 
 

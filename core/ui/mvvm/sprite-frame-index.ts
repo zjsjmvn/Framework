@@ -1,6 +1,6 @@
 import { _decorator, Sprite, Component, SpriteFrame, error, CCInteger } from 'cc';
 const { ccclass, property, executeInEditMode, requireComponent, menu } = _decorator;
-@ccclass
+@ccclass("SpriteFrameIndex")
 @executeInEditMode
 @requireComponent(Sprite)
 @menu("添加特殊行为/UI/Frame Index(帧图改变)")

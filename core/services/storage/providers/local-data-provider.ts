@@ -1,5 +1,4 @@
 import { EncryptUtil } from '../../../../libs/encrypt/encrypt-util';
-import { md5 } from '../../../../libs/encrypt/md5';
 import { IStorageProvider } from './i-storage-provider';
 import { sys } from 'cc';
 
@@ -14,11 +13,15 @@ export default class LocalDataProvider implements IStorageProvider {
      * @param key aes加密的key 
      * @param iv aes加密的iv
      */
-    constructor(key: string = null, iv: string = null, encrypted = false) {
-        if (key)
-            this._key = md5(key);
-        if (iv)
-            this._iv = md5(iv);
+    constructor(encrypted = false, key: string = null, iv: string = null) {
+        if (encrypted) {
+            if (null == key || null == iv) {
+                console.error("加密存储时，key和iv不能为空");
+                return;
+            }
+            this._key = key;
+            this._iv = iv;
+        }
         this.encrypted = encrypted;
     }
 
@@ -34,7 +37,7 @@ export default class LocalDataProvider implements IStorageProvider {
             return;
         }
         if (this.encrypted) {
-            key = md5(key);
+            key = EncryptUtil.md5(key);
         }
 
         if (null == value) {
@@ -54,7 +57,7 @@ export default class LocalDataProvider implements IStorageProvider {
                 return;
             }
         } else if (typeof value === 'number') {
-            value = value + "";
+            value = value.toString();
         }
         if (null != this._key && null != this._iv && this.encrypted) {
             try {
@@ -79,14 +82,21 @@ export default class LocalDataProvider implements IStorageProvider {
             return;
         }
         if (this.encrypted) {
-            key = md5(key);
+            key = EncryptUtil.md5(key);
         }
         let str: string | null = sys.localStorage.getItem(key);
-        if (null != str && '' !== str && null != this._key && null != this._iv && this.encrypted) {
-            try {
-                str = EncryptUtil.aesDecrypt(str, this._key, this._iv);
-            } catch (e) {
-                str = null;
+        if (null != str && '' !== str) {
+            if (this.encrypted) {
+                if (null != this._key && null != this._iv) {
+                    try {
+                        str = EncryptUtil.aesDecrypt(str, this._key, this._iv);
+                    } catch (e) {
+                        str = null;
+                        console.log("解密失败，str=", str, e);
+                    }
+                } else {
+                    console.error("读取加密数据时，key和iv不能为空");
+                }
             }
         }
         if (null == defaultValue || typeof defaultValue === 'string') {
@@ -106,7 +116,7 @@ export default class LocalDataProvider implements IStorageProvider {
     readObj<T>(key: string, def?: T): T {
         let str = this.read(key);
         try {
-            if (str != null) {
+            if (str) {
                 return JSON.parse(str);
             } else {
                 return def;
@@ -126,7 +136,7 @@ export default class LocalDataProvider implements IStorageProvider {
             console.error("存储的key不能为空");
             return;
         }
-        key = md5(key);
+        key = EncryptUtil.md5(key);
         sys.localStorage.removeItem(key);
     }
 
@@ -137,3 +147,5 @@ export default class LocalDataProvider implements IStorageProvider {
         sys.localStorage.clear();
     }
 }
+
+

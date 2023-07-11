@@ -1,4 +1,4 @@
-import { Prefab, director, error, instantiate, js, resources, log, Node, Label, isValid, warn } from 'cc';
+import { Prefab, director, error, instantiate, js, resources, log, Node, Label, isValid, warn, AssetManager } from 'cc';
 import { singleton } from '../../utils/decorator/singleton';
 import UIBase from './ui-base';
 import UIPopup from './ui-popup';
@@ -502,9 +502,13 @@ export default class UIManager {
      * @param {string} path
      * @memberof UIManager
      */
-    public registerUIPrefab(path: string) {
+    public registerUIPrefab(path: string, bundle?: AssetManager.Bundle) {
         let infos = [];
-        resources.getDirWithPath(path, Prefab, infos);
+        if (bundle) {
+            bundle.getDirWithPath(path, Prefab, infos);
+        } else {
+            resources.getDirWithPath(path, Prefab, infos);
+        }
         log('infos', infos);
         infos.forEach((info) => {
             let splitPathArr = (info.path as string).split('/')

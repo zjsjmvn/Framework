@@ -23,7 +23,7 @@ export default class TTPlatform extends BasePlatform {
      * @description  长震动
      * @memberof TTPlatform
      */
-    @TTCanIUse
+    @TTCanIUse()
     public vibrateLong() {
         tt.vibrateLong(null);
     }
@@ -32,7 +32,7 @@ export default class TTPlatform extends BasePlatform {
      * @description 短震动
      * @memberof TTPlatform
      */
-    @TTCanIUse
+    @TTCanIUse()
     public vibrateShort() {
         tt?.vibrateShort(null);
     }
@@ -115,26 +115,26 @@ export default class TTPlatform extends BasePlatform {
      * @description 收藏小程序
      * @memberof TTPlatform
      */
-    @TTCanIUse
+    @TTCanIUse()
     public static showFavoriteGuide(callback) {
-        tt?.showFavoriteGuide({
-            type: "bar",
-            content: "一键添加到我的小程序",
-            position: "bottom",
-            success(res) {
-                console.log("引导组件展示成功");
-                callback && callback(0);
-            },
-            fail(res) {
-                console.log("引导组件展示失败");
-                callback && callback(-1);
-            },
-        });
-
+        // 需要promise
+        // tt?.showFavoriteGuide({
+        //     type: "bar",
+        //     content: "一键添加到我的小程序",
+        //     position: "bottom",
+        //     success(res) {
+        //         console.log("引导组件展示成功");
+        //         callback && callback(0);
+        //     },
+        //     fail(res) {
+        //         console.log("引导组件展示失败");
+        //         callback && callback(-1);
+        //     },
+        // });
     }
 
 
-    // @TTCanIUse
+    @TTCanIUse()
     public static setImRankData(dataType: number, value: string, priority: number = 0, extra?) {
         if (this.canIUseImRankList) {
             tt.setImRankData({
@@ -216,15 +216,15 @@ export default class TTPlatform extends BasePlatform {
 
 
 
-    public static ttLogin(): Promise<{ errMsg: string, code: string, anonymousCode: string, isLogin: boolean }> {
+    public static ttLogin(force = true): Promise<{ errMsg: string, code: string, anonymousCode: string, isLogin: boolean }> {
         return new Promise((resolve, reject) => {
             tt.login({
-                force: true, success: async (res: { errMsg: string, code: string, anonymousCode: string, isLogin: boolean }) => {
+                force: force, success: async (res: { errMsg: string, code: string, anonymousCode: string, isLogin: boolean }) => {
                     console.log('success', res.errMsg, res.code, res.anonymousCode, res.isLogin);
                     resolve(res);
-
-                }, fail: () => {
-                    reject()
+                }, fail: (res) => {
+                    res.isLogin = false;
+                    resolve(res);
                     console.log('fail')
                 }
             })
@@ -250,10 +250,22 @@ export default class TTPlatform extends BasePlatform {
                 },
             });
         })
-
     }
 
-
+    public static getUserProfile(force = true): Promise<{ errMsg: string, code: string, anonymousCode: string, isLogin: boolean }> {
+        return new Promise((resolve, reject) => {
+            tt.getUserProfile({
+                force: force,
+                success(res) {
+                    console.log(`getUserInfo 调用成功`, res.userInfo, res.rawData);
+                    console.log(`res`, res);
+                },
+                fail(res) {
+                    console.log(`getUserInfo 调用失败`, res.errMsg);
+                },
+            });
+        })
+    }
 
 
 

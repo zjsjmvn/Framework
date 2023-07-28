@@ -1,76 +1,86 @@
+import { log } from "cc";
 
 export class EncryptUtil {
-    private static JsonFormatter = {
-        stringify: function (cipherParams: any) {
-            const jsonObj: any = { ct: cipherParams.ciphertext.toString(CryptoJS.enc.Base64) };
-            if (cipherParams.iv) {
-                jsonObj.iv = cipherParams.iv.toString();
-            }
-            if (cipherParams.salt) {
-                jsonObj.s = cipherParams.salt.toString();
-            }
-            return JSON.stringify(jsonObj);
-        },
-        parse: function (jsonStr: any) {
-            const jsonObj = JSON.parse(jsonStr);
-            const cipherParams = CryptoJS.lib.CipherParams.create(
-                { ciphertext: CryptoJS.enc.Base64.parse(jsonObj.ct) },
-            );
-            if (jsonObj.iv) {
-                cipherParams.iv = CryptoJS.enc.Hex.parse(jsonObj.iv)
-            }
-            if (jsonObj.s) {
-                cipherParams.salt = CryptoJS.enc.Hex.parse(jsonObj.s)
-            }
-            return cipherParams;
-        },
-    };
-
     /**
-     * MD5加密
-     * @param msg 加密信息
-     */
-    static md5(msg: string): string {
-        return CryptoJS.MD5(msg).toString();
-    }
-
-
-
-    /**
-     * AES 加密
-     * @param msg 加密信息
-     * @param key aes加密的key 
-     * @param iv  aes加密的iv
+     * @description 加密
+     * @static
+     * @param {string} msg
+     * @param {string} key
+     * @param {string} iv
+     * @return {*}  {string}
+     * @memberof EncryptUtil
      */
     static aesEncrypt(msg: string, key: string, iv: string): string {
-        return CryptoJS.AES.encrypt(
-            msg,
-            key,
+        let wordArrayMsg = CryptoJS.enc.Utf8.parse(msg);
+        let wordArrayKey = CryptoJS.enc.Utf8.parse(key);
+        let wordArrayIV = CryptoJS.enc.Utf8.parse(iv);
+        let encrypted = CryptoJS.AES.encrypt(
+            wordArrayMsg,
+            wordArrayKey,
             {
-                iv: CryptoJS.enc.Hex.parse(iv),
-                format: this.JsonFormatter
-            },
-        ).toString();
+                iv: wordArrayIV,
+                mode: CryptoJS.mode.CBC,
+                padding: CryptoJS.pad.Pkcs7
+            });
+        let encryptedBase64Data = CryptoJS.enc.Base64.stringify(encrypted.ciphertext);
+        return encryptedBase64Data;
     }
 
     /**
-     * AES 解密
-     * @param str 解密字符串
-     * @param key aes加密的key 
-     * @param iv  aes加密的iv
+     * @description URI encode之后加密
+     * @static
+     * @param {string} msg
+     * @param {string} key
+     * @param {string} iv
+     * @return {*}  {string}
+     * @memberof EncryptUtil
      */
-    static aesDecrypt(str: string, key: string, iv: string): string {
-        const decrypted = CryptoJS.AES.decrypt(
-            str,
-            key,
-            {
-                iv: CryptoJS.enc.Hex.parse(iv),
-                format: this.JsonFormatter
-            },
-        );
-        return decrypted.toString(CryptoJS.enc.Utf8);
+    static aesEncryptWithURIEncode(msg: string, key: string, iv: string): string {
+        msg = encodeURIComponent(msg);
+        return this.aesEncrypt(msg, key, iv);
     }
 
+
+    /**
+     * @description 解密，然后decodeURI
+     * @static
+     * @param {string} str
+     * @param {string} key
+     * @param {string} iv
+     * @return {*}  {string}
+     * @memberof EncryptUtil
+     */
+    static aesDecryptWithURIDecode(str: string, key: string, iv: string): string {
+        str = str.replace(/\r\n/g, "").replace(/\r/g, "").replace(/\n/g, "");
+        str = this.aesDecrypt(str, key, iv);
+        return decodeURIComponent(str);
+    }
+
+    /**
+     * @description 解密
+     * @static
+     * @param {string} str
+     * @param {string} key
+     * @param {string} iv
+     * @return {*}  {string}
+     * @memberof EncryptUtil
+     */
+    static aesDecrypt(str: string, key: string, iv: string): string {
+        let wordArrayKey = CryptoJS.enc.Utf8.parse(key);
+        let wordArrayIV = CryptoJS.enc.Utf8.parse(iv);
+        let encryptedHexStr = CryptoJS.enc.Base64.parse(str);
+        let wordArrayMsg = CryptoJS.enc.Base64.stringify(encryptedHexStr);
+        let decrypt = CryptoJS.AES.decrypt(
+            wordArrayMsg,
+            wordArrayKey,
+            {
+                iv: wordArrayIV,
+                mode: CryptoJS.mode.CBC,
+                padding: CryptoJS.pad.Pkcs7
+            });
+        let decryptedStr = decrypt.toString(CryptoJS.enc.Utf8);
+        return decryptedStr.toString();
+    }
 
 
     // base64加密
@@ -82,5 +92,15 @@ export class EncryptUtil {
     static base64Decode(str: string): string {
         return CryptoJS.enc.Base64.parse(str).toString(CryptoJS.enc.Utf8);
     }
-
+    /**
+     * MD5加密
+     * @param msg 加密信息
+     */
+    static md5(msg: string): string {
+        return CryptoJS.MD5(msg).toString();
+    }
 }
+
+
+
+

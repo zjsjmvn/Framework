@@ -1,4 +1,4 @@
-import { log, sys, view, warn } from 'cc';
+import { ImageAsset, SpriteFrame, Texture2D, log, sys, view, warn } from 'cc';
 import { TTCanIUse } from './tt-decorators';
 import { versionCompare } from '../../../utils/version-util';
 import BasePlatform from '../base-platform';
@@ -188,6 +188,70 @@ export default class TTPlatform extends BasePlatform {
     }
 
 
+    public static loadAvatar(url: string, width: number = 100, height: number = 100): Promise<SpriteFrame> {
+        return new Promise<SpriteFrame>((resolve, reject) => {
+            const image = tt.createImage();
+            image.src = url;
+            image.width = width;
+            image.height = height;
+            image.addEventListener('load', res => {
+                console.log("tt load remote image success: ", res);
+                let imageAsset = new ImageAsset(image);
+                let texture = new Texture2D();
+                texture.image = imageAsset;
+
+                let spriteFrame = new SpriteFrame();
+                spriteFrame.texture = texture;
+                spriteFrame.packable = false;
+
+                resolve(spriteFrame);
+            });
+            image.addEventListener('error', error => {
+                console.log("tt load remote image error: ", error);
+                reject(error);
+            });
+        });
+    }
+
+
+
+
+    public static ttLogin(): Promise<{ errMsg: string, code: string, anonymousCode: string, isLogin: boolean }> {
+        return new Promise((resolve, reject) => {
+            tt.login({
+                force: true, success: async (res: { errMsg: string, code: string, anonymousCode: string, isLogin: boolean }) => {
+                    console.log('success', res.errMsg, res.code, res.anonymousCode, res.isLogin);
+                    resolve(res);
+
+                }, fail: () => {
+                    reject()
+                    console.log('fail')
+                }
+            })
+        })
+    }
+    // getUserInfo
+    public static getUserInfo(): Promise<{ errMsg: string, code: string, anonymousCode: string, isLogin: boolean }> {
+        return new Promise((resolve, reject) => {
+            tt.getUserInfo({
+                withCredentials: true,
+                withRealNameAuthenticationInfo: false,
+                success(res) {
+                    console.log(`getUserInfo 调用成功`, res.userInfo, res.rawData);
+                    console.log(`res`, res);
+                    let signature = res.signature;
+                    let encryptedData = res.encryptedData;
+                    let iv = res.iv;
+
+
+                },
+                fail(res) {
+                    console.log(`getUserInfo 调用失败`, res.errMsg);
+                },
+            });
+        })
+
+    }
 
 
 

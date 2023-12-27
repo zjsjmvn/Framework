@@ -2,6 +2,7 @@ import { IAdProvider } from '../../Ads/Provider/IAdProvider';
 import BasePlatform from '../BasePlatform';
 import { TTCanIUse, TT_onTouchEnd } from './TTDecorators';
 import { versionCompare } from '../../../Utils/VersionUtil';
+import { show, nextPow2, hide } from '../../../../../../creator';
 
 
 export enum TTImRankDataType {
@@ -9,6 +10,9 @@ export enum TTImRankDataType {
     EnumType = 1,
 }
 export default class TTPlatform extends BasePlatform {
+
+
+    public static oneGridGamePanel: any;
 
     init() {
         super.init();
@@ -193,5 +197,123 @@ export default class TTPlatform extends BasePlatform {
             }
         }
         return false;
+    }
+
+    public static get canIUseCheckSceneAndNavigateToScene() {
+        if (cc.sys.platform == cc.sys.BYTEDANCE_GAME) {
+            let systemInfos = tt.getSystemInfoSync();
+            if (systemInfos.appName = "Douyin" || systemInfos.appName == "douyin_lite") {
+                let sdkVersion = systemInfos.SDKVersion;
+                if (versionCompare(sdkVersion, '2.92.0', true)) {
+                    return true;
+                }
+                return false;
+            }
+        }
+        return false;
+    }
+
+    public static canIUseSideBar(): Promise<boolean> {
+        if (cc.sys.platform == cc.sys.BYTEDANCE_GAME) {
+            return new Promise((resolve, reject) => {
+                // if (tt.canIUse("checkScene")) {
+                if (this.canIUseCheckSceneAndNavigateToScene) {
+                    tt.checkScene({
+                        scene: "sidebar",
+                        success(res) {
+                            console.log(`canIUseSideBar success res: ${res.isExist, res.errMsg}`);
+                            resolve(res.isExist);
+                        },
+                        fail(res) {
+                            console.log(`canIUseSideBar fail res: ${res.errMsg}`);
+                            resolve(false);
+                        }
+                    });
+                }
+                else {
+                    resolve(false);
+                }
+            });
+        }
+        console.error("不是 tt 平台，无法使用侧边栏");
+        return Promise.resolve(false);
+    }
+
+    public static navigateToScene(): Promise<{ isSuccess: boolean, errorMsg: string }> {
+        if (cc.sys.platform == cc.sys.BYTEDANCE_GAME) {
+            return new Promise((resolve, reject) => {
+                if (this.canIUseCheckSceneAndNavigateToScene) {
+                    tt.navigateToScene({
+                        scene: "sidebar",
+                        success(res) {
+                            console.log(`navigateToScene success`);
+                            resolve({ isSuccess: true, errorMsg: "" });
+                        },
+                        fail(res) {
+                            console.log(`canIUseSideBar fail res: ${res.errMsg}`);
+                            resolve({ isSuccess: false, errorMsg: res.errMsg });
+                        }
+                    });
+                } else {
+                    console.error("当前平台不支持跳转");
+                    resolve({ isSuccess: false, errorMsg: "当前平台不支持跳转" });
+                }
+            });
+        }
+        console.error("不是 tt 平台，无法使用侧边栏");
+        return Promise.resolve({ isSuccess: false, errorMsg: "当前平台不支持跳转" });
+    }
+
+
+    public static createGridGamePanel(top: number, left: number) {
+        if (cc.sys.platform == cc.sys.BYTEDANCE_GAME) {
+            if (tt.canIUse("createGridGamePanel")) {
+                try {
+                    var size = cc.view.getFrameSize();
+                    console.log("显示互推");
+                    this.oneGridGamePanel = tt.createGridGamePanel({
+                        gridCount: "one",
+                        size: "small",
+                        position: {
+                            top: top,
+                            left: left,
+                        },
+                        // query: {
+                        //     tt5f6929d4c054f9c102: "age=12&name=xxxx",
+                        // },
+                    });
+                }
+                catch (e) {
+                    console.log("createGridGamePanel " + e);
+                }
+            } else {
+                console.error("当前版本不支持 createGridGamePanel");
+            }
+
+        }
+        else {
+            console.error("不是 tt 平台，无法使用createGridGamePanel");
+        }
+
+
+    }
+
+    public static showGridGamePanel() {
+        if (!!this.oneGridGamePanel) {
+            console.log(" showGridGamePanel");
+            this.oneGridGamePanel.show()
+                .then(() => {
+                    console.error("展示游戏推荐组件成功");
+                })
+                .catch((err) => {
+                    console.error("展示游戏推荐组件失败", err);
+                });
+        } else {
+            console.error("oneGridGamePanel 不存在");
+        }
+
+    }
+    public static hideGridGamePanel() {
+        this.oneGridGamePanel?.hide();
     }
 }

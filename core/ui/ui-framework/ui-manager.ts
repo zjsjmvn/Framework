@@ -122,7 +122,7 @@ export default class UIManager {
      * @type {Map<string, string>}
      * @memberof UIManager
      */
-    private uiPrefabNameAndPathMap: Map<string, string> = new Map();
+    private uiPrefabNameAndPathMap: Map<string, { path: string, bundle: AssetManager.Bundle }> = new Map();
 
     public closeAllUI() {
         // if (this.showingUIStack.length == 0) {
@@ -154,12 +154,12 @@ export default class UIManager {
             uiInstance.node.setSiblingIndex(ViewZOrder.Tips as number);
             uiInstance.show();
         }
-        let path = this.uiPrefabNameAndPathMap.get(js.getClassName(uiClass));
-        if (!path) {
+        let pathAndBundle = this.uiPrefabNameAndPathMap.get(js.getClassName(uiClass));
+        if (!pathAndBundle) {
             error(`没有找到uiClass = ${js.getClassName(uiClass)}对应的预制体路径`)
             return;
         }
-        let prefab = await this.loadPrefab(path);
+        let prefab = await this.loadPrefab(pathAndBundle.path, pathAndBundle.bundle);
         let node = instantiate(prefab);
         //@ts-ignore
         let uiInstance = node.getComponent(UIBase);
@@ -207,6 +207,7 @@ export default class UIManager {
         uiNode.getComponent(UIBase).init(data);
         //@ts-ignore
         uiNode.getComponent(UIBase).show();
+        return Promise.resolve();
     }
 
     private pushQueue(popupDataBundle: PopupDataBundle) {
@@ -281,12 +282,12 @@ export default class UIManager {
             let uiInstance = this.getUIFromCachedMap(popupDataBundle.uiClass);
             let node = uiInstance?.node;
             if (!uiInstance) {
-                let path = this.uiPrefabNameAndPathMap.get(js.getClassName(popupDataBundle.uiClass));
-                if (!path) {
+                let pathAndBundle = this.uiPrefabNameAndPathMap.get(js.getClassName(popupDataBundle.uiClass));
+                if (!pathAndBundle) {
                     error(`没有找到uiClass = ${js.getClassName(popupDataBundle.uiClass)}对应的预制体路径`)
                     return;
                 }
-                let prefab = await this.loadPrefab(path);
+                let prefab = await this.loadPrefab(pathAndBundle.path, pathAndBundle.bundle);
                 node = instantiate(prefab);
                 //@ts-ignore
                 uiInstance = node.getComponent(UIBase);
@@ -504,12 +505,13 @@ export default class UIManager {
      */
     public registerUIPrefab(path: string, bundle?: AssetManager.Bundle) {
         let infos = [];
+
         if (bundle) {
             bundle.getDirWithPath(path, Prefab, infos);
         } else {
             resources.getDirWithPath(path, Prefab, infos);
         }
-        log('infos', infos);
+        log('infos', path, infos);
         infos.forEach((info) => {
             let splitPathArr = (info.path as string).split('/')
             log("splitPathArr", splitPathArr)
@@ -517,11 +519,15 @@ export default class UIManager {
                 let lastPath = splitPathArr.slice(-1)
                 if (lastPath.length > 0) {
                     let prefabPath = this.uiPrefabNameAndPathMap.get(lastPath[0]);
-                    if (prefabPath) {
-                        error(`已经存在${lastPath[0]},prefabPath = ${prefabPath}`);
+                    if (prefabPath?.path) {
+                        error(`已经存在${lastPath[0]},prefabPath = ${prefabPath.path}`);
                         return;
                     }
-                    this.uiPrefabNameAndPathMap.set(lastPath[0], info.path);
+                    if (bundle) {
+                        this.uiPrefabNameAndPathMap.set(lastPath[0], { path: info.path, bundle: bundle });
+                    } else {
+                        this.uiPrefabNameAndPathMap.set(lastPath[0], { path: info.path, bundle: resources });
+                    }
                 } else {
                     error("lastPath length is zero")
                 }
@@ -531,9 +537,9 @@ export default class UIManager {
         })
     }
 
-    private loadPrefab(path: string): Promise<Prefab> {
+    private loadPrefab(path: string, bundle): Promise<Prefab> {
         return new Promise(res => {
-            resources.load(path, (error, prefab: Prefab) => {
+            bundle.load(path, (error, prefab: Prefab) => {
                 if (error) {
                     console.error(`UIManager loadPrefab error: ${error}`);
                     return;

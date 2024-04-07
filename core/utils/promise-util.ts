@@ -4,14 +4,16 @@ export default class PromiseUtil {
 
 
     /**
-     * @description     //let [err, res] = await PromiseUtil.PromiseHandler(HttpService.login());
+     * @description     //let [err, res] = await PromiseUtil.promiseHandler(HttpService.login());
      * @static
      * @param {*} promise
      * @return {*}  
      * @memberof PromiseUtil
      */
-    public static promiseHandler(promise): [] {
-        return promise.then(data => [null, data]).catch(err => [err])
+    public static promiseHandler<T>(promise: Promise<T>): Promise<[Error | null, T]> {
+        return promise
+            .then(data => [null, data] as [null, T])
+            .catch(err => [err, null] as [Error, null]);
     }
 
     /**

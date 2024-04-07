@@ -1,4 +1,4 @@
-import { Component } from "cc";
+import { Component, macro } from "cc";
 export class ExtendCCComponent extends Component {
     protected onDestroy() {
         this.stopAllScheduler();
@@ -14,7 +14,7 @@ export class ExtendCCComponent extends Component {
         }
         this._I_SchedulerMap.set(key, func);
     }
-    protected startScheduler(key: string, func: Function, interval: number, repeat: number = cc.macro.REPEAT_FOREVER, delay: number = 0): void {
+    protected startScheduler(key: string, func: Function, interval: number, repeat: number = macro.REPEAT_FOREVER, delay: number = 0): void {
         if (!this.hasScheduler(key)) {
             this.registerScheduler(key, func);
             this.schedule(func, interval, repeat, delay);

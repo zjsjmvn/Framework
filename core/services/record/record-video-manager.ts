@@ -2,7 +2,7 @@ import { Game, game } from 'cc';
 /**
  * 分享参数
  */
-export interface ShareParams {
+interface ShareParams {
     templateId?: string,
     title?: string,
     desc?: string,

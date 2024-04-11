@@ -34,7 +34,7 @@ export default class Thor extends ExtendCCComponent {
     get copyBindNodeName() {
         return this._copyBindNodeName;
     }
-    // @property
+    // @property 如果不生效了，就复制到其他脚本的onload里然后浏览器调试即可。
     set copyBindNodeName(val) {
         if (EDITOR) {
             this.bind();
@@ -44,6 +44,7 @@ export default class Thor extends ExtendCCComponent {
                     let info = '';
                     for (const k in node) {
                         const val = node[k];
+                        // log("val" + val)
                         // 绑定组件
                         if (val instanceof Component) {
                             let index = val.name.indexOf('<');
@@ -57,11 +58,16 @@ export default class Thor extends ExtendCCComponent {
                             else {
                                 //$UITransform: UITransform
                                 info += '$' + name + ': ' + name;
+
                             }
+
                         }
+                        // log("info" + info);
                         // 绑定节点
                         if (val instanceof Node
                             && k != '_parent'
+                            && k != '_scene'
+
                             && !/^[0-9]*$/.test(val.name[0])
                             && val.name.indexOf('New') != 0
                             // 中间没空格
@@ -76,6 +82,7 @@ export default class Thor extends ExtendCCComponent {
                                     //加逗号 $UITransform: UITransform, $Sprite: Sprite
                                     info += ', ';
                                 }
+                                // log(val.name)
                                 let nextChildInfo = handler(val);
                                 let childInfo = val.name + ': Node';
                                 if (nextChildInfo.length > 0) {
@@ -94,6 +101,7 @@ export default class Thor extends ExtendCCComponent {
                     if (element instanceof Node) {
                         let info = '';
                         info += handler(element);
+                        log("out" + info);
                         if (info.length > 0) {
                             info = ' & { ' + info + ' }';
                         }

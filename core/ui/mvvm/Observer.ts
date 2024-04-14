@@ -90,7 +90,6 @@ export class Observer<T> {
             else {
                 pathArray = [key];
             }
-            log('key', key)
             Object.defineProperty(obj, key, {
 
                 get: () => {

@@ -136,9 +136,9 @@ export default class Thor extends ExtendCCComponent {
             return;
         }
         this._binding = true;
-        console.time('bind');
+        // console.time('bind');
         UIKiller.bind(this);
-        console.timeEnd('bind');
+        // console.timeEnd('bind');
     }
 
 }

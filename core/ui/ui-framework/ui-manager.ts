@@ -338,6 +338,11 @@ export default class UIManager {
     private setUIToCachedMap(ui: UIBase) {
         let uiName = js.getClassName(ui);
         if (this.cachedUI.has(uiName)) {
+            var instance = this.cachedUI.get(uiName);
+            if (instance == ui) {
+                ui.node.removeFromParent();
+                return;
+            };
             ui.node.destroy();
             return;
         } else {

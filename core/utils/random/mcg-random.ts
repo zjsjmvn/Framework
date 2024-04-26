@@ -1,3 +1,4 @@
+import { assert } from "cc"
 import { log } from "cc"
 
 
@@ -41,7 +42,7 @@ abstract class RandBase {
      * @param exclusiveMax 最大值
      */
     range(inclusiveMin: number, exclusiveMax: number) {
-        console.assert(inclusiveMin < exclusiveMax)
+        assert(inclusiveMin < exclusiveMax)
         const ret = Math.floor(this.random() * (exclusiveMax - inclusiveMin) + inclusiveMin)
         return ret
     }

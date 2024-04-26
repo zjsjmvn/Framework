@@ -1,9 +1,4 @@
-/*
- * @Author: dgflash
- * @Date: 2022-06-21 12:05:13
- * @LastEditors: dgflash
- * @LastEditTime: 2022-09-02 10:29:01
- */
+
 import { AudioClip, AudioSource, error, _decorator } from 'cc';
 const { ccclass, menu } = _decorator;
 
@@ -32,7 +27,7 @@ export class AudioMusic extends AudioSource {
         this.currentTime = value * this.duration;
     }
 
-    playMusic(clip: AudioClip, callback?: Function) {
+    playSelf(clip: AudioClip, callback?: Function) {
         if (this.playing) {
             this._isPlay = false;
             this.stop();
@@ -43,17 +38,17 @@ export class AudioMusic extends AudioSource {
         this.play();
     }
 
-    /** cc.Component 生命周期方法，验证背景音乐播放完成逻辑，建议不要主动调用 */
-    update(dt: number) {
-        if (this.currentTime > 0) {
-            this._isPlay = true;
-        }
-        if (this._isPlay && this.playing == false) {
-            this._isPlay = false;
-            this.enabled = false
-            this.onCompleteCallback && this.onCompleteCallback();
-        }
-    }
+    // /** cc.Component 生命周期方法，验证背景音乐播放完成逻辑，建议不要主动调用 */
+    // update(dt: number) {
+    //     if (this.currentTime > 0) {
+    //         this._isPlay = true;
+    //     }
+    //     if (this._isPlay && this.playing == false) {
+    //         this._isPlay = false;
+    //         this.enabled = false
+    //         this.onCompleteCallback && this.onCompleteCallback();
+    //     }
+    // }
 
     /** 释放当前背景音乐资源 */
     release() {

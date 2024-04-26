@@ -494,8 +494,8 @@ export module ECS {
             else {
                 let tmpCtor = (ctor.constructor as ComponentCtor<T>);
                 let componentTid = tmpCtor.tid;
-                // console.assert(compTid !== -1 || !compTid, '组件未注册！');
-                // console.assert(this.compTid2Ctor.has(compTid), '已存在该组件！');
+                // assert(compTid !== -1 || !compTid, '组件未注册！');
+                // assert(this.compTid2Ctor.has(compTid), '已存在该组件！');
                 if (componentTid === -1 || componentTid == null) {
                     throw Error('组件未注册！');
                 }

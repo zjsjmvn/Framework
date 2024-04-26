@@ -1,6 +1,8 @@
 import { Component, director, Node, resources, AudioClip, error } from 'cc';
 import { AudioMusic } from './audio-music';
 import { AudioEffect } from './audio-effect';
+import { AssetManager } from 'cc';
+import { log } from 'cc';
 
 
 export class AudioManager extends Component {
@@ -31,6 +33,9 @@ export class AudioManager extends Component {
     private audioEffect!: AudioEffect;
 
     private _musicVolume: number = 1;
+
+    private bundle: AssetManager.Bundle | null = null;
+    private audioPath: string = "";
     /**
      * 获取背景音乐音量
      */
@@ -45,20 +50,20 @@ export class AudioManager extends Component {
         this._musicVolume = value;
         this.audioMusic.volume = value;
     }
-    private effectVolume: number = 1;
+    private _effectVolume: number = 1;
 
     /** 
      * 获取音效音量 
      */
-    get volumeEffect(): number {
-        return this.effectVolume;
+    get effectVolume(): number {
+        return this._effectVolume;
     }
     /**
      * 设置获取音效音量
      * @param value     音效音量值
      */
-    set volumeEffect(value: number) {
-        this.effectVolume = value;
+    set effectVolume(value: number) {
+        this._effectVolume = value;
         this.audioEffect.volume = value;
     }
     private _audioMusicSwitchState: boolean = true;
@@ -109,6 +114,47 @@ export class AudioManager extends Component {
         this.audioMusic.progress = value;
     }
 
+    private uiPrefabNameAndPathMap: Map<string, { path: string, bundle: AssetManager.Bundle }> = new Map();
+
+    public init(path: string, bundle: AssetManager.Bundle) {
+        this.bundle = bundle;
+        this.audioPath = path;
+        // 遍历一遍。
+
+        let infos = [];
+
+        if (bundle) {
+            bundle.getDirWithPath(path, AudioClip, infos);
+        } else {
+            resources.getDirWithPath(path, AudioClip, infos);
+        }
+        log('infos', path, infos);
+        infos.forEach((info) => {
+            let splitPathArr = (info.path as string).split('/')
+            log("splitPathArr", splitPathArr)
+            if (splitPathArr.length > 0) {
+                let lastPath = splitPathArr.slice(-1)
+                if (lastPath.length > 0) {
+                    let prefabPath = this.uiPrefabNameAndPathMap.get(lastPath[0]);
+                    if (prefabPath?.path) {
+                        error(`已经存在${lastPath[0]},prefabPath = ${prefabPath.path}`);
+                        return;
+                    }
+                    if (bundle) {
+                        this.uiPrefabNameAndPathMap.set(lastPath[0], { path: info.path, bundle: bundle });
+                    } else {
+                        this.uiPrefabNameAndPathMap.set(lastPath[0], { path: info.path, bundle: resources });
+                    }
+                } else {
+                    error("lastPath length is zero")
+                }
+            } else {
+                error("splitPathArr length is zero")
+            }
+        })
+    }
+
+
     /**
      * 设置背景音乐播放完成回调
      * @param callback 背景音乐播放完成回调
@@ -117,6 +163,15 @@ export class AudioManager extends Component {
         this.audioMusic.onCompleteCallback = callback;
     }
 
+
+    // protected onLoad() {
+    //     game.on(Game.EVENT_HIDE, function () {
+    //         AudioEngine.inst.pauseAll();
+    //     });
+    //     game.on(Game.EVENT_SHOW, function () {
+    //         AudioEngine.inst.resumeAll();
+    //     });
+    // }
     /**
      * 播放背景音乐
      * @param url        资源地址
@@ -125,15 +180,17 @@ export class AudioManager extends Component {
     playMusic(url: string, callback?: Function) {
         if (this._audioMusicSwitchState) {
             let clip = this.musics.get(url);
-            if (clip !== null) {
-                this.audioMusic.playMusic(clip, callback)
+            if (!!clip) {
+                this.audioMusic.playSelf(clip, callback)
             } else {
-                resources.load(url, AudioClip, (err: Error | null, data: AudioClip) => {
+                let data: { path: string, bundle: AssetManager.Bundle } = this.uiPrefabNameAndPathMap.get(url);
+
+                this.bundle.load(data.path, AudioClip, (err: Error | null, data: AudioClip) => {
                     if (err) {
                         error(err);
                     }
                     this.musics.set(url, data);
-                    this.audioMusic.playMusic(data, callback)
+                    this.audioMusic.playSelf(data, callback)
                 });
             }
         }
@@ -144,17 +201,23 @@ export class AudioManager extends Component {
      * @param url        资源地址
      */
     playEffect(url: string, callback?: Function) {
+
         if (this._audioEffectSwitchState) {
             let clip = this.effects.get(url);
-            if (clip !== null) {
-                this.audioEffect.playEffect(clip, callback)
+            if (!!clip) {
+                this.audioEffect.playSelf(clip, callback)
             } else {
-                resources.load(url, AudioClip, (err: Error | null, data: AudioClip) => {
+                let data: { path: string, bundle: AssetManager.Bundle } = this.uiPrefabNameAndPathMap.get(url);
+                if (!data) {
+                    error("没有找到音效资源", url);
+                    return;
+                }
+                this.bundle.load(data.path, AudioClip, (err: Error | null, data: AudioClip) => {
                     if (err) {
                         error(err);
                     }
                     this.effects.set(url, data);
-                    this.audioEffect.playEffect(clip, callback)
+                    this.audioEffect.playSelf(data, callback)
                 });
             }
         }

@@ -169,7 +169,7 @@ export default class UIManager {
 
     //#region popup
 
-    public async showPopup(ui, data?: any, params?: PopupParams) {
+    public async showPopup<T>(ui: (new () => UIPopup<T>) | Node, data?: T, params?: PopupParams) {
         if (ui instanceof Node) {
             await this.openNodeTypePopup(ui, data);
         } else {

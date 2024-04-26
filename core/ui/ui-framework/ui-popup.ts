@@ -13,8 +13,11 @@ enum BlankJudgeType {
     ContentSize,
     BoundingBoxToWorld,
 }
+
+export class UIData {
+}
 @ccclass('UIPopup')
-export default abstract class UIPopup<T = any> extends UIBase {
+export default abstract class UIPopup<T extends UIData> extends UIBase {
 
     //#region  animation
     @property
@@ -184,10 +187,10 @@ export default abstract class UIPopup<T = any> extends UIBase {
     /**
      * @description 
      * @abstract
-     * @param {T} [args]
+     * @param {T} [uiData]
      * @memberof UIPopup
      */
-    public abstract init(args?: T);
+    public abstract init(uiData?: T);
 
 
     public onLoad() {

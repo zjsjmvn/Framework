@@ -3,6 +3,7 @@ import BasePlatform from '../BasePlatform';
 import { TTCanIUse, TT_onTouchEnd } from './TTDecorators';
 import { versionCompare } from '../../../Utils/VersionUtil';
 import { show, nextPow2, hide } from '../../../../../../creator';
+import { slice } from '../../../../GamePlay/Lib/lodash';
 
 
 export enum TTImRankDataType {
@@ -268,6 +269,9 @@ export default class TTPlatform extends BasePlatform {
     public static createGridGamePanel(top: number, left: number) {
         if (cc.sys.platform == cc.sys.BYTEDANCE_GAME) {
             if (tt.canIUse("createGridGamePanel")) {
+                let systemInfos = tt.getSystemInfoSync();
+                var s = systemInfos.platform == 'ios'
+                if (s == true) return;
                 try {
                     var size = cc.view.getFrameSize();
                     console.log("显示互推");
@@ -298,6 +302,14 @@ export default class TTPlatform extends BasePlatform {
 
     }
 
+
+    public static isIOS() {
+        if (cc.sys.platform == cc.sys.BYTEDANCE_GAME) {
+            let systemInfos = tt.getSystemInfoSync();
+            return systemInfos.platform == 'ios'
+        }
+        return false;
+    }
     public static showGridGamePanel() {
         if (!!this.oneGridGamePanel) {
             console.log(" showGridGamePanel");

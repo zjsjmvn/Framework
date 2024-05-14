@@ -21,7 +21,7 @@ const { ccclass, property } = _decorator;
             `_on${name}TouchMove`,
             `_on${name}TouchEnd`,
             `_on${name}TouchCancel`,
-      并且节点下添加$属性。$值为其后面的数字。   
+      并且节点下添加$属性。$值为其后面的数字,可通过node.$得到。   
  * @class Thor
  * @extends {Component}
  */

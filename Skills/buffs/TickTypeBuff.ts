@@ -1,5 +1,6 @@
 import { BuffSkill } from "./BuffSkill";
 import { Entity } from '../../ECS/Entitas/Entity';
+import DurationTypeBuff from "./DurationTypeBuff";
 
 
 
@@ -10,22 +11,27 @@ import { Entity } from '../../ECS/Entitas/Entity';
  * @class TickTypeBuff
  * @extends {BuffSkill}
  */
-export default abstract class TickTypeBuff extends BuffSkill {
+export default abstract class TickTypeBuff extends DurationTypeBuff {
 
     public tick: number = 0;
     public currentTick: number = 0;
 
-    constructor(caster: Entity, target: Entity, tick: number) {
-        super(caster, target);
+    constructor(caster: Entity, target: Entity, tick: number, lifeTime: number) {
+        super(caster, target, lifeTime);
         this.tick = tick;
         this.currentTick = this.tick;
     }
-    public onTick(dt) {
+
+    public onUpdate(dt) {
+        super.onUpdate(dt);
+        if (this.lifeTime <= 0) return;
         this.currentTick -= dt;
         if (this.currentTick <= 0) {
-            // do something
+            this.onTick(dt);
             this.currentTick = this.tick;
         }
     }
-    abstract meetRemoveCondition(): boolean;
+    public onTick(dt) {
+
+    }
 }

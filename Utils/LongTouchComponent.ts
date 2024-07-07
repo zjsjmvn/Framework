@@ -122,6 +122,9 @@ export default class LongTouchComponent extends cc.Component {
 
     }
 
+    public cancelLongTouch() {
+        this._onTouchCancel(null);
+    }
     private _touchCounterCallback(event) {
         this.publishOneTouch(event);
         // if (this._isTouching) {

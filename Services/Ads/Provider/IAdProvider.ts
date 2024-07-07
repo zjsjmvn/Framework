@@ -8,6 +8,5 @@ export interface IAdProvider {
     preloadRewardVideo(): Promise<boolean>;
     hasInterstitial(posName: string): boolean;
     preloadInterstitial(): Promise<boolean>;
-    hasMultitonRewardVideo(posName: string): boolean;
 
 }

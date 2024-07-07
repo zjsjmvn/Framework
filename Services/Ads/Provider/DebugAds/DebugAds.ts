@@ -13,7 +13,12 @@ const { ccclass, property } = cc._decorator;
 @ccclass
 
 export default class DebugAds implements IAdProvider {
+
     name: string;
+    init() {
+
+    }
+
     showInterstitial() {
         return new Promise((resolve, reject) => {
             let node = new cc.Node('DebugAds');

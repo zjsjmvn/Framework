@@ -34,12 +34,6 @@ export default class ByteDanceAds implements IAdProvider {
         this.initInterstitialAds(interstitialAdsMap);
         this.initBanners(bannersMap);
     }
-    hasMultitonRewardVideo(posName: string): boolean {
-
-        let bundle = this.rewardVideoInstanceMap.get(posName);
-        return bundle.hasRewardVideoInCache;
-
-    }
 
 
     //#region 插屏广告

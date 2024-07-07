@@ -2,6 +2,20 @@ import { IAdProvider } from './Provider/IAdProvider';
 import { IConfig } from '../../../GamePlay/LaunchConfigs';
 import { singleton } from '../../Utils/Decorator/Singleton';
 
+export class BaseAdConfig {
+    public posName: string;
+    public id: string;
+}
+export class BannerConfig extends BaseAdConfig {
+
+    public style: { width: number, height: number, left: number, top: number };
+}
+export class InterstitialConfig extends BaseAdConfig {
+
+}
+export class RewardVideoConfig extends BaseAdConfig {
+
+}
 /**
  * @description 视频广告播放回调，如果失败就读取errMsg
  * @date 2019-09-09
@@ -46,8 +60,12 @@ export class InterstitialAdBundle {
 export class BannerAdBundle {
     public bannerInstance;
     public bannerId;
+    public style: { width: number, height: number, left: number, top: number };
 }
-
+export class ShowInterstitialAdCallBackMsg {
+    success: boolean = false;
+    errMsg: string = "";
+}
 @singleton
 export class AdsManager {
     /**
@@ -78,19 +96,18 @@ export class AdsManager {
     constructor() {
 
     }
-    public init(config: IConfig["adsConfig"]) {
+
+
+    public init(config: any) {
         for (let adProvider of config.adsProviders) {
-            let rewardVideosMap = config.rewardVideoProviderAndPosIdsMap?.get(adProvider);
-            let interstitialAdsMap = config.interstitialProviderAndPosIdsMap?.get(adProvider);
-            let bannersMap: Map<string, string> = config.bannerProviderAndPosIdsMap?.get(adProvider);
-            let provider = new adProvider(rewardVideosMap, interstitialAdsMap, bannersMap);
-            cc.log('rewardVideosMap', rewardVideosMap);
-            cc.log('interstitialAdsMap', interstitialAdsMap);
-            cc.log('bannersMap', bannersMap);
+            let rewardVideosConfigArr = config.rewardVideoProviderAndPosIdsMap?.get(adProvider);
+            let interstitialAdsConfigArr = config.interstitialProviderAndPosIdsMap?.get(adProvider);
+            let bannersConfigArr = config.bannerProviderAndPosIdsMap?.get(adProvider);
+            let provider = new adProvider();
+            provider.init(rewardVideosConfigArr, interstitialAdsConfigArr, bannersConfigArr);
             this.addAdProvider(provider);
         }
     }
-
     public addAdProvider(advertiser: IAdProvider) {
         this.adProviderArr.push(advertiser);
     }
@@ -141,7 +158,7 @@ export class AdsManager {
      * @return {*}  
      * @memberof AdsManager
      */
-    showInterstitial(posName: string = "Default") {
+    showInterstitial(posName: string = "Default"): Promise<ShowInterstitialAdCallBackMsg> {
         try {
             cc.log("AdsManager showInterstitial");
             for (let i of this.adProviderArr) {
@@ -149,13 +166,14 @@ export class AdsManager {
                     return i.showInterstitial(posName);
                 }
             }
-            return Promise.resolve(false);
-
+            let msg = new ShowInterstitialAdCallBackMsg();
+            msg.success = false;
+            msg.errMsg = "无可用广告";
+            return Promise.resolve(msg);
         } catch (e) {
             console.error(`showInterstitial: ${e}`);
         }
     }
-
     /**
      * @description 是否有奖励视频。
      * @returns {boolean}
@@ -194,15 +212,7 @@ export class AdsManager {
     }
 
 
-    hasMultitonRewardVideo(posName: string): boolean {
-        for (let i of this.adProviderArr) {
-            if (i.hasMultitonRewardVideo(posName)) {
-                return true;
-            }
-        }
-        return false;
 
-    }
     /**
      * @description 预加载广告
      * @param {boolean} [parallel] 是否并行加载，并行可能会导致卡顿。但是会调用所有广告平台的预加载功能。
@@ -241,7 +251,19 @@ export class AdsManager {
     defaultBannerStyle() {
         let width = cc.view.getFrameSize().width;
         let height = cc.view.getFrameSize().height;
-        return { width: width };
+
+        let screenWidth = cc.view.getFrameSize().width / cc.view.getDevicePixelRatio();
+        let screenHeight = cc.view.getFrameSize().height / cc.view.getDevicePixelRatio();
+        let bannerWidth = screenWidth;
+        let bannerHeight = bannerWidth / 20 * 7;
+        let left = screenWidth - bannerWidth;
+        let top = screenHeight - bannerHeight;
+        return {
+            width: bannerWidth,
+            height: bannerHeight,
+            left: left,
+            top: top
+        }
     }
 
 

@@ -1,6 +1,8 @@
 import { IAdProvider } from './Provider/IAdProvider';
 import { IConfig } from '../../../GamePlay/LaunchConfigs';
 import { singleton } from '../../Utils/Decorator/Singleton';
+import { find } from '../../../../../creator';
+import WeChatAds from './Provider/WeChatAds';
 
 export class BaseAdConfig {
     public posName: string;
@@ -14,6 +16,11 @@ export class InterstitialConfig extends BaseAdConfig {
 
 }
 export class RewardVideoConfig extends BaseAdConfig {
+
+}
+export class GeZiAdConfig extends BaseAdConfig {
+
+    public style: { width: number, height?: number, left: number, top: number };
 
 }
 /**
@@ -62,6 +69,12 @@ export class BannerAdBundle {
     public bannerId;
     public style: { width: number, height: number, left: number, top: number };
 }
+
+export class GeZiAdBundle {
+    public geZiInstance;
+    public geZiId;
+    public style: { width: number, height?: number, left: number, top: number };
+}
 export class ShowInterstitialAdCallBackMsg {
     success: boolean = false;
     errMsg: string = "";
@@ -103,8 +116,10 @@ export class AdsManager {
             let rewardVideosConfigArr = config.rewardVideoProviderAndPosIdsMap?.get(adProvider);
             let interstitialAdsConfigArr = config.interstitialProviderAndPosIdsMap?.get(adProvider);
             let bannersConfigArr = config.bannerProviderAndPosIdsMap?.get(adProvider);
+            //geZiProviderAndPosIdsMap
+            let geZiConfigArr = config.geZiProviderAndPosIdsMap?.get(adProvider);
             let provider = new adProvider();
-            provider.init(rewardVideosConfigArr, interstitialAdsConfigArr, bannersConfigArr);
+            provider.init(rewardVideosConfigArr, interstitialAdsConfigArr, bannersConfigArr, geZiConfigArr);
             this.addAdProvider(provider);
         }
     }
@@ -127,6 +142,21 @@ export class AdsManager {
                 return;
             }
         }
+    }
+    // 目前只有微信有格子广告
+    showGeZiAd(posName: string) {
+        this.adProviderArr.find((adProvider) => {
+            if (adProvider instanceof WeChatAds) {
+                (adProvider as WeChatAds).showGeZi(posName);
+            }
+        });
+    }
+    closeGeZiAd(posName: string) {
+        this.adProviderArr.find((adProvider) => {
+            if (adProvider instanceof WeChatAds) {
+                (adProvider as WeChatAds).closeGeZi(posName);
+            }
+        });
     }
 
     hideBanner(posName: string = "Default") {

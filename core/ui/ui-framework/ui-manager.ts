@@ -25,7 +25,7 @@ export class ViewZOrder {
 /**
  * 弹窗缓存模式
  */
-enum CacheMode {
+export enum CacheMode {
     /** 一次性的（立即销毁节点，预制体资源随即释放） */
     Once = 1,
     /** 正常的（立即销毁节点，但是缓存预制体资源） */
@@ -35,21 +35,21 @@ enum CacheMode {
 }
 
 
-class PopupParams {
+export class PopupParams {
     /** 缓存模式 */
     mode?: CacheMode = CacheMode.Normal;
     /** 优先级（优先级大的优先展示） */
     priority?: number = 0;
     /** 立刻展示（将会挂起当前展示中的弹窗） */
-    immediately?: boolean = false;
+    immediately?: boolean = true;
     /**
      * @description 是否挂起当前,比如展示loading的时候就不要挂起。
      * @type {boolean}
      * @memberof PopupParams 
      */
-    suspendCurrent?: boolean = true;
+    suspendCurrent?: boolean = false;
 }
-class PopupDataBundle {
+export class PopupDataBundle {
     /** 弹窗选项 */
     uiClass: any;
 
@@ -168,7 +168,7 @@ export default class UIManager {
     }
 
     //#region popup
-
+    // 默认不挂起当前弹窗。
     public async showPopup<T>(ui: (new () => UIPopup<T>) | Node, data?: T, params?: PopupParams) {
         if (ui instanceof Node) {
             await this.openNodeTypePopup(ui, data);
@@ -222,7 +222,12 @@ export default class UIManager {
     }
 
     private showNextPopup() {
-        if (this._currentShowingPopup || (this._suspendedQueue.length === 0 && this._waitingQueue.length === 0 && this.showingUIStack.length == 0)) {
+        if (this.showingUIStack.length > 0) {
+            // 等于最后一个
+            this._currentShowingPopup = this.showingUIStack[this.showingUIStack.length - 1];
+            return;
+        }
+        if (this._currentShowingPopup || (this._suspendedQueue.length === 0 && this._waitingQueue.length === 0)) {
             return;
         }
         let bundle: PopupDataBundle = null;
@@ -231,17 +236,20 @@ export default class UIManager {
         } else {
             bundle = this._waitingQueue.shift();
         }
-        // 已有实例
-        if (isValid(bundle.node)) {
-            // 设为当前弹窗
-            this._currentShowingPopup = bundle;
-            // 直接展示
-            //@ts-ignore
-            bundle.node.getComponent(UIPopup).show();
-            return;
+        if (!!bundle) {
+            // 已有实例
+            if (isValid(bundle.node)) {
+                // 设为当前弹窗
+                this._currentShowingPopup = bundle;
+                // 直接展示
+                //@ts-ignore
+                bundle.node.getComponent(UIPopup).show();
+                return;
+            }
+            // 加载并展示
+            this.openClassTypePopup(bundle);
         }
-        // 加载并展示
-        this.openClassTypePopup(bundle);
+
     }
 
     private async openClassTypePopup(popupDataBundle: PopupDataBundle): Promise<void> {
@@ -306,22 +314,6 @@ export default class UIManager {
         bundle.params = params;
         if (bundle.params == undefined) {
             bundle.params = new PopupParams();
-        }
-        // 缓存模式
-        if (bundle.params.mode == undefined) {
-            bundle.params.mode = CacheMode.Normal;
-        }
-        // 优先级
-        if (bundle.params.priority == undefined) {
-            bundle.params.priority = 0;
-        }
-        // 立刻展示
-        if (bundle.params.immediately == undefined) {
-            bundle.params.immediately = false;
-        }
-        // 是否隐藏当前ui
-        if (bundle.params.suspendCurrent == undefined) {
-            bundle.params.suspendCurrent = true;
         }
         return bundle;
     }

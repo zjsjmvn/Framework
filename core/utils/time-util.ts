@@ -1,3 +1,5 @@
+import { log } from "cc";
+
 export default class TimeUtil {
 
     /**
@@ -50,7 +52,11 @@ export default class TimeUtil {
     static Date2TimeStamp(date: Date): number { return Math.floor(date.getTime() / 1000) }
     static getTimeStamp(): number { return Math.floor(new Date().getTime() / 1000) }
     static getMilliTimeStamp(): number { return new Date().getTime() }
-    static IsSameDay(date1: Date, date2: Date): boolean { return date1.toDateString() === date2.toDateString() }
+    static IsSameDay(date1: Date, date2: Date): boolean {
+        return date1.getFullYear() === date2.getFullYear() &&
+            date1.getMonth() === date2.getMonth() &&
+            date1.getDate() === date2.getDate();
+    }
     static IsSameDayTimeStamp(ts1: number, ts2: number): boolean { return this.IsSameDay(this.TimeStamp2Date(ts1), this.TimeStamp2Date(ts2)) }
     static zeroHourOfTimeStamp(timeStamp: number): number { return this.zeroHourTimeStampOfDate(this.TimeStamp2Date(timeStamp)) }
     static zeroHourTimeStampOfDate(date: Date): number { return this.Date2TimeStamp(date) - (date.getHours() * 3600 + date.getMinutes() * 60 + date.getSeconds()) }

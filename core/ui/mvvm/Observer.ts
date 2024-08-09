@@ -108,7 +108,9 @@ export class Observer<T> {
                 }
             })
 
-            if ((Object.prototype.toString.call(obj[key]) === types.obj || Object.prototype.toString.call(obj[key]) === types.array) && (path.length <= this.pathDepth)) {
+
+            let ob = obj[key];
+            if (!(ob instanceof ECS.Entity) && (Object.prototype.toString.call(obj[key]) === types.obj || Object.prototype.toString.call(obj[key]) === types.array) && (path.length <= this.pathDepth)) {
                 this.observe(obj[key], pathArray)
             }
             // console.log("observe ----", obj, "pathArray: ", pathArray);

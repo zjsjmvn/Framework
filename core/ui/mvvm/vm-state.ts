@@ -149,7 +149,7 @@ export default class VMState extends VMBase {
 
     //当值初始化时
     protected onValueInit() {
-        let value = VM.getValue(this.watchPathArr[0]);
+        let value = this.VM.getValue(this.watchPathArr[0]);
         this.checkNodeFromValue(value);
     }
 

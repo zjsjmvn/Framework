@@ -1,7 +1,9 @@
-import { ShowRewardVideoCallBackMsg } from '../ads-manager';
+import { ShowInterstitialAdCallBackMsg, ShowRewardVideoCallBackMsg } from '../ads-manager';
 export interface IAdProvider {
-    showInterstitial(posName: string);
-    showBanner(style, posName: string): Promise<boolean>;
+    isShowingRewardVideo?: boolean;
+    isShowingInterstitial?: boolean;
+    showInterstitial(posName: string): Promise<ShowInterstitialAdCallBackMsg>;
+    showBanner(posName: string): Promise<boolean>;
     hideBanner(posName: string);
     hasRewardVideo(posName: string): boolean;
     showRewardVideo(posName: string): Promise<ShowRewardVideoCallBackMsg>;
@@ -10,4 +12,6 @@ export interface IAdProvider {
     preloadInterstitial(): Promise<boolean>;
 
 
+    haveCacheVideo?(posName: string): boolean;
 }
+

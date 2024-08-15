@@ -16,6 +16,15 @@ enum BlankJudgeType {
 
 export class UIData {
 }
+
+/**
+ * @description onLoad he onDestroy 需要        super.onLoad(); super.onDestroy()，不然会导致事件监听器无法释放。
+ * @export
+ * @abstract
+ * @class UIPopup
+ * @extends {UIBase}
+ * @template T
+ */
 @ccclass('UIPopup')
 export default abstract class UIPopup<T extends UIData> extends UIBase {
 

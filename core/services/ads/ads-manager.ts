@@ -1,13 +1,31 @@
-
-import { log, screen, view } from 'cc';
+import { log, screen, view, director } from 'cc';
 import { IAdProvider } from './providers/iad-provider';
-import { singleton } from '../../utils/decorator/singleton';
+import WeChatAds from './providers/wechat-ads';
+
+export class BaseAdConfig {
+    public posName: string;
+    public id: string;
+}
+export class BannerConfig extends BaseAdConfig {
+
+    public style: { width: number, height: number, left: number, top: number };
+}
+export class InterstitialConfig extends BaseAdConfig {
+
+}
+export class RewardVideoConfig extends BaseAdConfig {
+
+}
+
+export class GeZiAdConfig extends BaseAdConfig {
+    public style: { width: number, height?: number, left: number, top: number };
+}
 
 /**
  * @description 视频广告播放回调，如果失败就读取errMsg
  * @date 2019-09-09
  * @export
- * @class ShowRewardVideoCallBackMsg
+ * @class RewardVideoCallBackMsg
  */
 export class ShowRewardVideoCallBackMsg {
     /**
@@ -23,8 +41,18 @@ export class ShowRewardVideoCallBackMsg {
      * @memberof ShowRewardVideoCallBackMsg
      */
     errMsg: string = "";
+
+    skip: boolean = false;
 }
 
+/**
+ * @description 插页广告播放回调
+ * @date 2024-07-02
+ */
+export class ShowInterstitialAdCallBackMsg {
+    success: boolean = false;
+    errMsg: string = "";
+}
 export class RewardVideoBundle {
     /**
      * @description 广告实例
@@ -36,29 +64,44 @@ export class RewardVideoBundle {
      * @memberof RewardVideoBundle
      */
     public hasRewardVideoInCache: boolean = false;
+
+    /** 是否预加载中 */
+    public isPreloading: boolean = false;
 }
 
 export class InterstitialAdBundle {
     public interstitialInstance;
     public interstitialId;
     public hasInterstitialInCache: boolean = false;
+
+    public bShow = false;
 }
 
 export class BannerAdBundle {
     public bannerInstance;
     public bannerId;
-}
 
-@singleton
+    public bShow;
+    public style: { width: number, height: number, left: number, top: number };
+}
+export class GeZiAdBundle {
+    public geZiInstance;
+    public geZiId;
+    public style: { width: number, height?: number, left: number, top: number };
+}
 export class AdsManager {
-    /**
-     * @description 单例,只是为了智能提示。instance会被singleton装饰器赋值。
-     * @private
-     * @static
-     * @type {AdsManager}
-     * @memberof AdsManager
-     */
-    public static instance: AdsManager = null
+    public static ModEvent = {
+        /** 视频成功 */
+        adVideoSuccess: "adVideoSuccess",
+        /** 视频失败 */
+        adVideoFail: "adVideoFail",
+    }
+
+    private static _instance: AdsManager;
+    public static get instance() {
+        return this._instance || (this._instance = new AdsManager());
+    }
+
 
     /**
      * @description 最后一次展示插页的时间
@@ -76,19 +119,25 @@ export class AdsManager {
      */
     private adProviderArr: Array<IAdProvider> = new Array<IAdProvider>();
 
+    private initialized: boolean = false;
+    private isShowingRewardVideo: boolean = false;
+
     constructor() {
 
     }
-    public init(config: IConfig["adsConfig"]) {
-        for (let adProvider of config.adsProviders) {
-            let rewardVideosMap = config.rewardVideoProviderAndPosIdsMap?.get(adProvider);
-            let interstitialAdsMap = config.interstitialProviderAndPosIdsMap?.get(adProvider);
-            let bannersMap: Map<string, string> = config.bannerProviderAndPosIdsMap?.get(adProvider);
-            let provider = new adProvider(rewardVideosMap, interstitialAdsMap, bannersMap);
-            log('rewardVideosMap', rewardVideosMap);
-            log('interstitialAdsMap', interstitialAdsMap);
-            log('bannersMap', bannersMap);
-            this.addAdProvider(provider);
+    public init(config: any) {
+        if (!this.initialized) {
+            this.initialized = true;
+            for (let adProvider of config.adsProviders) {
+                let rewardVideosConfigArr = config.rewardVideoProviderAndPosIdsMap?.get(adProvider);
+                let interstitialAdsConfigArr = config.interstitialProviderAndPosIdsMap?.get(adProvider);
+                let bannersConfigArr = config.bannerProviderAndPosIdsMap?.get(adProvider);
+                let provider = new adProvider();
+                let geZiConfigArr = config.geZiProviderAndPosIdsMap?.get(adProvider);
+
+                provider.init(rewardVideosConfigArr, interstitialAdsConfigArr, bannersConfigArr, geZiConfigArr);
+                this.addAdProvider(provider);
+            }
         }
     }
 
@@ -99,15 +148,32 @@ export class AdsManager {
 
     }
 
+
+    /**
+     * @description 如果想直接使用provider 那么可以通过这个方法获取。
+     * @template T
+     * @param {{ new(): T; }} provider
+     * @return {*}  {T}
+     * @memberof AdsManager
+     */
+    public getProvider<T extends IAdProvider>(provider: { new(): T; }): T {
+        for (let i of this.adProviderArr) {
+            if (i instanceof provider) {
+                return i as T;
+            }
+        }
+        return null;
+    }
+
+
     /**
      * 显示横幅
      * @returns 无
      */
-    async showBanner(style?, posName: string = "Default") {
+    async showBanner(posName: string = "Default") {
         if (this.isNoAds()) return;
-        style = style || this.defaultBannerStyle();
         for (let i of this.adProviderArr) {
-            if (!!await i.showBanner(style, posName)) {
+            if (!!await i.showBanner(posName)) {
                 return;
             }
         }
@@ -142,7 +208,7 @@ export class AdsManager {
      * @return {*}  
      * @memberof AdsManager
      */
-    showInterstitial(posName: string = "Default") {
+    showInterstitial(posName: string = "Default"): Promise<ShowInterstitialAdCallBackMsg> {
         try {
             log("AdsManager showInterstitial");
             for (let i of this.adProviderArr) {
@@ -150,8 +216,10 @@ export class AdsManager {
                     return i.showInterstitial(posName);
                 }
             }
-            return Promise.resolve(false);
-
+            let msg = new ShowInterstitialAdCallBackMsg();
+            msg.success = false;
+            msg.errMsg = "无可用广告";
+            return Promise.resolve(msg);
         } catch (e) {
             console.error(`showInterstitial: ${e}`);
         }
@@ -171,28 +239,87 @@ export class AdsManager {
         return false;
     }
 
+    haveCacheVideo(posName: string = "Default") {
+        for (let i of this.adProviderArr) {
+            if (i.haveCacheVideo) {
+                return i.haveCacheVideo(posName);
+            }
+        }
+        return true;
+    }
+
+    /** 是否正在显示广告 */
+    isShowingVideo() {
+        for (let i of this.adProviderArr) {
+            if (i.isShowingRewardVideo) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /** 是否正在显示广告 */
+    isShowingInterstitial() {
+        for (let i of this.adProviderArr) {
+            if (i.isShowingInterstitial) {
+                return true;
+            }
+        }
+
+        return false;
+    }
     /**
      * @description
      * @param {string} [position] 广告位
-     * @return {*}  {Promise<ShowRewardVideoCallBackMsg>}
+     * @return {*}  {Promise<RewardVideoCallBackMsg>}
      * @memberof AdsManager
      */
     showRewardVideo(posName: string = "Default"): Promise<ShowRewardVideoCallBackMsg> {
-        try {
-            log("AdsManager showRewardVideo");
-            for (let i of this.adProviderArr) {
-                if (i.hasRewardVideo(posName)) {
-                    return i.showRewardVideo(posName);
-                }
-            }
+
+        // wx测试改分享
+        // return new Promise((resolve, reject) => {
+        //     let result = RecordVideoManager.instance.shareAppMessage(() => {
+        //         let msg = new ShowRewardVideoCallBackMsg();
+        //         msg.success = true;
+        //         resolve(msg);
+        //     }, () => {
+        //         let msg = new ShowRewardVideoCallBackMsg();
+        //         msg.success = false;
+        //         resolve(msg);
+        //     });
+
+        //     if (!result) {
+        //         let msg = new ShowRewardVideoCallBackMsg();
+        //         msg.success = false;
+        //         resolve(msg);
+        //     }
+        // })
+
+        log("AdsManager showRewardVideo");
+        if (this.isShowingRewardVideo) {
             let msg = new ShowRewardVideoCallBackMsg();
             msg.success = false;
-            msg.errMsg = "无可用广告";
+            msg.errMsg = "广告正在播放中";
             return Promise.resolve(msg);
-        } catch (e) {
-            console.error(`showRewardVideo: ${e}`);
         }
+
+        for (let i of this.adProviderArr) {
+            if (i.hasRewardVideo(posName)) {
+                this.isShowingRewardVideo = true;
+                let result = i.showRewardVideo(posName);
+                this.isShowingRewardVideo = false;
+                return result;
+            }
+        }
+        let msg = new ShowRewardVideoCallBackMsg();
+        msg.success = false;
+        msg.errMsg = "无可用广告";
+        return Promise.resolve(msg);
     }
+
+
+
     /**
      * @description 预加载广告
      * @param {boolean} [parallel] 是否并行加载，并行可能会导致卡顿。但是会调用所有广告平台的预加载功能。
@@ -224,15 +351,27 @@ export class AdsManager {
 
 
     /**
-     * @description 默认广告为屏幕 居中最下。
+     * @description 默认广告为屏幕居中最下铺满
      * @returns 
      * @memberof AdsManager
      */
-    defaultBannerStyle() {
-        let width = screen.windowSize.width;
-        let height = screen.windowSize.height;
-        return { width: width };
+    public static defaultBannerStyle() {
+        let screenWidth = screen.windowSize.width / screen.devicePixelRatio;
+        let screenHeight = screen.windowSize.height / screen.devicePixelRatio;
+        let bannerWidth = screenWidth;
+        let bannerHeight = bannerWidth / 20 * 7;
+        let left = screenWidth - bannerWidth;
+        let top = screenHeight - bannerHeight;
+        return {
+            width: bannerWidth,
+            height: bannerHeight,
+            left: left,
+            top: top
+        }
     }
+
+
+
 
 
     /**
@@ -241,8 +380,24 @@ export class AdsManager {
      * @returns {boolean}
      * @memberof AdsManager
      */
-    private isNoAds() {
+    public isNoAds() {
         return false;
+    }
+
+    // 目前只有微信有格子广告
+    showGeZiAd(posName: string = 'PopupUI') {
+        this.adProviderArr.find((adProvider) => {
+            if (adProvider instanceof WeChatAds) {
+                (adProvider as WeChatAds).showGeZi(posName);
+            }
+        });
+    }
+    closeGeZiAd(posName: string = 'PopupUI') {
+        this.adProviderArr.find((adProvider) => {
+            if (adProvider instanceof WeChatAds) {
+                (adProvider as WeChatAds).closeGeZi(posName);
+            }
+        });
     }
 }
 

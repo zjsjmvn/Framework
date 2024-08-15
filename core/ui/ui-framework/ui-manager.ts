@@ -2,6 +2,7 @@ import { Prefab, director, error, instantiate, js, resources, log, Node, Label, 
 import { singleton } from '../../utils/decorator/singleton';
 import UIBase from './ui-base';
 import UIPopup from './ui-popup';
+import UITips from './ui-tips';
 
 
 export class ViewZOrder {
@@ -138,7 +139,7 @@ export default class UIManager {
         // this._queue = [];
     }
 
-    public async showTips(uiClass, data: any) {
+    public async showTips<T>(uiClass: (new () => UITips<T>) | Node, data: T) {
         let initUI = (uiInstance: UIBase) => {
             if (!uiInstance) {
                 console.error(`${js.getClassName(uiClass)}没有绑定UI脚本!!!`);
@@ -429,21 +430,21 @@ export default class UIManager {
 
 
     /**
-    //  * @description 暂时先这样用。
-    //  * @param {(UITips | Node)} ui
-    //  * @return {*}  {Promise<void>}
-    //  * @memberof UIManager
-    //  */
-    // public async closeTip(ui: UITips | Node): Promise<void> {
-    //     if (ui instanceof Node) {
-    //         //@ts-ignore
-    //         //node一般都属于弹框里的弹框，不能销毁。否则没办法再次显示了
-    //         await ui.getComponent(UITips).hide();
-    //     } else {
-    //         ui.close();
-    //     }
-    //     return Promise.resolve();
-    // }
+     * @description 暂时先这样用。
+     * @param {(UITips | Node)} ui
+     * @return {*}  {Promise<void>}
+     * @memberof UIManager
+     */
+    public async closeTip(ui: UITips | Node): Promise<void> {
+        if (ui instanceof Node) {
+            //@ts-ignore
+            //node一般都属于弹框里的弹框，不能销毁。否则没办法再次显示了
+            await ui.getComponent(UITips).hide();
+        } else {
+            ui.close();
+        }
+        return Promise.resolve();
+    }
 
 
 

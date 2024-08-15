@@ -48,9 +48,9 @@ export default class TimeUtil {
     public static getDays(now, before) {
         return Math.floor((now - before) / 86400000);
     }
-    static TimeStamp2Date(timeStamp: number): Date { return new Date(timeStamp * 1000) }
-    static Date2TimeStamp(date: Date): number { return Math.floor(date.getTime() / 1000) }
-    static getTimeStamp(): number { return Math.floor(new Date().getTime() / 1000) }
+    static TimeStamp2Date(timeStamp: number): Date { return new Date(timeStamp) }
+    static Date2TimeStamp(date: Date): number { return Math.floor(date.getTime()) }
+    static getTimeStamp(): number { return Math.floor(new Date().getTime()) }
     static getMilliTimeStamp(): number { return new Date().getTime() }
     static IsSameDay(date1: Date, date2: Date): boolean {
         return date1.getFullYear() === date2.getFullYear() &&
@@ -58,12 +58,9 @@ export default class TimeUtil {
             date1.getDate() === date2.getDate();
     }
     static IsSameDayTimeStamp(ts1: number, ts2: number): boolean { return this.IsSameDay(this.TimeStamp2Date(ts1), this.TimeStamp2Date(ts2)) }
-    static zeroHourOfTimeStamp(timeStamp: number): number { return this.zeroHourTimeStampOfDate(this.TimeStamp2Date(timeStamp)) }
     static zeroHourTimeStampOfDate(date: Date): number { return this.Date2TimeStamp(date) - (date.getHours() * 3600 + date.getMinutes() * 60 + date.getSeconds()) }
-    static tomorrowTimeStamp(timeStamp: number) { return this.zeroHourOfTimeStamp(timeStamp + 86400) }
-    static tomorrowTimeStampOfDate(date: Date): number { return this.tomorrowTimeStamp(this.Date2TimeStamp(date)) }
     static IsToday(timeStamp: number) { return this.IsSameDayTimeStamp(timeStamp, this.getTimeStamp()) }
-    static IsBeforToday(timeStamp: number) { return (!this.IsToday(timeStamp)) && timeStamp < this.getTimeStamp() }
+    static IsBeforeToday(timeStamp: number) { return (!this.IsToday(timeStamp)) && timeStamp < this.getTimeStamp() }
     /**
      * 将秒转换的方法，目前格式只支持 dd hh mm ss
      * @param second 秒数

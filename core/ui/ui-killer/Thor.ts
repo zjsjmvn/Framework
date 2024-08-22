@@ -2,6 +2,7 @@ import { _decorator, Component, log, Node, sp, ValueType } from 'cc';
 import { EDITOR } from "cc/env";
 import UIKiller from './uikiller';
 import { ExtendCCComponent } from '../components/extend-cc-component';
+import VMBase from '../mvvm/vm-base';
 const { ccclass, property } = _decorator;
 /**
  * @description 
@@ -46,7 +47,7 @@ export default class Thor extends ExtendCCComponent {
                         const val = node[k];
                         // log("val" + val)
                         // 绑定组件
-                        if (val instanceof Component) {
+                        if (val instanceof Component && !(val instanceof VMBase)) {
                             let index = val.name.indexOf('<');
                             let name = val.name.slice(index + 1, -1);
                             if (info !== '') {

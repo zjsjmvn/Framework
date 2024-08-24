@@ -1,6 +1,6 @@
-import { ShowRewardVideoCallBackMsg, AdsManager } from '../../ads-manager';
-import { IAdProvider } from '../iad-provider';
 import { Node, _decorator, director, log, UITransform } from 'cc';
+import { IAdProvider } from '../iad-provider';
+import { ShowInterstitialAdCallBackMsg, ShowRewardVideoCallBackMsg } from '../../ads-manager';
 import DebugAdsView from './debug-ads-view';
 
 export enum DebugAdsEnum {
@@ -15,27 +15,41 @@ const { ccclass, property } = _decorator;
 
 export default class DebugAds implements IAdProvider {
     name: string;
+    isShowingRewardVideo: boolean;
+    isShowingInterstitial: boolean;
     private banner: Node = null;
-    showInterstitial() {
+    init() {
+
+    }
+    showInterstitial(): Promise<ShowInterstitialAdCallBackMsg> {
         return new Promise((resolve, reject) => {
+            this.isShowingInterstitial = true;
             let node = new Node('DebugAds');
             let debugAdsView: DebugAdsView = node.addComponent(DebugAdsView);
             let callback = (result) => {
+                this.isShowingInterstitial = false;
                 resolve(result);
             }
             debugAdsView.initInterstitialAds(callback);
         })
     }
     showBanner(style: any): Promise<boolean> {
-        if (!this.banner) {
-            this.banner = new Node('Banner');
-            let debugAdsView = this.banner.addComponent(DebugAdsView);
-            debugAdsView.initBanner();
-        }
-        return Promise.resolve(true);
+
+        return new Promise((resolve, reject) => {
+            if (!this.banner) {
+                this.banner = new Node('Banner');
+                let debugAdsView = this.banner.addComponent(DebugAdsView);
+                debugAdsView.initBanner();
+            }
+
+            resolve(true);
+        })
     }
     hideBanner() {
-        this.banner.removeFromParent();
+        if (this.banner) {
+            this.banner.removeFromParent();
+        }
+        this.banner = null;
     }
     hasRewardVideo(position: any): boolean {
         return true;
@@ -45,8 +59,10 @@ export default class DebugAds implements IAdProvider {
             log("DebugAds showVideo ")
             let node = new Node('DebugAdsView');
             node.addComponent(UITransform);
+            this.isShowingRewardVideo = true;
             let debugAdsView: DebugAdsView = node.addComponent(DebugAdsView);
             let callback = (result: ShowRewardVideoCallBackMsg) => {
+                this.isShowingRewardVideo = false;
                 resolve(result);
             }
             debugAdsView.initRewardAds(callback);

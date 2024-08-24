@@ -1,4 +1,4 @@
-import { _decorator, Component, game, log, resources, Sprite, SpriteFrame, director, BlockInputEvents, Label, Color, Node, UITransform, view, v2, v3, error, screen, Asset, Widget, Layers } from 'cc';
+import { _decorator, Component, game, log, resources, Sprite, SpriteFrame, director, BlockInputEvents, Label, Color, Node, UITransform, view, v2, v3, error, screen, Asset, Widget, Layers, Canvas } from 'cc';
 import { assetManager } from 'cc';
 import { Texture2D } from 'cc';
 import { DebugAdsEnum } from './debug-ads';
@@ -16,7 +16,7 @@ export default class DebugAdsView extends Component {
         let uiTransform = this.node.getComponent(UITransform);
         uiTransform.anchorX = 0;
         uiTransform.anchorY = 1;
-        style = style || AdsManager.instance.defaultBannerStyle();
+        style = style || AdsManager.defaultBannerStyle();
         // let scaleX = view.getVisibleSize().width / screen.windowSize.width;
         // let scaleY = view.getVisibleSize().height / screen.windowSize.height;
         uiTransform.width = style.width / 2;
@@ -46,7 +46,7 @@ export default class DebugAdsView extends Component {
     }
 
     initUI(adsEnum: DebugAdsEnum) {
-        director.getScene().getChildByName('Canvas').addChild(this.node);
+        director.getScene().getComponentInChildren(Canvas).node.addChild(this.node);
         this.node.layer = Layers.Enum.UI_2D;
         this.node.addComponent(BlockInputEvents);
         this.node.addComponent(Sprite).sizeMode = Sprite.SizeMode.CUSTOM;
@@ -69,6 +69,7 @@ export default class DebugAdsView extends Component {
 
     addBtn(desc, callFunc) {
         let node = new Node(desc);
+        node.layer = Layers.Enum.UI_2D;
         node.addComponent(Label).string = desc;
         node.getComponent(Label).color = Color.BLACK;
         this.node.addChild(node);

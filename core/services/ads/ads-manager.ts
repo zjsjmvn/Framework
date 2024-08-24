@@ -134,7 +134,6 @@ export class AdsManager {
                 let bannersConfigArr = config.bannerProviderAndPosIdsMap?.get(adProvider);
                 let provider = new adProvider();
                 let geZiConfigArr = config.geZiProviderAndPosIdsMap?.get(adProvider);
-
                 provider.init(rewardVideosConfigArr, interstitialAdsConfigArr, bannersConfigArr, geZiConfigArr);
                 this.addAdProvider(provider);
             }

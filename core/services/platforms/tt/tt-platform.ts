@@ -114,19 +114,19 @@ export default class TTPlatform extends BasePlatform {
     @TTCanIUse()
     public static showFavoriteGuide(callback) {
         // 需要promise
-        // tt?.showFavoriteGuide({
-        //     type: "bar",
-        //     content: "一键添加到我的小程序",
-        //     position: "bottom",
-        //     success(res) {
-        //         console.log("引导组件展示成功");
-        //         callback && callback(0);
-        //     },
-        //     fail(res) {
-        //         console.log("引导组件展示失败");
-        //         callback && callback(-1);
-        //     },
-        // });
+        tt?.showFavoriteGuide({
+            type: "bar",
+            content: "一键添加到我的小程序",
+            position: "bottom",
+            success(res) {
+                console.log("引导组件展示成功");
+                callback && callback(0);
+            },
+            fail(res) {
+                console.log("引导组件展示失败");
+                callback && callback(-1);
+            },
+        });
     }
 
     @TTCanIUse()

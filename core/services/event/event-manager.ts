@@ -69,6 +69,9 @@ export class EventManager {
             }
         }
     }
+    removeAllSpecifiedEventListeners(eventName: string) {
+        this._eventListeners.delete(eventName);
+    }
     off(eventName: string, callBack: Function, target?: any) {
         return this.removeEventListener(eventName, callBack, target);
     }

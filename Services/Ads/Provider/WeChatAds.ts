@@ -1,5 +1,6 @@
-import { InterstitialAdBundle, BannerAdBundle, RewardVideoBundle, AdsManager, ShowInterstitialAdCallBackMsg, RewardVideoConfig, InterstitialConfig, BannerConfig, RewardVideoCallBackMsg } from '../AdsManager';
+import { InterstitialAdBundle, BannerAdBundle, RewardVideoBundle, AdsManager, ShowInterstitialAdCallBackMsg, RewardVideoConfig, InterstitialConfig, BannerConfig, RewardVideoCallBackMsg, GeZiAdConfig, GeZiAdBundle } from '../AdsManager';
 import { IAdProvider } from './IAdProvider';
+import { show } from '../../../../../../creator';
 /**
  * 激励广告播放失败代码翻译
  */
@@ -21,14 +22,16 @@ export default class WeChatAds implements IAdProvider {
     private rewardVideoInstanceMap: Map<string, RewardVideoBundle> = new Map();
     private interstitialInstanceMap: Map<string, InterstitialAdBundle> = new Map();
     private bannerInstanceMap: Map<string, BannerAdBundle> = new Map();
+    private geZiInstanceMap: Map<string, GeZiAdBundle> = new Map();
 
 
     public isShowingRewardVideo: boolean = false;
 
-    init(rewardVideosConfigArr: Array<RewardVideoConfig>, interstitialAdsConfigArr: Array<InterstitialConfig>, bannersConfigArr: Array<BannerConfig>) {
+    init(rewardVideosConfigArr: Array<RewardVideoConfig>, interstitialAdsConfigArr: Array<InterstitialConfig>, bannersConfigArr: Array<BannerConfig>, geZiAdsConfigArr: Array<GeZiAdConfig>) {
         this.initRewardVideos(rewardVideosConfigArr);
         this.initInterstitialAds(interstitialAdsConfigArr);
         this.initBanners(bannersConfigArr);
+        this.initGeZi(geZiAdsConfigArr);
     }
 
 
@@ -292,6 +295,71 @@ export default class WeChatAds implements IAdProvider {
 
     //#endregion
 
+
+    //#region 格子广告
+
+    private initGeZi(geZiAdConfigArr: Array<GeZiAdConfig>) {
+        geZiAdConfigArr?.forEach((value) => {
+            let bundle = new GeZiAdBundle();
+            bundle.geZiId = value.id;
+            bundle.style = value.style;
+            bundle.geZiInstance = null;
+            this.geZiInstanceMap.set(value.posName, bundle);
+        });
+    }
+
+
+    public showGeZi(posName: string) {
+        let bundle = this.geZiInstanceMap.get(posName);
+        if (bundle) {
+            if (window.wx && window.wx.createCustomAd) {
+                bundle?.geZiInstance?.destroy();
+                let param = {
+                    adUnitId: bundle.geZiId,
+                    style: bundle.style,
+                    adIntervals: 60,
+                };
+                bundle.geZiInstance = window.wx.createCustomAd(param);
+                bundle.geZiInstance.onError(err => {
+                    console.log("WeChat ge zi error: ", err)
+                });
+                bundle.geZiInstance.onClose(() => {
+                    console.log("WeChat ge zi close: ")
+                });
+
+                bundle.geZiInstance.show();
+            };
+        }
+    }
+    public closeGeZi(posName: string) {
+        let bundle = this.geZiInstanceMap.get(posName);
+        bundle?.geZiInstance?.destroy();
+        bundle.geZiInstance = null;
+
+    }
+
+    // public showCustomAds() {
+    //     // 创建 原生模板 广告实例，提前初始化
+    //     let CustomAd = wx.createCustomAd({
+    //         adUnitId: ,
+    //         style: {
+    //             left: 0,
+    //             top: 0,
+    //             width: 350
+    //         }
+    //     })
+
+    //     // 在适合的场景显示 原生模板 广告
+    //     CustomAd.show()
+
+    //     // 监听 原生模板 广告错误事件
+    //     CustomAd.onError(err => {
+    //         console.error(err.errMsg)
+    //     });
+    // }
+
+
+    //#endregion
 
 }
 

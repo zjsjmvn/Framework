@@ -1,4 +1,4 @@
-import { RewardVideoCallBackMsg, RewardVideoBundle, InterstitialAdBundle, BannerAdBundle } from '../AdsManager';
+import { RewardVideoCallBackMsg, RewardVideoBundle, InterstitialAdBundle, BannerAdBundle, RewardVideoConfig, InterstitialConfig, BannerConfig } from '../AdsManager';
 import { IAdProvider } from './IAdProvider';
 export const VivoRewardVideoErrMsg = {
     // "-1": "未知原因	联系技术对接",
@@ -88,10 +88,10 @@ export default class VivoAds implements IAdProvider {
     private interstitialInstanceMap: Map<string, InterstitialAdBundle> = new Map();
     private bannerInstanceMap: Map<string, BannerAdBundle> = new Map();
 
-    constructor(rewardVideosMap: Map<string, string>, interstitialAdsMap: Map<string, string>, bannersMap: Map<string, string>) {
-        this.initRewardVideos(rewardVideosMap);
-        this.initInterstitialAds(interstitialAdsMap);
-        this.initBanners(bannersMap);
+    init(rewardVideosConfigArr: Array<RewardVideoConfig>, interstitialAdsConfigArr: Array<InterstitialConfig>, bannersConfigArr: Array<BannerConfig>) {
+        this.initRewardVideos(rewardVideosConfigArr);
+        this.initInterstitialAds(interstitialAdsConfigArr);
+        this.initBanners(bannersConfigArr);
     }
 
 
@@ -102,11 +102,11 @@ export default class VivoAds implements IAdProvider {
     preloadInterstitial(): Promise<boolean> {
         throw new Error("Method not implemented.");
     }
-    private initInterstitialAds(interstitialAdsMap: Map<string, string>) {
-        interstitialAdsMap?.forEach((value, key) => {
+    private initInterstitialAds(interstitialAdsConfigArr: Array<InterstitialConfig>) {
+        interstitialAdsConfigArr?.forEach((value) => {
             let bundle = new InterstitialAdBundle();
-            bundle.interstitialId = value;
-            this.interstitialInstanceMap.set(key, bundle);
+            bundle.interstitialId = value.id;
+            this.interstitialInstanceMap.set(value.posName, bundle);
         });
     }
     public showInterstitial(posName: string): Promise<boolean> {
@@ -190,13 +190,14 @@ export default class VivoAds implements IAdProvider {
         }
     }
 
-    private initRewardVideos(rewardVideosMap: Map<string, string>) {
+    private initRewardVideos(rewardVideosConfigArr: Array<RewardVideoConfig>) {
         if (window['qg'].getSystemInfoSync().platformVersionCode >= 1041) {
-            rewardVideosMap?.forEach((value, key) => {
+            rewardVideosConfigArr?.forEach((value) => {
                 let bundle = new RewardVideoBundle();
-                this.initRewardVideo(value, bundle);
-                this.rewardVideoInstanceMap.set(key, bundle);
+                this.initRewardVideo(value.id, bundle);
+                this.rewardVideoInstanceMap.set(value.posName, bundle);
             });
+            this.preloadRewardVideo()
         }
     }
 
@@ -283,14 +284,15 @@ export default class VivoAds implements IAdProvider {
 
     //#region  banner广告
 
-    private initBanners(bannersMap: Map<string, string>) {
-        bannersMap?.forEach((value, key) => {
+    private initBanners(bannersConfigArr: Array<BannerConfig>) {
+        bannersConfigArr?.forEach((value) => {
             let bundle = new BannerAdBundle();
-            bundle.bannerId = value;
-            this.bannerInstanceMap.set(key, bundle);
+            bundle.bannerId = value.id;
+            bundle.style = value.style;
+            bundle.bannerInstance = null;
+            this.bannerInstanceMap.set(value.posName, bundle);
         });
     }
-
 
     showBanner(style, posName: string): Promise<boolean> {
         return new Promise((resolve, reject) => {

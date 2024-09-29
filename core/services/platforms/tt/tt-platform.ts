@@ -207,7 +207,7 @@ export default class TTPlatform extends BasePlatform {
         });
     }
 
-    public static ttLogin(force = true): Promise<{ errMsg: string, code: string, anonymousCode: string, isLogin: boolean }> {
+    public static login(force = true): Promise<{ errMsg: string, code: string, anonymousCode: string, isLogin: boolean }> {
         return new Promise((resolve, reject) => {
             tt.login({
                 force: force, success: async (res: { errMsg: string, code: string, anonymousCode: string, isLogin: boolean }) => {

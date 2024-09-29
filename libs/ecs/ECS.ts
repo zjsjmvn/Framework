@@ -1,8 +1,7 @@
 export module ECS {
     export interface IComponent {
         canRecycle: boolean;
-        ent: Entity;
-
+        entityId: number;
         init(): void;
     }
 
@@ -24,7 +23,7 @@ export module ECS {
         /**
          * 拥有该组件的实体
          */
-        ent!: Entity;
+        entityId!: number;
 
         /**
          * 是否可回收组件对象，默认情况下都是可回收的。
@@ -471,7 +470,7 @@ export module ECS {
                 this[ctor.componentName] = component;
                 this.componentTid2Ctor.set(componentTid, ctor);
                 this.componentTid2Obj.set(componentTid, component);
-                component.ent = this;
+                component.entityId = this.eid;
                 // 广播实体添加组件的消息
                 broadcastComponentAddOrRemove(this, componentTid);
 
@@ -506,7 +505,7 @@ export module ECS {
                 this.mask.set(componentTid);
                 this[tmpCtor.componentName] = ctor;
                 this.componentTid2Ctor.set(componentTid, tmpCtor);
-                ctor.ent = this;
+                ctor.entityId = this.eid;
                 ctor.canRecycle = false;
                 broadcastComponentAddOrRemove(this, componentTid);
                 return this;
@@ -567,7 +566,7 @@ export module ECS {
                 if (this.mask.has(componentTypeId)) {
                     hasComp = true;
                     let comp = this[ctor.componentName] as IComponent;
-                    comp.ent = null;
+                    comp.entityId = -1;
                     if (isRecycle) {
                         comp.init();
                         if (comp.canRecycle) {

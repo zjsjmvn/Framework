@@ -1,6 +1,7 @@
-import { InterstitialAdBundle, BannerAdBundle, RewardVideoBundle, ShowRewardVideoCallBackMsg } from '../ads-manager';
 import { IAdProvider } from './iad-provider';
-import { error, log, screen, view } from 'cc';
+import { ShowRewardVideoCallBackMsg, InterstitialAdBundle, BannerAdBundle, RewardVideoBundle, AdsManager, ShowInterstitialAdCallBackMsg, RewardVideoConfig, InterstitialConfig, BannerConfig, GeZiAdBundle, GeZiAdConfig } from '../ads-manager';
+
+import { error, floatToHalf, log, screen, view } from 'cc';
 /**
  * 激励广告播放失败代码翻译
  */
@@ -23,28 +24,30 @@ export default class ByteDanceAds implements IAdProvider {
     private interstitialInstanceMap: Map<string, InterstitialAdBundle> = new Map();
     private bannerInstanceMap: Map<string, BannerAdBundle> = new Map();
 
-    constructor(rewardVideosMap: Map<string, string>, interstitialAdsMap: Map<string, string>, bannersMap: Map<string, string>) {
-        this.initRewardVideos(rewardVideosMap);
-        this.initInterstitialAds(interstitialAdsMap);
-        this.initBanners(bannersMap);
-    }
 
+    public isShowingRewardVideo: boolean = false;
+
+    init(rewardVideosConfigArr: Array<RewardVideoConfig>, interstitialAdsConfigArr: Array<InterstitialConfig>, bannersConfigArr: Array<BannerConfig>) {
+        this.initRewardVideos(rewardVideosConfigArr);
+        this.initInterstitialAds(interstitialAdsConfigArr);
+        this.initBanners(bannersConfigArr);
+    }
 
     //#region 插屏广告
     hasInterstitial(): boolean {
-        return true;
+        return this.interstitialInstanceMap.size > 0;
     }
     preloadInterstitial(): Promise<boolean> {
         throw new Error("Method not implemented.");
     }
-    private initInterstitialAds(interstitialAdsMap: Map<string, string>) {
-        interstitialAdsMap?.forEach((value, key) => {
+    private initInterstitialAds(interstitialAdsConfigArr: Array<InterstitialConfig>) {
+        interstitialAdsConfigArr?.forEach((value) => {
             let bundle = new InterstitialAdBundle();
             bundle.interstitialId = value;
-            this.interstitialInstanceMap.set(key, bundle);
+            this.interstitialInstanceMap.set(value.posName, bundle);
         });
     }
-    public showInterstitial(posName: string): Promise<boolean> {
+    public showInterstitial(posName: string): Promise<ShowInterstitialAdCallBackMsg> {
         return new Promise((resolve, reject) => {
             let bundle = this.interstitialInstanceMap.get(posName);
             if (!!bundle) {
@@ -58,25 +61,39 @@ export default class ByteDanceAds implements IAdProvider {
                             bundle.interstitialInstance.show().then(() => {
                             }).catch(err => {
                                 console.log('show', err);
-                                resolve(false);
+                                let msg = new ShowInterstitialAdCallBackMsg();
+                                msg.success = false;
+                                msg.errMsg = "无可用广告";
+                                resolve(msg);
                             })
                         })
                         .catch(err => {
                             console.log('load', err);
-                            resolve(false);
+                            let msg = new ShowInterstitialAdCallBackMsg();
+                            msg.success = false;
+                            msg.errMsg = "无可用广告";
+                            resolve(msg);
                         });
                     let onCloseFunc = res => {
                         console.log('>> ByteDanceAds::插页广告关闭')
                         bundle.interstitialInstance.offClose(onCloseFunc);
-                        resolve(true);
+                        let msg = new ShowInterstitialAdCallBackMsg();
+                        msg.success = true;
+                        resolve(msg);
                     }
                     bundle.interstitialInstance.onClose(onCloseFunc);
                 } else {
-                    resolve(false);
+                    let msg = new ShowInterstitialAdCallBackMsg();
+                    msg.success = false;
+                    msg.errMsg = `不支持的广告平台`;
+                    return Promise.reject(msg);
                 }
             } else {
                 error(`>> ByteDanceAds::showInterstitial 无法找到posName=${posName}的广告`);
-                return Promise.reject(false);
+                let msg = new ShowInterstitialAdCallBackMsg();
+                msg.success = false;
+                msg.errMsg = `无法找到posName=${posName}的广告`;
+                return Promise.reject(msg);
             }
         });
     }
@@ -117,7 +134,6 @@ export default class ByteDanceAds implements IAdProvider {
             rewardVideoBundle.rewardVideoInstance = window.tt.createRewardedVideoAd(adInfo);
             rewardVideoBundle.rewardVideoInstance.onLoad(() => {
                 console.log('激励视频 广告加载成功')
-                rewardVideoBundle.hasRewardVideoInCache = true;
             });
             rewardVideoBundle.rewardVideoInstance.onError(err => {
                 console.log('激励视频播放失败', err)
@@ -130,21 +146,39 @@ export default class ByteDanceAds implements IAdProvider {
 
     }
 
-    private initRewardVideos(rewardVideosMap: Map<string, string>) {
-        rewardVideosMap?.forEach((value, key) => {
+    private initRewardVideos(rewardVideosConfigArr: Array<RewardVideoConfig>) {
+        rewardVideosConfigArr?.forEach((value) => {
             let bundle = new RewardVideoBundle();
-            this.initRewardVideo(value, bundle);
-            this.rewardVideoInstanceMap.set(key, bundle);
+            this.initRewardVideo(value.id, bundle);
+            this.rewardVideoInstanceMap.set(value.posName, bundle);
         });
         this.preloadRewardVideo()
     }
 
+    public haveCacheVideo(posName: string) {
+        let bundle = this.rewardVideoInstanceMap.get(posName);
+        if (bundle) {
+            return bundle.hasRewardVideoInCache;
+        }
+
+        return false;
+    }
+
     showRewardVideo(posName: string): Promise<ShowRewardVideoCallBackMsg> {
         return new Promise((resolve, reject) => {
+            if (this.isShowingRewardVideo) {
+                let msg = new ShowRewardVideoCallBackMsg();
+                msg.success = false;
+                msg.errMsg = "广告加载中";
+                resolve(msg);
+                return;
+            }
+            this.isShowingRewardVideo = true;
+
             let bundle = this.rewardVideoInstanceMap.get(posName);
             let msg = new ShowRewardVideoCallBackMsg();
             if (bundle) {
-                log(">> ByteDanceAds::showRewardVideo");
+                console.log(">> ByteDanceAds::showRewardVideo");
                 if (!!bundle.rewardVideoInstance) {
                     let onCloseFunc = (res) => {
                         // 用户点击了【关闭广告】按钮
@@ -153,8 +187,12 @@ export default class ByteDanceAds implements IAdProvider {
                         } else {
                             msg.errMsg = "广告被关闭，奖励失败";
                         }
+                        bundle.hasRewardVideoInCache = false;
+                        this.isShowingRewardVideo = false;
+                        console.log(">> ByteDanceAds::onClose");
                         resolve(msg);
-                        bundle.rewardVideoInstance.load();
+                        // bundle.rewardVideoInstance.load();
+                        this.preloadRewardVideo();
                         // 取消
                         bundle.rewardVideoInstance.offClose(onCloseFunc);
                     }
@@ -162,16 +200,19 @@ export default class ByteDanceAds implements IAdProvider {
                     bundle.rewardVideoInstance.show().then(() => {
                         console.log('>> ByteDanceAds 广告显示成功');
                         bundle.hasRewardVideoInCache = false;
+                        this.isShowingRewardVideo = false;
                     }).catch((err) => {
                         console.error('>> ByteDanceAds::showRewardVideo 广告组件出现问题', JSON.stringify(err));
                         msg.success = false;
                         msg.errMsg = TTRewardVideoErrMsg[err.errCode] || '广告播放失败';
                         bundle.hasRewardVideoInCache = false;
                         bundle.rewardVideoInstance.load();
+                        this.isShowingRewardVideo = false;
                         resolve(msg);
                     });
                 } else {
                     error(`>> ByteDanceAds::rewardedVideoAd rewardVideoInstance为空`);
+                    this.isShowingRewardVideo = false;
                     msg.success = false;
                     msg.errMsg = '广告初始化失败，实例为空';
                     resolve(msg);
@@ -180,6 +221,7 @@ export default class ByteDanceAds implements IAdProvider {
             else {
                 error(`>> ByteDanceAds::rewardedVideoAd 无法找到posName=${posName}的广告`);
                 msg.success = false;
+                this.isShowingRewardVideo = false;
                 msg.errMsg = `无法找到posName=${posName}的广告`;
                 resolve(msg);
             }
@@ -194,23 +236,41 @@ export default class ByteDanceAds implements IAdProvider {
     preloadRewardVideo(): Promise<boolean> {
         this.rewardVideoInstanceMap.forEach((value, key) => {
             if (!!value) {
-                value.rewardVideoInstance.load()
-                    .then(() => {
-                        console.log(`ByteDanceAds ${key}拉取视频广告成功`);
-                        value.hasRewardVideoInCache = true;
-                    })
-                    .catch(() => {
-                        console.log(`ByteDanceAds ${key}拉取视频广告失败`);
-                        value.hasRewardVideoInCache = false;
-                    })
+                if (!value.isPreloading) {
+                    value.isPreloading = true;
+                    value.rewardVideoInstance.load()
+                        .then(() => {
+                            console.log(`ByteDanceAds ${key}拉取视频广告成功`);
+                            value.hasRewardVideoInCache = true;
+                            value.isPreloading = false;
+                        })
+                        .catch(() => {
+                            console.log(`ByteDanceAds ${key}拉取视频广告失败`);
+                            value.hasRewardVideoInCache = false;
+                            value.isPreloading = false;
+                        })
+                }
             }
         })
         return Promise.resolve(true);
     }
 
+    /** 是否有缓存视频 */
+    isHasCacheVideo() {
+        this.rewardVideoInstanceMap.forEach((value, key) => {
+            if (!!value) {
+                if (value.hasRewardVideoInCache) {
+                    return true;
+                }
+            }
+        })
+
+        return false;
+    }
+
     hasRewardVideo(posName: string): boolean {
         let bundle = this.rewardVideoInstanceMap.get(posName);
-        return bundle.hasRewardVideoInCache;
+        return bundle && bundle.hasRewardVideoInCache;
     }
 
 
@@ -222,24 +282,28 @@ export default class ByteDanceAds implements IAdProvider {
 
     //#region  banner广告
 
-    private initBanners(bannersMap: Map<string, string>) {
-        bannersMap?.forEach((value, key) => {
+    private initBanners(bannersConfigArr: Array<BannerConfig>) {
+        bannersConfigArr?.forEach((value) => {
             let bundle = new BannerAdBundle();
-            bundle.bannerId = value;
-            this.bannerInstanceMap.set(key, bundle);
+            bundle.bannerId = value.id;
+            bundle.style = value.style;
+            bundle.bannerInstance = null;
+            this.bannerInstanceMap.set(value.posName, bundle);
         });
     }
 
 
-    showBanner(style: tt.RectanbleStyle, posName: string): Promise<boolean> {
+
+    showBanner(posName: string): Promise<boolean> {
         return new Promise((resolve, reject) => {
             let bundle = this.bannerInstanceMap.get(posName);
-            if (bundle) {
+            if (bundle && !bundle.bShow) {
+                bundle.bShow = true;
                 if (window.tt && window.tt.createBannerAd) {
-                    console.log(JSON.stringify(style));
                     let param = {
                         adUnitId: bundle.bannerId,
-                        style: style
+                        adIntervals: 60,
+                        style: bundle.style || AdsManager.defaultBannerStyle(),
                     };
                     bundle.bannerInstance = window.tt.createBannerAd(param);
                     bundle.bannerInstance.onError(err => {
@@ -261,12 +325,20 @@ export default class ByteDanceAds implements IAdProvider {
                     });
                 };
             }
+            else {
+                resolve(false);
+            }
+
         })
     }
 
     hideBanner(posName: string) {
         let bundle = this.bannerInstanceMap.get(posName);
-        bundle?.bannerInstance.destroy();
+        if (bundle) {
+            bundle.bannerInstance?.destroy();
+            bundle.bannerInstance = null;
+            bundle.bShow = false;
+        }
     }
 
     //#endregion

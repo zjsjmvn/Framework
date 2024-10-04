@@ -398,6 +398,62 @@ export default class TTPlatform extends BasePlatform {
             }
         });
     }
+
+    public static get canIUseCheckSceneAndNavigateToScene() {
+        let systemInfos = tt.getSystemInfoSync();
+        if (systemInfos.appName = "Douyin" || systemInfos.appName == "douyin_lite") {
+            let sdkVersion = systemInfos.SDKVersion;
+            if (versionCompare(sdkVersion, '2.92.0', true)) {
+                return true;
+            }
+            return false;
+        }
+    }
+
+    public static canIUseSideBar(): Promise<boolean> {
+        return new Promise((resolve, reject) => {
+            // if (tt.canIUse("checkScene")) {
+            if (this.canIUseCheckSceneAndNavigateToScene) {
+                tt.checkScene({
+                    scene: "sidebar",
+                    success(res) {
+                        console.log(`canIUseSideBar success res: ${res.isExist, res.errMsg}`);
+                        resolve(res.isExist);
+                    },
+                    fail(res) {
+                        console.log(`canIUseSideBar fail res: ${res.errMsg}`);
+                        resolve(false);
+                    }
+                });
+            }
+            else {
+                resolve(false);
+            }
+        });
+    }
+
+    public static navigateToScene(): Promise<{ isSuccess: boolean, errorMsg: string }> {
+        return new Promise((resolve, reject) => {
+            if (this.canIUseCheckSceneAndNavigateToScene) {
+                tt.navigateToScene({
+                    scene: "sidebar",
+                    success(res) {
+                        console.log(`navigateToScene success`);
+                        resolve({ isSuccess: true, errorMsg: "" });
+                    },
+                    fail(res) {
+                        console.log(`canIUseSideBar fail res: ${res.errMsg}`);
+                        resolve({ isSuccess: false, errorMsg: res.errMsg });
+                    }
+                });
+            } else {
+                console.error("当前平台不支持跳转");
+                resolve({ isSuccess: false, errorMsg: "当前平台不支持跳转" });
+            }
+        });
+
+    }
+
 }
 
 

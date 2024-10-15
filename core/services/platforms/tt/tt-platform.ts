@@ -454,6 +454,13 @@ export default class TTPlatform extends BasePlatform {
 
     }
 
+
+    public static reportAnalytics(name: string, data: object = null) {
+        data = data || {};
+        tt.reportAnalytics(name, data);
+    }
+
+
 }
 
 

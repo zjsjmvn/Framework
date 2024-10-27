@@ -1,6 +1,6 @@
 
 import { _decorator, Component, Node } from 'cc';
-import { ECS } from './ecs1';
+import { ECS } from './ecs';
 const { ccclass, property } = _decorator;
 
 @ccclass('EntityLink')

@@ -5,7 +5,7 @@
  */
 
 import { Node, log } from "cc";
-import { ECS } from "../../../libs/ecs/ecs1";
+import { ECS } from "../../../libs/ecs/ecs";
 
 const types = {
     obj: '[object Object]',

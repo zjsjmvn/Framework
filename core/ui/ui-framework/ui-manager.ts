@@ -284,7 +284,7 @@ export default class UIManager {
                 uiInstance.init(popupDataBundle.data);
                 uiInstance.node.setSiblingIndex(popupDataBundle.zOrder as number);
                 uiInstance.show();
-                this.showingUIStack.push(this._currentShowingPopup);
+                this.showingUIStack.push(popupDataBundle);
                 res();
             }
 
@@ -301,7 +301,7 @@ export default class UIManager {
                 //@ts-ignore
                 uiInstance = node.getComponent(UIBase);
             }
-            this._currentShowingPopup.node = node;
+            popupDataBundle.node = node;
             initUI(uiInstance);
         });
     }
@@ -393,8 +393,14 @@ export default class UIManager {
         } else {
             let clear = (arr) => {
                 let index = arr.findIndex((bundle: PopupDataBundle) => {
-                    //@ts-ignore
-                    return bundle.node?.getComponent(UIPopup) == ui;
+                    console.log("closePopup " + isValid(bundle.node));
+                    if (isValid(bundle.node)) {
+                        //@ts-ignore
+                        return bundle.node?.getComponent(UIPopup) == ui;
+                    } else {
+                        // 如果无效，暂时不管。
+                        return false;
+                    }
                 })
                 if (index >= 0) {
                     return arr.splice(index, 1);

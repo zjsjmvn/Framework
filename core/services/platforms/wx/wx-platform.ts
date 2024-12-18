@@ -83,6 +83,7 @@ export default class WXPlatform {
                 width = pos.width;
                 height = pos.height;
             }
+            console.log("pos ", pos.top, pos.left, pos.width, pos.height);
             let button = window["wx"].createUserInfoButton({
                 type: 'image',
                 image: '',
@@ -94,8 +95,9 @@ export default class WXPlatform {
                     lineHeight: 40,
                     borderColor: '#00000000',
                     borderWidth: 0,
+                    // backgroundColor: '#ff0000',
                     backgroundColor: '#00000000',
-                    color: '#00000000',
+                    color: '#ffffffff',
                     textAlign: 'center',
                     fontSize: 16,
                     borderRadius: 4
@@ -113,6 +115,7 @@ export default class WXPlatform {
                 }
             })
         } else {
+            console.log("认证过");
             wx.getUserInfo({
                 success: function (res) {
                     console.log(res.userInfo)
@@ -175,6 +178,98 @@ export default class WXPlatform {
 
     private static replacenormalcharacter(normalcharacterstr: string) {
         return normalcharacterstr.replace(/\=/g, "~").replace(/\//g, "_").replace(/\+/g, "-");
+    }
+
+    static imageUrl = null;
+    static imageUrlId = null;
+    static title = "";
+    static query = null;
+    public static initShareInfo(title = "", imageUrl = null, imageUrlId: string = null, query = null) {
+        console.log("initShareInfo")
+        // if (!!!imageUrl) {
+        //     imageUrl = canvas.toTempFilePathSync({
+        //         destWidth: 500,
+        //         destHeight: 400
+        //     });
+        // }
+
+        wx.showShareMenu({
+            withShareTicket: true,
+            menus: ['shareAppMessage', 'shareTimeline']
+        });
+
+        this.title = title;
+        this.imageUrl = imageUrl;
+        this.imageUrlId = imageUrlId;
+        this.query = query;
+
+        //监听右上角的分享好友调用 
+        wx.onShareAppMessage((res: any) => {
+            return {
+                title: title,
+                imageUrl: imageUrl,
+                query: query,
+                imageUrlId: imageUrlId,
+            }
+        })
+
+        //监听右上角的分享朋友圈调用 
+        wx.onShareTimeline((res: any) => {
+            return {
+                title: title,
+                imageUrl: imageUrl,
+                query: query,
+                imageUrlId: imageUrlId,
+
+            }
+        })
+    }
+
+    public static shareAppMessage(title = "", imageUrl = null, imageUrlId: string = null, query = null) {
+        title = title || this.title;
+        imageUrl = imageUrl || this.imageUrl;
+        imageUrlId = imageUrlId || this.imageUrlId;
+        query = query || this.query;
+
+        console.log("title" + title);
+        if (window.wx && wx.shareAppMessage) {
+            wx.shareAppMessage({
+                title: title,
+                imageUrl: imageUrl,
+                query: query,
+                imageUrlId: imageUrlId,
+            });
+        }
+    }
+
+    public static showShareImageMenu() {
+        if (window.wx && wx.showShareImageMenu) {
+            const tempFilePath = canvas.toTempFilePathSync();
+            wx.showShareImageMenu({
+                path: tempFilePath,
+                style: 'v2',
+                needShowEntrance: 'true',
+                success: (res) => {
+                    console.log('showShareImageMenu success:', res);
+                    wx.showToast({
+                        title: "处理成功",
+                    });
+                },
+                fail: (res) => {
+                    console.log('showShareImageMenu fail:', res);
+                    wx.showToast({
+                        icon: "error",
+                        title: "处理失败",
+                    });
+                },
+            });
+        } else {
+            wx.showModal({
+                title: '提示',
+                content: '当前微信版本过低，无法使用该功能，请升级到最新微信版本后重试。'
+            })
+        }
+
     }
 
 }

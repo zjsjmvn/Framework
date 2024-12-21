@@ -1,5 +1,5 @@
 import { _decorator } from 'cc';
-import Thor from '../ui-killer/thor1';
+import Thor from '../ui-killer/thor';
 const PREFAB_UI_DIR = 'Prefab/UI/';
 
 const { property, ccclass } = _decorator

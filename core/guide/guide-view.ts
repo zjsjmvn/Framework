@@ -1,7 +1,7 @@
 import { GuideHelper } from "./guide-helper";
 import { GuideStep } from "./guide-step";
 import { Vec2, _decorator, log, v2, Rect, UIOpacity, v3, UITransform, Node, Vec3, tween, Tween, TweenAction, utils, RichText } from 'cc';
-import Thor from '../ui/ui-killer/thor1';
+import Thor from '../ui/ui-killer/thor';
 const { ccclass, property } = _decorator;
 @ccclass
 export class GuideView extends Thor {

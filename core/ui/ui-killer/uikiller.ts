@@ -1,6 +1,6 @@
 import { Button, Component, EditBox, Event, EventTouch, Node, log, warn } from 'cc';
 import { EDITOR } from 'cc/env';
-import Thor from './thor1';
+import Thor from './thor';
 
 /**
  * 注意：

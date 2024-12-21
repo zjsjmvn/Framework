@@ -5,7 +5,7 @@ import { _decorator, log, Rect, UITransform, v3, EventTouch, Node, v2 } from 'cc
 //@ts-ignore
 // let async = require("async");
 import { default as async } from "../../libs/async.js"
-import Thor from '../ui/ui-killer/thor';
+import Thor from '../ui/ui-killer/thor1';
 
 
 const { ccclass, property } = _decorator;

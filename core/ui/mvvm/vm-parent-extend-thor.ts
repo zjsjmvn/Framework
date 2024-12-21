@@ -1,7 +1,7 @@
 
 
 import { Component, Node, _decorator } from 'cc';
-import Thor from '../ui-killer/thor';
+import Thor from '../ui-killer/thor1';
 import { VM } from './vm-manager';
 const { ccclass, property } = _decorator;
 @ccclass

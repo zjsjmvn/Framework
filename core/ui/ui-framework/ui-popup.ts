@@ -3,6 +3,7 @@ import { Enum, Node, Rect, _decorator, error, Sprite, SpriteFrame, resources, lo
 import UIBase from './ui-base';
 import EditorTool from '../../utils/editor-util';
 import UIManager from './ui-manager';
+import { PopupAction } from './popup-action';
 const { property, ccclass } = _decorator
 
 /**
@@ -64,14 +65,14 @@ export default abstract class UIPopup<T extends UIData> extends UIBase {
 
     @property({
         type: Animation,
-        visible() { return !!this.hasAnimation; }
+        visible() { return !!this._useAnimation; }
     })
     protected animation: Animation = null;
 
     @property({
         type: AnimationClip,
         tooltip: DEV && "打开弹窗的动画",
-        visible() { return !!this.hasAnimation; }
+        visible() { return !!this._useAnimation; }
 
     })
     protected openClip: AnimationClip = null;
@@ -79,7 +80,7 @@ export default abstract class UIPopup<T extends UIData> extends UIBase {
     @property({
         type: AnimationClip,
         tooltip: DEV && "关闭弹窗的动画",
-        visible() { return !!this.hasAnimation; }
+        visible() { return !!this._useAnimation; }
     })
     protected closeClip: AnimationClip = null;
 
@@ -221,7 +222,9 @@ export default abstract class UIPopup<T extends UIData> extends UIBase {
     public async show() {
         await this.beforeShow();
         super.show();
+        this.onShow();
         this.playOpenAnimation();
+        this.runOpenAction();
         await this.afterShow();
     }
 
@@ -229,19 +232,37 @@ export default abstract class UIPopup<T extends UIData> extends UIBase {
         await this.beforeHide();
         await this.playCloseAnimation();
         super.hide();
+        this.onHide();
         await this.afterHide();
     }
 
     public async close() {
         await this.beforeClose();
         this.playCloseAnimation();
+        this.runCloseAction();
         // 不需要缓存才destroy。
         if (!this.needCache) {
             super.close();
         }
+        this.onClose();
         await this.afterClose();
     }
 
+
+    //#region  animation
+
+    //#region  action
+    protected runOpenAction() {
+        let action = this.node.getComponent(PopupAction);
+        action?.runOpenAction();
+    }
+
+
+    protected runCloseAction() {
+        let action = this.node.getComponent(PopupAction);
+        action?.runCloseAction();
+    }
+    //#endregion
     protected onAnimFinished(type, state: AnimationState): void {
         if (state.clip === this.closeClip) {
             this.closeAnimationPromiseResolve && this.closeAnimationPromiseResolve();
@@ -268,6 +289,7 @@ export default abstract class UIPopup<T extends UIData> extends UIBase {
         });
     }
 
+    //#endregion
     private onThisNodeTouchEnd_UsedFor_TouchMarginToClose(event: EventTouch) {
         // let pop = this.node.getComponentsInChildren(UIPopup);
         // log('onThisNodeTouchEnd_UsedFor_TouchMarginToClose', pop)
@@ -302,7 +324,6 @@ export default abstract class UIPopup<T extends UIData> extends UIBase {
     private onThisNodeTouchEnd_UsedFor_TouchAnyWhereToClose(event) {
         log('onThisNodeTouchEnd_UsedFor_TouchAnyWhereToClose', this.node.name);
         UIManager.instance.closePopup(this);
-
     }
 
 

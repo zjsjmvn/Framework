@@ -55,3 +55,4 @@ export default class GameContext {
         GameContext._servicesDictionary.set(name, service);
     }
 }
+window.GameContext = GameContext

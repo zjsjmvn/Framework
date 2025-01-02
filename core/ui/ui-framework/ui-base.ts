@@ -64,6 +64,10 @@ export default abstract class UIBase extends Thor {
         return new Promise(res => res());
     }
 
+    protected onShow() {
+
+    }
+
     protected afterShow(): Promise<void> {
         return new Promise(res => res());
 
@@ -72,12 +76,19 @@ export default abstract class UIBase extends Thor {
         return new Promise(res => res());
     }
 
+    protected onHide() {
+
+    }
     protected afterHide(): Promise<void> {
         return new Promise(res => res());
 
     }
     protected beforeClose(): Promise<void> {
         return new Promise(res => res());
+    }
+
+    protected onClose() {
+
     }
 
     protected afterClose(): Promise<void> {

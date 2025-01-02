@@ -1,19 +1,25 @@
 import { Component, _decorator, log, UIOpacity } from 'cc';
 import RedDotManager from './red-dot-manager';
+import { Enum } from 'cc';
+import { RedDotNodeType } from './tree-node';
 const { ccclass, property } = _decorator;
 
-
-
-@ccclass
+@ccclass("RedDotComponent")
 export default class RedDotComponent extends Component {
-
+    @property({
+        type: Enum(RedDotNodeType),
+        tooltip: "动态生成的都是Dynamic,比如背包内的装备。静态都是static,比如背包界面的按钮",
+    })
+    public redDotNodeType: RedDotNodeType = RedDotNodeType.Static;
     @property
     public _path: string = ''
     protected currentValue = 0;
 
     onLoad() {
-        // 注册。注册路径和事件。移除路径和事件。
-        RedDotManager.instance.addPathAndBindListener(this._path, this.onValueChanged.bind(this));
+        // 先隐藏
+        if (this.currentValue == 0) {
+            this.onValueChanged(0);
+        }
     }
 
     // 这个负责显示红点。
@@ -35,6 +41,30 @@ export default class RedDotComponent extends Component {
         if (this._path != "") {
             RedDotManager.instance.removeListener(this._path);
         }
+    }
+
+
+    public setDynamicPath(path: string) {
+        this._path = path;
+        if (this.redDotNodeType == RedDotNodeType.Dynamic) {
+            RedDotManager.instance.addPathAndBindListener(this._path, this.onValueChanged.bind(this));
+        } else {
+            error("动态路径只能设置动态类型的节点");
+        }
+    }
+
+
+    public setStaticPath(path: string) {
+        this._path = path;
+        if (this.redDotNodeType == RedDotNodeType.Static) {
+            RedDotManager.instance.addPathAndBindListener(this._path, this.onValueChanged.bind(this));
+        } else {
+            error("静态路径只能设置静态类型的节点");
+        }
+    }
+
+    public changeValueToZero() {
+        RedDotManager.instance.changeValue(this._path, 0);
     }
 
 }

@@ -3,6 +3,10 @@ import { singleton } from '../../utils/decorator/singleton';
 import UIBase from './ui-base';
 import UIPopup from './ui-popup';
 import UITips from './ui-tips';
+import { Vec3 } from 'cc';
+import { Color } from 'cc';
+import { PublicTipParamData } from 'db://assets/game/scripts/views/popups/public-tip';
+import { mkdirSync } from 'fs';
 
 
 export class ViewZOrder {
@@ -168,6 +172,26 @@ export default class UIManager {
         initUI(uiInstance);
     }
 
+
+
+    public async showPublicTip(uiClass, message: string, pos?: Vec3,
+        labelColor?: Color,
+        delayDuration?: number,
+        opacityInDuration?: number,
+        opacityOutDuration?: number) {
+
+        let data = new PublicTipParamData();
+        data.message = message;
+        data.pos = pos;
+        data.labelColor = labelColor;
+        data.delayDuration = delayDuration;
+        data.opacityInDuration = opacityInDuration;
+        data.opacityOutDuration = opacityOutDuration;
+
+        // 如果能有烟花什么的就好了。
+        UIManager.instance.showTips(uiClass, data);
+
+    }
     //#region popup
     // 默认不挂起当前弹窗。
     public async showPopup<T>(ui: (new () => UIPopup<T>) | Node, data?: T, params?: PopupParams) {

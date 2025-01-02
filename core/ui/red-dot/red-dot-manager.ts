@@ -163,7 +163,6 @@ export default class RedDotManager {
         this.allNodesMap.delete(key);
     }
 
-
     public showValues() {
         this.allNodesMap.forEach((value, key) => {
             log('showValues：', key, value.value);

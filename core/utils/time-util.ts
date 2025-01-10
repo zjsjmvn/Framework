@@ -48,25 +48,32 @@ export default class TimeUtil {
     public static getDays(now, before) {
         return Math.floor((now - before) / 86400000);
     }
-    static TimeStamp2Date(timeStamp: number): Date { return new Date(timeStamp) }
-    static Date2TimeStamp(date: Date): number { return Math.floor(date.getTime()) }
+    static timeStamp2Date(timeStamp: number): Date { return new Date(timeStamp) }
+    static date2TimeStamp(date: Date): number { return Math.floor(date.getTime()) }
     static getTimeStamp(): number { return Math.floor(new Date().getTime()) }
     static getMilliTimeStamp(): number { return new Date().getTime() }
-    static IsSameDay(date1: Date, date2: Date): boolean {
+    static isSameDay(date1: Date, date2: Date): boolean {
         return date1.getFullYear() === date2.getFullYear() &&
             date1.getMonth() === date2.getMonth() &&
             date1.getDate() === date2.getDate();
     }
-    static IsSameDayTimeStamp(ts1: number, ts2: number): boolean { return this.IsSameDay(this.TimeStamp2Date(ts1), this.TimeStamp2Date(ts2)) }
-    static zeroHourTimeStampOfDate(date: Date): number { return this.Date2TimeStamp(date) - (date.getHours() * 3600 + date.getMinutes() * 60 + date.getSeconds()) }
-    static IsToday(timeStamp: number) { return this.IsSameDayTimeStamp(timeStamp, this.getTimeStamp()) }
-    static IsBeforeToday(timeStamp: number) { return (!this.IsToday(timeStamp)) && timeStamp < this.getTimeStamp() }
+    static isSameDayTimeStamp(ts1: number, ts2: number): boolean { return this.isSameDay(this.timeStamp2Date(ts1), this.timeStamp2Date(ts2)) }
+    static zeroHourTimeStampOfDate(date: Date): number { return this.date2TimeStamp(date) - (date.getHours() * 3600 + date.getMinutes() * 60 + date.getSeconds()) }
+    static isToday(timeStamp: number) { return this.isSameDayTimeStamp(timeStamp, this.getTimeStamp()) }
+    static isBeforeToday(timeStamp: number) { return (!this.isToday(timeStamp)) && timeStamp < this.getTimeStamp() }
+    //是否是相同月份
+    static isSameMonth(date1: Date, date2: Date): boolean {
+        return date1.getFullYear() === date2.getFullYear() &&
+            date1.getMonth() === date2.getMonth();
+    }
+    //是否是相同月份
+    static isSameMonthTimeStamp(ts1: number, ts2: number): boolean { return this.isSameMonth(this.timeStamp2Date(ts1), this.timeStamp2Date(ts2)) }
     /**
      * 将秒转换的方法，目前格式只支持 dd hh mm ss
      * @param second 秒数
      * @param format 格式
      */
-    static Format(seconds: number, format: string = "hh:mm:ss", single: boolean = false) {
+    static format(seconds: number, format: string = "hh:mm:ss", single: boolean = false) {
         if (format.indexOf('dd') != -1) {
             let d = Math.floor(seconds / 86400)
             seconds = seconds - d * 86400

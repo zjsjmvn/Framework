@@ -214,6 +214,41 @@ export default class UIManager {
         //         return;
         //     }
         // }
+
+        let findUI = (arr: Array<PopupDataBundle>) => {
+            let findArr = [];
+            for (let i = 0; i < arr.length; ++i) {
+                let bundle = arr[i];
+                console.log("closePopup " + isValid(bundle.node));
+                if (isValid(bundle.node)) {
+                    //@ts-ignore
+                    let instance = bundle.node?.getComponent(UIPopup);
+                    if (instance != null && instance instanceof uiClass) {
+                        findArr.push(instance);
+                    }
+                }
+            }
+            return findArr;
+        }
+
+        let resultArr = [];
+        resultArr = resultArr.concat(findUI(this.showingUIStack));
+        resultArr = resultArr.concat(findUI(this._waitingQueue));
+        resultArr = resultArr.concat(findUI(this._suspendedQueue));
+
+
+
+
+        console.log(resultArr.length);
+
+
+
+
+        for (let index = 0; index < resultArr.length; index++) {
+            const element = resultArr[index];
+            this.closePopup(element);
+        }
+
     }
 
     /**

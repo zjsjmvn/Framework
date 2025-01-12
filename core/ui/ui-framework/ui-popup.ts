@@ -236,10 +236,14 @@ export default abstract class UIPopup<T extends UIData> extends UIBase {
         await this.afterHide();
     }
 
+    private isClosing = false;
     public async close() {
+        if (this.isClosing) return;
+        this.isClosing = true;
+
         await this.beforeClose();
         this.playCloseAnimation();
-        this.runCloseAction();
+        await this.runCloseAction();
         // 不需要缓存才destroy。
         if (!this.needCache) {
             super.close();
@@ -258,9 +262,9 @@ export default abstract class UIPopup<T extends UIData> extends UIBase {
     }
 
 
-    protected runCloseAction() {
+    protected async runCloseAction() {
         let action = this.node.getComponent(PopupAction);
-        action?.runCloseAction();
+        await action?.runCloseAction();
     }
     //#endregion
     protected onAnimFinished(type, state: AnimationState): void {

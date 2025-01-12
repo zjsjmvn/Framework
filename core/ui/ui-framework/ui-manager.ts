@@ -469,10 +469,15 @@ export default class UIManager {
             // 清理栈  // 清理等待队列   // 清理挂起队列
             clear(this.showingUIStack) || clear(this._waitingQueue) || clear(this._suspendedQueue);
             if (isValid(ui)) {
-                //@ts-ignore           
-                if (this._currentShowingPopup.node.getComponent(UIPopup) == ui) {
+                //@ts-ignore       
+                if (!isValid(this._currentShowingPopup?.node)) {
                     this._currentShowingPopup = null;
-                    log('this._currentShowingPopup set to  null')
+                }
+                //@ts-ignore
+
+                if (this._currentShowingPopup?.node?.getComponent(UIPopup) === ui) {
+                    this._currentShowingPopup = null;
+                    log('this._currentShowingPopup set to null');
                 }
                 await ui.close();
                 this.showNextPopup();

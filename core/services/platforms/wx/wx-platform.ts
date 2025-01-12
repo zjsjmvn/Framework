@@ -272,4 +272,22 @@ export default class WXPlatform {
 
     }
 
+
+
+
+
+
+    public setClipboardData(data) {
+        wx.setClipboardData({
+            data: data,
+            success(res) {
+                wx.getClipboardData({
+                    success(res) {
+                        console.log(res.data) // data
+                    }
+                })
+            }
+        })
+    }
+
 }

@@ -1,4 +1,5 @@
 import { Texture2D } from 'cc';
+import { assetManager } from 'cc';
 import { ImageAsset } from 'cc';
 import { SpriteFrame } from 'cc';
 import { _decorator, Component, Node, view, director, Size, log, UITransform, screen, v3, math, isValid } from 'cc';
@@ -29,28 +30,41 @@ export default class WXPlatform {
     //     sf.texture = texture;
     //     sp.spriteFrame = sf;
     // });
-    public static loadAvatar(url: string, width: number = 100, height: number = 100): Promise<SpriteFrame> {
-        return new Promise<SpriteFrame>((resolve, reject) => {
-            const image = wx.createImage();
-            image.src = url;
-            image.width = width;
-            image.height = height;
-            image.onload = res => {
-                console.log("wx load remote image success: ", res);
-                let imageAsset = new ImageAsset(image);
-                let texture = new Texture2D();
+    // public static loadAvatar(url: string, width: number = 100, height: number = 100): Promise<SpriteFrame> {
+    //     return new Promise<SpriteFrame>((resolve, reject) => {
+    //         const image = wx.createImage();
+    //         image.src = url;
+    //         image.width = width;
+    //         image.height = height;
+    //         image.onload = res => {
+    //             console.log("wx load remote image success: ", res);
+    //             let imageAsset = new ImageAsset(image);
+    //             let texture = new Texture2D();
+    //             texture.image = imageAsset;
+
+    //             let spriteFrame = new SpriteFrame();
+    //             spriteFrame.texture = texture;
+    //             spriteFrame.packable = false;
+
+    //             resolve(spriteFrame);
+    //         }
+    //         image.onerror = error => {
+    //             console.log("wx load remote image error: ", error);
+    //             reject(error);
+    //         };
+    //     });
+    // }
+
+
+    public static loadAvatar(avatarUrl): Promise<SpriteFrame> {
+        return new Promise((resolve, reject) => {
+            assetManager.loadRemote<ImageAsset>(avatarUrl, { ext: '.jpg' }, (err, imageAsset) => {
+                const sf = new SpriteFrame();
+                const texture = new Texture2D();
                 texture.image = imageAsset;
-
-                let spriteFrame = new SpriteFrame();
-                spriteFrame.texture = texture;
-                spriteFrame.packable = false;
-
-                resolve(spriteFrame);
-            }
-            image.onerror = error => {
-                console.log("wx load remote image error: ", error);
-                reject(error);
-            };
+                sf.texture = texture;
+                resolve(sf);
+            });
         });
     }
 

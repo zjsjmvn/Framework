@@ -149,4 +149,11 @@ export class MathUtil {
     public static isValidNumber(value) {
         return !isNaN(parseFloat(value)) && isFinite(value);
     }
+
+    public static randomEnum(enumType) {
+        var keys = Object.keys(enumType);
+        var index = Math.floor(Math.random() * keys.length);
+        return enumType[keys[index]];
+    }
+
 }

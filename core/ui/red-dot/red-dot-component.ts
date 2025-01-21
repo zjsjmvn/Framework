@@ -2,6 +2,7 @@ import { Component, _decorator, log, UIOpacity } from 'cc';
 import RedDotManager from './red-dot-manager';
 import { Enum } from 'cc';
 import { RedDotNodeType } from './tree-node';
+import { error } from 'cc';
 const { ccclass, property } = _decorator;
 
 @ccclass("RedDotComponent")
@@ -20,8 +21,8 @@ export default class RedDotComponent extends Component {
         if (this.currentValue == 0) {
             this.onValueChanged(0);
         }
-    }
 
+    }
     // 这个负责显示红点。
     onValueChanged(value) {
         this.currentValue = value;

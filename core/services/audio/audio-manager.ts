@@ -18,6 +18,7 @@ export class AudioManager extends Component {
             var music = new Node("AudioMusic");
             music.parent = node;
             this._instance.audioMusic = music.addComponent(AudioMusic);
+            this._instance.audioMusic.playOnAwake = false;
 
             var effect = new Node("AudioEffect");
             effect.parent = node;
@@ -79,8 +80,11 @@ export class AudioManager extends Component {
      */
     set audioMusicSwitchState(value: boolean) {
         this._audioMusicSwitchState = value;
-        if (value == false)
+        if (value == false) {
+            this.audioMusic.loop = false;
             this.audioMusic.stop();
+
+        }
     }
 
 
@@ -177,8 +181,9 @@ export class AudioManager extends Component {
      * @param url        资源地址
      * @param callback   音乐播放完成事件
      */
-    playMusic(url: string, callback?: Function) {
+    playMusic(url: string, isLoop: boolean = true, callback?: Function) {
         if (this._audioMusicSwitchState) {
+            this.audioMusic.loop = isLoop;
             let clip = this.musics.get(url);
             if (!!clip) {
                 this.audioMusic.playSelf(clip, callback)

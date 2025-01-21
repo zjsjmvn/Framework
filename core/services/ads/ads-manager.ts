@@ -111,6 +111,8 @@ export class AdsManager {
      */
     private _last_show_interstitial_timestamp: number = 0;
 
+    private interstitialIntervalTime: number = 5 * 60;
+
     /**
      * @description 加入的广告提供商都会存在这里。
      * @private
@@ -210,15 +212,20 @@ export class AdsManager {
     showInterstitial(posName: string = "Default"): Promise<ShowInterstitialAdCallBackMsg> {
         try {
             log("AdsManager showInterstitial");
-            for (let i of this.adProviderArr) {
-                if (i.hasInterstitial(posName)) {
-                    return i.showInterstitial(posName);
+            // 
+            if (Date.now() - this._last_show_interstitial_timestamp > this.interstitialIntervalTime * 1000) {
+                for (let i of this.adProviderArr) {
+                    if (i.hasInterstitial(posName)) {
+                        this._last_show_interstitial_timestamp = Date.now();
+                        return i.showInterstitial(posName);
+                    }
                 }
+                let msg = new ShowInterstitialAdCallBackMsg();
+                msg.success = false;
+                msg.errMsg = "无可用广告";
+                return Promise.resolve(msg);
             }
-            let msg = new ShowInterstitialAdCallBackMsg();
-            msg.success = false;
-            msg.errMsg = "无可用广告";
-            return Promise.resolve(msg);
+
         } catch (e) {
             console.error(`showInterstitial: ${e}`);
         }

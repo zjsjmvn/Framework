@@ -35,7 +35,6 @@ export class AudioManager extends Component {
 
     private _musicVolume: number = 1;
 
-    private bundle: AssetManager.Bundle | null = null;
     private audioPath: string = "";
     /**
      * 获取背景音乐音量
@@ -121,7 +120,6 @@ export class AudioManager extends Component {
     private uiPrefabNameAndPathMap: Map<string, { path: string, bundle: AssetManager.Bundle }> = new Map();
 
     public init(path: string, bundle: AssetManager.Bundle) {
-        this.bundle = bundle;
         this.audioPath = path;
         // 遍历一遍。
 
@@ -159,6 +157,41 @@ export class AudioManager extends Component {
     }
 
 
+    public registerMusicAndEffect(path: string, bundle: AssetManager.Bundle) {
+        this.audioPath = path;
+        // 遍历一遍。
+        let infos = [];
+        if (bundle) {
+            bundle.getDirWithPath(path, AudioClip, infos);
+        } else {
+            resources.getDirWithPath(path, AudioClip, infos);
+        }
+        log('infos', path, infos);
+        infos.forEach((info) => {
+            let splitPathArr = (info.path as string).split('/')
+            log("splitPathArr", splitPathArr)
+            if (splitPathArr.length > 0) {
+                let lastPath = splitPathArr.slice(-1)
+                if (lastPath.length > 0) {
+                    let prefabPath = this.uiPrefabNameAndPathMap.get(lastPath[0]);
+                    if (prefabPath?.path) {
+                        error(`已经存在${lastPath[0]},prefabPath = ${prefabPath.path}`);
+                        return;
+                    }
+                    if (bundle) {
+                        this.uiPrefabNameAndPathMap.set(lastPath[0], { path: info.path, bundle: bundle });
+                    } else {
+                        this.uiPrefabNameAndPathMap.set(lastPath[0], { path: info.path, bundle: resources });
+                    }
+                } else {
+                    error("lastPath length is zero")
+                }
+            } else {
+                error("splitPathArr length is zero")
+            }
+        })
+    }
+
     /**
      * 设置背景音乐播放完成回调
      * @param callback 背景音乐播放完成回调
@@ -189,8 +222,11 @@ export class AudioManager extends Component {
                 this.audioMusic.playSelf(clip, callback)
             } else {
                 let data: { path: string, bundle: AssetManager.Bundle } = this.uiPrefabNameAndPathMap.get(url);
-
-                this.bundle.load(data.path, AudioClip, (err: Error | null, data: AudioClip) => {
+                if (!data) {
+                    error("没有找到音乐资源", url);
+                    return;
+                }
+                data.bundle.load(data.path, AudioClip, (err: Error | null, data: AudioClip) => {
                     if (err) {
                         error(err);
                     }
@@ -217,7 +253,7 @@ export class AudioManager extends Component {
                     error("没有找到音效资源", url);
                     return;
                 }
-                this.bundle.load(data.path, AudioClip, (err: Error | null, data: AudioClip) => {
+                data.bundle.load(data.path, AudioClip, (err: Error | null, data: AudioClip) => {
                     if (err) {
                         error(err);
                     }

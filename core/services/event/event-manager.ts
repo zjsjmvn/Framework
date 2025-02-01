@@ -1,49 +1,84 @@
 import { error, log, warn } from 'cc';
 import { singleton } from '../../utils/decorator/singleton';
+import { Component } from 'cc';
+import { Node } from 'cc';
 
-interface EventListener {
-    callBack: Function,
-    target: any,
-}
-@singleton
-export class EventManager {
-    /**
-     * @description 单例,只是为了智能提示。instance会被singleton装饰器赋值。
-     * @static
-     * @type {AdsManager}
-     * @memberof AdsManager
-     */
-    public static instance: EventManager = null
-    private _eventListeners: Map<string, Array<EventListener>> = new Map();
-    /**
-     * @description 无主的事件，当发射的事件没有listener时，就存在这里。
-     * @private
-     * @type {Map<string, { eventData: any, pickTimes: number }>}
-     * @memberof EventManager
-     */
-    private _unattendedEventsMap: Map<string, { eventData: any, pickTimes: number }> = new Map();
-    private getEventListenersIndex(eventName: string, callBack: Function, target?: any): number {
-        let index = -1;
-        const handlers = this._eventListeners.get(eventName);
-        for (let i = 0; i < handlers.length; i++) {
-            if (handlers[i].callBack == callBack && handlers[i].target == target) {
-                index = i;
-                break;
-            }
-        }
-        return index;
+// 定义事件监听器的类
+class EventListener<T = any> {
+    public eventName: string;
+    public callBack: (data: T) => void; // 回调函数，接受一个泛型参数
+    public target?: any; // 回调的目标对象
+    public tag?: string; // 可选的标签
+    constructor(eventName, callBack: (data: T) => void, target?: any, tag?: string) {
+        this.eventName = eventName;
+        this.callBack = callBack;
+        this.target = target;
+        this.tag = tag;
     }
 
-    addEventListener(eventName: string, callBack: Function, target?: any): boolean {
+
+    bindToCanDestroyTarget(target: Node | Component) {
+        let removeFunc = () => {
+            if (!!this.tag) {
+                EventManager.instance.removeEventListenerByTag(this.eventName, this.tag);
+            } else {
+                EventManager.instance.removeEventListener(this.eventName, this.callBack, this.target);
+            }
+        };
+
+        let node: Node = null;
+        if (target instanceof Node) {
+            node = target;
+        } else if (target instanceof Component) {
+            node = target.node;
+        }
+        node.once(Node.EventType.NODE_DESTROYED, removeFunc);
+    }
+}
+
+@singleton
+export class EventManager {
+    public static instance: EventManager = null;
+
+    // 使用泛型约束事件监听器
+    private _eventListeners: Map<string, EventListener<any>[]> = new Map();
+
+
+    /**
+     * 获取事件监听器的索引
+     * @param eventName 事件名称
+     * @param callBack 回调函数
+     * @param target 目标对象
+     * @returns 监听器的索引，如果未找到则返回 -1
+     */
+    private getEventListenersIndex<T>(eventName: string, callBack: (data: T) => void, target?: any): number {
+        const handlers = this._eventListeners.get(eventName);
+        if (!handlers) return -1;
+
+        return handlers.findIndex(handler =>
+            handler.callBack === callBack && handler.target === target
+        );
+    }
+
+    /**
+     * 添加事件监听器
+     * @param eventName 事件名称
+     * @param callBack 回调函数
+     * @param target 目标对象
+     * @param tag 可选的标签
+     * @returns 是否添加成功
+     */
+    public addEventListener<T>(eventName: string, callBack: (data: T) => void, target?: any, tag?: string): EventListener {
         if (!eventName) {
-            warn("eventName is empty" + eventName);
-            return;
+            warn(`Event name is empty: ${eventName}`);
+            return null;
         }
-        if (null == callBack) {
-            log('addEventListener callBack is null');
-            return false;
+        if (!callBack) {
+            log('Callback is null');
+            return null;
         }
-        let handler: EventListener = { callBack: callBack, target: target };
+
+        let handler = new EventListener(eventName, callBack, target, tag);
         const handlers = this._eventListeners.get(eventName);
         if (handlers) {
             let index = this.getEventListenersIndex(eventName, callBack, target);
@@ -53,77 +88,113 @@ export class EventManager {
         } else {
             this._eventListeners.set(eventName, [handler]);
         }
-        return true;
+        return handler;
     }
-    on(eventName: string, callBack: Function, target?: any): boolean {
+
+    /**
+     * 添加事件监听器（简写）
+     * @param eventName 事件名称
+     * @param callBack 回调函数
+     * @param target 目标对象
+     * @returns 是否添加成功
+     */
+    public on<T>(eventName: string, callBack: (data: T) => void, target?: any): EventListener {
         return this.addEventListener(eventName, callBack, target);
     }
 
-
-    removeEventListener(eventName: string, callBack: Function, target?: any) {
+    /**
+     * 移除事件监听器
+     * @param eventName 事件名称
+     * @param callBack 回调函数
+     * @param target 目标对象
+     */
+    public removeEventListener<T>(eventName: string, callBack: (data: T) => void, target?: any): void {
         const handlers = this._eventListeners.get(eventName);
-        if (null != handlers) {
-            let index = this.getEventListenersIndex(eventName, callBack, target);
-            if (-1 != index) {
-                handlers.splice(index, 1);
-            }
+        if (!handlers) return;
+
+        const index = this.getEventListenersIndex(eventName, callBack, target);
+        if (index !== -1) {
+            handlers.splice(index, 1);
         }
     }
-    removeAllSpecifiedEventListeners(eventName: string) {
+
+    /**
+     * 通过标签移除事件监听器
+     * @param eventName 事件名称
+     * @param tag 标签
+     * @returns 是否移除成功
+     */
+    public removeEventListenerByTag(eventName: string, tag: string): boolean {
+        if (!eventName) {
+            warn(`Event name is empty: ${eventName}`);
+            return false;
+        }
+
+        const handlers = this._eventListeners.get(eventName);
+        if (!handlers) return false;
+
+        for (let i = handlers.length - 1; i >= 0; i--) {
+            if (handlers[i].tag === tag) {
+                handlers.splice(i, 1);
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * 移除指定事件的所有监听器
+     * @param eventName 事件名称
+     */
+    public removeAllSpecifiedEventListeners(eventName: string): void {
         this._eventListeners.delete(eventName);
     }
-    off(eventName: string, callBack: Function, target?: any) {
-        return this.removeEventListener(eventName, callBack, target);
-    }
+
     /**
-     * @description 
-     * @param {string} eventName
-     * @param {*} [eventData]
-     * @param {number} [pickTimes]  被拾取的次数。
-     * @memberof EventManager
+     * 移除事件监听器（简写）
+     * @param eventName 事件名称
+     * @param callBack 回调函数
+     * @param target 目标对象
      */
-    public fireEvent(eventName: string, eventData?: any, pickTimes?: number) {
-        // 如果获取不到，不代表要丢弃，有可能战斗场景中发出的消息需要在主场景中监听，但是主场景当前不存在
-        if (null != this._eventListeners.get(eventName)) {
-            // 将所有回调提取出来，再调用，避免调用回调的时候操作了事件的删除
-            let eventHandlers: EventListener[] = [];
-            for (const iterator of this._eventListeners.get(eventName)) {
-                eventHandlers.push({ callBack: iterator.callBack, target: iterator.target });
-            }
-            for (const iterator of eventHandlers) {
-                iterator.callBack.call(iterator.target, eventData);
-            }
-        } else if (null == this._eventListeners.get(eventName) && !!!pickTimes) {
-            error('eventName:' + eventName + ' 不存在listener');
-        }
-        if (pickTimes > 0) {
-            this._unattendedEventsMap.set(eventName, { eventData, pickTimes });
-        }
+    public off<T>(eventName: string, callBack: (data: T) => void, target?: any): void {
+        this.removeEventListener(eventName, callBack, target);
     }
 
-    public emit(eventName: string, eventData?: any, pickTimes?: number) {
-        this.fireEvent(eventName, eventData, pickTimes);
-    }
+    /**
+     * 触发事件
+     * @param eventName 事件名称
+     * @param eventData 事件数据
+     */
+    public fireEvent<T>(eventName: string, eventData?: T): void {
+        const handlers = this._eventListeners.get(eventName);
+        if (handlers) {
+            // 创建副本以避免在回调中修改监听器时出现问题
+            const eventHandlers = handlers.map(handler => ({
+                callBack: handler.callBack,
+                target: handler.target
+            }));
 
-    /** 
-    主动拾取事件，主要用途：如玩家在游戏内获得金币，回到主界面时，主界面的金币Label要显示一些动画。这时，在回到主界面时，先注册事件，然后在主动拾取事件。
-    eg:
-        // 注册事件。
-        EventManager.instance.addEventListener(EventNames.MainCoin, this.coinUpdate, this);
-        // 主动拾取事件
-        EventManager.instance.pickAndFireEvent(EventNames.MainCoin);
-    */
-    public pickEvent(eventName: string) {
-        let event = this._unattendedEventsMap.get(eventName);
-        if (event) {
-            event.pickTimes--;
-            this.fireEvent(eventName, event.eventData);
-            if (event.pickTimes == 0) {
-                this._unattendedEventsMap.delete(eventName);
-            }
+            eventHandlers.forEach(handler => {
+                if (handler.target) {
+                    handler.callBack.call(handler.target, eventData);
+                } else {
+                    handler.callBack(eventData);
+                }
+            });
+        } else {
+            error(`Event name: ${eventName} does not have any listeners`);
         }
     }
 
+    /**
+     * 触发事件（简写）
+     * @param eventName 事件名称
+     * @param eventData 事件数据
+     */
+    public emit<T>(eventName: string, eventData?: T): void {
+        this.fireEvent(eventName, eventData);
+    }
 
 
 }

@@ -17,7 +17,7 @@ class EventListener<T = any> {
     }
 
 
-    bindToCanDestroyTarget(target: Node | Component) {
+    bindToDestroyableTarget(target: Node | Component) {
         let removeFunc = () => {
             if (!!this.tag) {
                 EventManager.instance.removeEventListenerByTag(this.eventName, this.tag);

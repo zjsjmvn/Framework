@@ -58,6 +58,11 @@ export default class WXPlatform {
 
     public static loadAvatar(avatarUrl: string): Promise<SpriteFrame | null> {
         return new Promise((resolve) => {
+            if (!avatarUrl || typeof avatarUrl !== 'string' || avatarUrl.trim() === '') {
+                console.error('头像地址为空或无效');
+                resolve(null);
+                return;
+            }
             // 使用 assetManager.loadRemote 加载远程图片
             assetManager.loadRemote<ImageAsset>(avatarUrl, { ext: '.jpg' }, (err, imageAsset) => {
                 if (err) {

@@ -56,18 +56,29 @@ export default class WXPlatform {
     // }
 
 
-    public static loadAvatar(avatarUrl): Promise<SpriteFrame> {
+    public static loadAvatar(avatarUrl: string): Promise<SpriteFrame> {
         return new Promise((resolve, reject) => {
+            // 使用 assetManager.loadRemote 加载远程图片
             assetManager.loadRemote<ImageAsset>(avatarUrl, { ext: '.jpg' }, (err, imageAsset) => {
-                const sf = new SpriteFrame();
+                if (err) {
+                    console.error('加载头像失败', err);
+                    reject(err); // 如果加载失败，返回错误
+                    return;
+                }
+
+                // 创建 Texture2D 并设置 imageAsset
                 const texture = new Texture2D();
                 texture.image = imageAsset;
-                sf.texture = texture;
-                resolve(sf);
+
+                // 创建 SpriteFrame 并设置 texture
+                const spriteFrame = new SpriteFrame();
+                spriteFrame.texture = texture;
+
+                // 返回 SpriteFrame
+                resolve(spriteFrame);
             });
         });
     }
-
 
     /**
      * @description         WeChatPlatform.authUserInfo(button, (userInfo: { nickName: string, avatarUrl: string }) => {

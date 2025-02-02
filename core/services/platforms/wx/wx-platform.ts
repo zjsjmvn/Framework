@@ -56,30 +56,75 @@ export default class WXPlatform {
     // }
 
 
-    public static loadAvatar(avatarUrl: string): Promise<SpriteFrame> {
-        return new Promise((resolve, reject) => {
+    public static loadAvatar(avatarUrl: string): Promise<SpriteFrame | null> {
+        return new Promise((resolve) => {
             // 使用 assetManager.loadRemote 加载远程图片
             assetManager.loadRemote<ImageAsset>(avatarUrl, { ext: '.jpg' }, (err, imageAsset) => {
                 if (err) {
                     console.error('加载头像失败', err);
-                    reject(err); // 如果加载失败，返回错误
+                    resolve(null); // 如果加载失败，返回 null
                     return;
                 }
 
-                // 创建 Texture2D 并设置 imageAsset
-                const texture = new Texture2D();
-                texture.image = imageAsset;
+                try {
+                    // 创建 Texture2D 并设置 imageAsset
+                    const texture = new Texture2D();
+                    texture.image = imageAsset;
 
-                // 创建 SpriteFrame 并设置 texture
-                const spriteFrame = new SpriteFrame();
-                spriteFrame.texture = texture;
+                    // 创建 SpriteFrame 并设置 texture
+                    const spriteFrame = new SpriteFrame();
+                    spriteFrame.texture = texture;
 
-                // 返回 SpriteFrame
-                resolve(spriteFrame);
+                    // 返回 SpriteFrame
+                    resolve(spriteFrame);
+                } catch (error) {
+                    console.error('创建纹理或精灵帧失败', error);
+                    resolve(null);
+                }
             });
         });
     }
 
+    // 此种方式加载头像不需要白名单
+    public static loadAvatar2(avatarUrl: string): Promise<SpriteFrame | null> {
+        return new Promise((resolve) => {
+            // 检查 avatarUrl 是否为空或无效
+            if (!avatarUrl || typeof avatarUrl !== 'string' || avatarUrl.trim() === '') {
+                console.error('头像地址为空或无效');
+                resolve(null);
+                return;
+            }
+            // 创建 Image 对象
+            const image = wx.createImage();
+            // 监听图片加载完成事件
+            image.onload = () => {
+                try {
+                    // 创建 ImageAsset
+                    const imageAsset = new ImageAsset(image);
+                    // 创建 Texture2D
+                    const texture = new Texture2D();
+                    texture.image = imageAsset;
+                    // 创建 SpriteFrame
+                    const spriteFrame = new SpriteFrame();
+                    spriteFrame.texture = texture;
+                    // 返回 SpriteFrame
+                    resolve(spriteFrame);
+                } catch (error) {
+                    console.error('创建纹理或精灵帧失败', error);
+                    resolve(null);
+                }
+            };
+
+            // 监听图片加载失败事件
+            image.onerror = (err) => {
+                console.error('加载头像失败', err);
+                resolve(null);
+            };
+
+            // 设置图片源（开始加载）
+            image.src = avatarUrl;
+        });
+    }
     /**
      * @description         WeChatPlatform.authUserInfo(button, (userInfo: { nickName: string, avatarUrl: string }) => {
                                     console.log('授权成功', userInfo);

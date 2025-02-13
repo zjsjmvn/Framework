@@ -268,7 +268,8 @@ export default class WXPlatform {
         //     });
         // }
 
-        wx.showShareMenu({
+
+        window['wx']?.showShareMenu({
             withShareTicket: true,
             menus: ['shareAppMessage', 'shareTimeline']
         });
@@ -279,7 +280,7 @@ export default class WXPlatform {
         this.query = query;
 
         //监听右上角的分享好友调用 
-        wx.onShareAppMessage((res: any) => {
+        window['wx']?.onShareAppMessage((res: any) => {
             return {
                 title: title,
                 imageUrl: imageUrl,
@@ -289,7 +290,7 @@ export default class WXPlatform {
         })
 
         //监听右上角的分享朋友圈调用 
-        wx.onShareTimeline((res: any) => {
+        window['wx']?.onShareTimeline((res: any) => {
             return {
                 title: title,
                 imageUrl: imageUrl,

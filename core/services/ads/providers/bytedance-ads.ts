@@ -43,12 +43,14 @@ export default class ByteDanceAds implements IAdProvider {
     private initInterstitialAds(interstitialAdsConfigArr: Array<InterstitialConfig>) {
         interstitialAdsConfigArr?.forEach((value) => {
             let bundle = new InterstitialAdBundle();
-            bundle.interstitialId = value;
+            bundle.interstitialId = value.id;
             this.interstitialInstanceMap.set(value.posName, bundle);
         });
     }
     public showInterstitial(posName: string): Promise<ShowInterstitialAdCallBackMsg> {
         return new Promise((resolve, reject) => {
+            console.log('>> ByteDanceAds::showInterstitial')
+
             let bundle = this.interstitialInstanceMap.get(posName);
             if (!!bundle) {
                 this.createInterstitialAdsWithBundle(bundle);

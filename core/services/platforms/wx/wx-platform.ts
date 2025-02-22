@@ -365,5 +365,19 @@ export default class WXPlatform {
             }
         })
     }
+    public static requirePrivacyAuthorize() {
+        wx.requirePrivacyAuthorize({
+            success: res => {
+                // 进入success回调说明用户已同意隐私政策
+                // TODO：非标准API的方式处理用户个人信息
+            },
+            fail: () => {
+                // 进入fail回调说明用户拒绝隐私政策
+                // 游戏需要放弃处理用户个人信息，同时不要阻断游戏主流程
+            }
+        })
+    }
+
+
 
 }

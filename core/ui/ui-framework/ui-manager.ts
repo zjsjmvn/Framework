@@ -5,9 +5,7 @@ import UIPopup from './ui-popup';
 import UITips from './ui-tips';
 import { Vec3 } from 'cc';
 import { Color } from 'cc';
-import { PublicTipParamData } from 'db://assets/game/scripts/views/popups/public-tip';
 import { mkdirSync } from 'fs';
-
 
 export class ViewZOrder {
     /**场景层 */
@@ -180,7 +178,7 @@ export default class UIManager {
         opacityInDuration?: number,
         opacityOutDuration?: number) {
 
-        let data = new PublicTipParamData();
+        let data = {} as any;
         data.message = message;
         data.pos = pos;
         data.labelColor = labelColor;

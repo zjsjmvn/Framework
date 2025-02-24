@@ -38,3 +38,4 @@ quick_gen_project_*_autogen.sh.meta
 !LongTouchComponent.ts.meta
 !EntityLink.ts.meta
 !canvas-adapter.ts.meta
+!GPRoundBoxSprite.ts.meta

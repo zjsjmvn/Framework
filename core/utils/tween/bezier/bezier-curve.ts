@@ -150,6 +150,8 @@ export class BezierCurve extends Component {
         return this._curveList;
     }
     public set curveList(v: CurveSegment[]) {
+
+        log("set curveList", v)
         this._curveList = v;
         if (this.isReLoad) {
             this.reLoadCurveList()
@@ -288,8 +290,9 @@ export class BezierCurve extends Component {
             this.curve = curve;
             this.pathNode = new Node(this.node.name + PathNodeName);
             this.pathNode.layer = Layers.Enum.UI_2D;
+            this.pathNode.setWorldPosition(v3(0, 0, 0));
 
-            this.pathNode.parent = this.node.parent;
+            this.pathNode.parent = this.node;
             this.preCurve = curve
 
             // this.pathNode.on(Node.EventType.POSITION_CHANGED, () => {
@@ -439,6 +442,7 @@ export class BezierCurve extends Component {
         //     return
         // }
 
+        log("reload")
         this.destroyPathNode()
         let posTemp = this._curveList
         this._curveList = []
@@ -521,6 +525,7 @@ export class BezierCurve extends Component {
         let duration = curve.duration || this.duration
         let ease = curve.ease || this.ease
         let angleOffset = curve.angleOffset || this.angleOffset
+
         let c = new CurveSegment().init(
             [...points],
             duration,
@@ -528,12 +533,13 @@ export class BezierCurve extends Component {
             this.curveWidth,
             this
         );
-        curve = this.addCurve_M(c
-        );
+
+
+        c.repeatCount = curve.repeatCount;
+        curve = this.addCurve_M(c);
         curve.setEase(ease)
         curve.setAngleOffset(angleOffset)
 
-        // this.AddCurve_M(curve)
     }
 
     private calculateCurveRunTime() {

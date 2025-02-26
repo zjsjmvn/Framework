@@ -6,6 +6,7 @@ import Point from './curve-point';
 import { Bezier, BVector2 } from './tools/bezier';
 import { EaseType, Evaluate } from './tools/ease-type';
 import { CurveSegment } from './curve-segment';
+import DebugUtils from 'db://assets/game/scripts/views/init/debug-utils';
 const { ccclass, property, executeInEditMode, inspector, menu } = _decorator;
 
 export enum CurveState {
@@ -24,17 +25,18 @@ export class Curve {
     private angleOffset: number;
 
     public curveSegments: CurveSegment[]
-    public timeList: number[]
-    public duration: number
+    public totalDuration: number = 0;
     public ease: EaseType
     public completeCallBack: () => void
     public curTime: number = 0
     public state: CurveState;
 
-    constructor(curveSegments: CurveSegment[], timeList: number[], duration: number, ease: EaseType = EaseType.Linear, callBack = () => { }, target?: Node) {
+    constructor(curveSegments: CurveSegment[], ease: EaseType = EaseType.Linear, callBack = () => { }, target?: Node) {
         this.curveSegments = curveSegments
-        this.timeList = timeList
-        this.duration = duration
+        curveSegments.forEach((curveSegment) => {
+            this.totalDuration += curveSegment.duration * curveSegment.repeatCount;
+        });
+        console.log("totalDuration", this.totalDuration)
         this.ease = ease
         this.curTime = 0
         this.completeCallBack = callBack
@@ -67,7 +69,7 @@ export class Curve {
             curveSegments.push(curveSegment.clone())
         });
 
-        let curve = new Curve(curveSegments, [...this.timeList], this.duration, this.ease, this.completeCallBack)
+        let curve = new Curve(curveSegments, this.ease, this.completeCallBack)
 
         return curve;
     }

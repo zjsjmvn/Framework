@@ -108,26 +108,76 @@ export class Bezier {
     }
 
     // --------------------------------------------------------------------------------------------------------------------------------------
-    public static getCurTimePos(points: Vec3[], t: number): Vec3 {
+    // public static getCurTimePos(points: Vec3[], t: number): Vec3 {
+    //     if (!points || points.length == 0) {
+    //         return
+    //     }
+    //     var x = 0, y = 0;
+    //     //控制点数组
+    //     var n = points.length - 1;
+    //     points.forEach((item, index) => {
+    //         if (!index) {
+    //             x += item.x * Math.pow((1 - t), n - index) * Math.pow(t, index)
+    //             y += item.y * Math.pow((1 - t), n - index) * Math.pow(t, index)
+    //         } else {
+    //             //factorial为阶乘函数
+    //             x += Bezier.factorial(n) / Bezier.factorial(index) / Bezier.factorial(n - index) * item.x * Math.pow((1 - t), n - index) * Math.pow(t, index)
+    //             y += Bezier.factorial(n) / Bezier.factorial(index) / Bezier.factorial(n - index) * item.y * Math.pow((1 - t), n - index) * Math.pow(t, index)
+    //         }
+    //     })
+    //     return new Vec3(x, y);
+    // }
+    public static getCurTimePos(points: Vec3[], time: number): Vec3 {
         if (!points || points.length == 0) {
-            return
+            return;
         }
-        var x = 0, y = 0;
-        //控制点数组
-        var n = points.length - 1;
-        points.forEach((item, index) => {
-            if (!index) {
-                x += item.x * Math.pow((1 - t), n - index) * Math.pow(t, index)
-                y += item.y * Math.pow((1 - t), n - index) * Math.pow(t, index)
-            } else {
-                //factorial为阶乘函数
-                x += Bezier.factorial(n) / Bezier.factorial(index) / Bezier.factorial(n - index) * item.x * Math.pow((1 - t), n - index) * Math.pow(t, index)
-                y += Bezier.factorial(n) / Bezier.factorial(index) / Bezier.factorial(n - index) * item.y * Math.pow((1 - t), n - index) * Math.pow(t, index)
+
+        // 预计算贝塞尔曲线的弧长
+        const arcLength = Bezier.calculateArcLength(points);
+        const targetLength = time * arcLength;
+
+        // 使用弧长参数化来计算曲线上的点
+        let currentLength = 0;
+        let previousPoint = points[0];
+        for (let i = 1; i <= 100; i++) {
+            const u = i / 100;
+            const currentPoint = Bezier.calculateBezierPoint(points, u);
+            const segmentLength = Vec3.distance(previousPoint, currentPoint);
+            currentLength += segmentLength;
+            if (currentLength >= targetLength) {
+                return currentPoint;
             }
-        })
-        return new Vec3(x, y);
+            previousPoint = currentPoint;
+        }
+
+        return points[points.length - 1];
     }
 
+
+
+    private static calculateArcLength(points: Vec3[]): number {
+        let length = 0;
+        let previousPoint = points[0];
+        for (let i = 1; i <= 100; i++) {
+            const u = i / 100;
+            const currentPoint = Bezier.calculateBezierPoint(points, u);
+            length += Vec3.distance(previousPoint, currentPoint);
+            previousPoint = currentPoint;
+        }
+        return length;
+    }
+
+    private static calculateBezierPoint(points: Vec3[], t: number): Vec3 {
+        const n = points.length - 1;
+        let x = 0, y = 0;
+        points.forEach((item, index) => {
+            const binomialCoefficient = Bezier.factorial(n) / (Bezier.factorial(index) * Bezier.factorial(n - index));
+            const term = binomialCoefficient * Math.pow(1 - t, n - index) * Math.pow(t, index);
+            x += item.x * term;
+            y += item.y * term;
+        });
+        return new Vec3(x, y);
+    }
     private static factorial(i: number) {
         let n = 1;
         for (let j = 1; j <= i; j++)
@@ -176,29 +226,71 @@ export class Bezier {
         let lastCurve = curveList[curveList.length - 1]
         return lastCurve.points[lastCurve.points.length - 1]
     }
-    private static getCurTimeAndIndex(time: number, durationList: number[], totalDuration: number) {
-        let timeStep = 0
-        let preTime = 0
-        for (let index = 0; index < durationList.length; index++) {
-            timeStep += durationList[index] / totalDuration
-            if (time <= timeStep) {
-                return {
-                    time: (time - preTime) / (timeStep - preTime),
-                    index: index
+    private static getCurrentTimeAndIndex(time: number, totalDuration: number, curveSegments: CurveSegment[]) {
+        let timeStep = 0;
+        let preTime = 0;
+
+        // 计算每个曲线片段的总持续时间（duration * repeatCount）
+        let durationList = curveSegments.map((cs) => {
+            return cs.duration * cs.repeatCount;
+        });
+
+        // 计算所有曲线片段的总持续时间
+        const totalRepeatDuration = durationList.reduce((acc, duration) => acc + duration, 0);
+
+        // 将时间限制在总的重复时间范围内
+        // time = time % totalRepeatDuration;
+
+        for (let index = 0; index < curveSegments.length; index++) {
+            const segment = curveSegments[index];
+            const segmentDuration = segment.duration;
+            const segmentTotalDuration = segmentDuration * segment.repeatCount;
+
+            for (let repeatIndex = 0; repeatIndex < segment.repeatCount; repeatIndex++) {
+                timeStep += segmentDuration / totalRepeatDuration;
+                if (time <= timeStep) {
+                    return {
+                        time: (time - preTime) / (timeStep - preTime),
+                        index: index
+                    };
                 }
+                preTime = timeStep;
             }
-            preTime = timeStep
         }
         return {
             time: 1,
-            index: durationList.length - 1
+            index: curveSegments.length - 1
         };
     }
+    // private static getCurrentTimeAndIndex(time: number, totalDuration: number, curveSegments: CurveSegment[]) {
+    //     let timeStep = 0
+    //     let preTime = 0
+
+    //     let durationList = curveSegments.map((cs) => {
+    //         return cs.duration;
+    //     });
+
+    //     for (let index = 0; index < durationList.length; index++) {
+    //         timeStep += durationList[index] / totalDuration
+    //         if (time <= timeStep) {
+    //             return {
+    //                 time: (time - preTime) / (timeStep - preTime),
+    //                 index: index
+    //             }
+    //         }
+    //         preTime = timeStep
+    //     }
+    //     return {
+    //         time: 1,
+    //         index: durationList.length - 1
+    //     };
+    // }
     // 计算曲线点(曲线列表)
-    public static calculateCurveListPos(curveSegments: CurveSegment[], durationList: number[], curTime: number, totalDuration: number, ease: EaseType): Vec3 {
+    public static calculateCurveListPos(curveSegments: CurveSegment[], curTime: number, totalDuration: number, ease: EaseType): Vec3 {
         // 根据easing计算时间。
         let newTime = Evaluate.calculate(ease, curTime, totalDuration);
-        let nowData = this.getCurTimeAndIndex(newTime, durationList, totalDuration)
+
+        let nowData = this.getCurrentTimeAndIndex(newTime, totalDuration, curveSegments)
         let nowCurve = curveSegments[nowData.index]
         // let length = Bezier.bezierLength(nowCurve.points, 1);
         // console.time('bezier')

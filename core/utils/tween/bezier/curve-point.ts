@@ -1,7 +1,7 @@
 import { Color, Component, Graphics, Label, Layers, Node, UITransform, Vec3, _decorator, screen, view } from "cc";
 import BezierManager from "./bezier-manager";
-import { CurveSegment } from "./curve";
 import PointLabel from "./point-label";
+import { CurveSegment } from "./curve-segment";
 
 const { ccclass, property } = _decorator;
 

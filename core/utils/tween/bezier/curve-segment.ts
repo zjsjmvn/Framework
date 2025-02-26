@@ -6,7 +6,6 @@ import { BezierCurve } from "./bezier-curve";
 import CurvePoint from "./curve-point";
 const { ccclass, property, executeInEditMode, inspector, menu } = _decorator;
 
-
 /**
  * @description 曲线片段，由曲线片段组成曲线。
  * @export
@@ -31,8 +30,6 @@ export class CurveSegment {
     public set state(v: CurveState) {
         this._state = v;
     }
-
-
 
     // 所属者索引
     private _index: number = 0;
@@ -75,7 +72,6 @@ export class CurveSegment {
     }
     public set duration(v: number) {
         this._duration = v;
-        // console.error("set duration:"+v)
         if (this.owner) {
             this.owner.isReLoad = false
             this.owner.calculateCurveRunTimeInversion()
@@ -99,6 +95,16 @@ export class CurveSegment {
             this.owner.isReLoad = false
     }
 
+    // 重复次数
+    @property({ type: CCFloat, displayName: "重复次数", visible: true })
+    private _repeatCount: number = 1;
+    public get repeatCount(): number {
+        return this._repeatCount;
+    }
+    public set repeatCount(v: number) {
+        this._repeatCount = v;
+    }
+
     public line: Node;
     public nextCurve: CurveSegment;
     public prevCurve: CurveSegment;
@@ -111,7 +117,6 @@ export class CurveSegment {
 
     private lineColor: Color = Color.GREEN;
     private subLineColor: Color = Color.RED;
-    // private lineMat: Material;
 
     @property({ visible: false })
     public angleOffset: number = null;
@@ -133,11 +138,9 @@ export class CurveSegment {
             }
         }
         this._duration = duration
-        // this.smoothness = smoothness
         this.lineRenderer.strokeColor = color
         this.lineRenderer.lineWidth = width
         this.owner = owner
-        // 添加辅助线
         this.updatePoints();
         this.updateSubLine();
         return this
@@ -156,7 +159,6 @@ export class CurveSegment {
         point.setName("point_" + i)
         point.setOwner(this);
         point.setLabelColor(Color.BLACK)
-        // 起点和终点
         if (i == 0) {
             point.setColor(this.lineColor)
             this.prePoint = point
@@ -184,40 +186,28 @@ export class CurveSegment {
         this.updateSubLine();
     }
 
-    // public SetLineMat(mat: Material) {
-    //     this.lineMat = mat;
-    //     this.lineRenderer.setMaterial(0, mat);
-    //     this.UpdatePoints();
-    //     this.UpdateSubLine();
-    // }
-
     public setWidth(width: number) {
         this.lineRenderer.lineWidth = width;
         this.updatePoints();
         this.updateSubLine();
     }
 
-    // 设置平滑度
     public setSmoothness(value: number) {
         this.smoothness = value;
-        // this.UpdatePoints();
-        // this.UpdateSubLine();
     }
 
     public setEase(value: EaseType) {
         this._ease = value;
-        // this.UpdatePoints();
-        // this.UpdateSubLine();
     }
 
     public setAngleOffset(value: number) {
         this.angleOffset = value;
     }
 
-
     public update() {
         this.updatePoints();
         this.updateSubLine();
+        this.points = [...this.points];
     }
 
     public updatePoints() {
@@ -271,18 +261,15 @@ export class CurveSegment {
         this.controlPoints.forEach((node, i) => {
             let point = node.getComponent(CurvePoint);
             if (point) {
-                // 起点和终点
                 if (i == 0 || i == this.points.length - 1) {
                     point.setColor(this.lineColor)
                 } else {
                     point.setColor(this.subLineColor)
                 }
             }
-
         })
     }
 
-    // 检测坐标是否变化
     public checkPositionChanged(): boolean {
         let isChange = false;
 
@@ -291,15 +278,16 @@ export class CurveSegment {
             var curPos = node.position.clone();
 
             if (!curPos.equals(prePos)) {
-                log('equals', curPos, prePos);
+                // log('equals', curPos, prePos);
 
                 isChange = true;
-                this.points[i] = curPos
+                this.points[i] = curPos;
             }
         })
-        return isChange;
 
-        // return true;
+
+        log('change1212    ', isChange);
+        return isChange;
     }
 
     public removeLineRender() {
@@ -310,25 +298,13 @@ export class CurveSegment {
         }
     }
 
-    /**
-     * 重置line node属性
-     */
     public resetLineNodeProperty() {
         if (this.line) {
             this.line.position = v3(0);
-            // this.line.position = TransformUtils.TransformPosition(new Vec3(0), this.line.position.constructor.name);
-
-            // this.line.angle = 0;
             this.line.scale = v3(1, 1, 1);
-            // this.line.skewX = 0;
-            // this.line.skewY = 0;
         }
     }
 
-    /**
-     * 删除点
-     * @param index 索引
-     */
     public deletePoint(index: number) {
         let corPoint = this.controlPoints[index]
         if (corPoint) {
@@ -338,7 +314,6 @@ export class CurveSegment {
         }
     }
 
-    /** */
     public delete() {
         this.line.destroy()
         this.points = null
@@ -347,8 +322,6 @@ export class CurveSegment {
             this.owner.deleteCurve(this)
         }
     }
-
-
 
     private pointList: BVector2[] = [];
     private prevPos: BVector2;
@@ -362,27 +335,21 @@ export class CurveSegment {
         }
         return this._length
     }
-    // 重置数据
+
     private resetData() {
-        // 点集合
         this.pointList = [];
-        // 线段总长度
         this.length = 0;
-        // 初始位置
         this.prevPos = new BVector2(this.points[0], 0, 0);
     }
 
     public getPointList(): BVector2[] {
         this.resetData();
         let duration = this.duration;
-        //TODO: 优化
-
         let smoothness = 100; this.smoothness ? this.smoothness : 300;
 
         let step = duration / smoothness;
         if (step <= 0)
             return this.pointList;
-        // 开始分割曲线
         for (let i = 0; i <= duration; i += step) {
             if (i + step > duration) {
                 i = duration
@@ -391,33 +358,23 @@ export class CurveSegment {
         }
         return this.pointList;
     }
-    /**
-     * 计算贝塞尔点
-     */
+
     private calculateBezier(curTime: number) {
         let t = Evaluate.calculate(this.ease, curTime, this.duration);
         let pos = Bezier.getCurTimePos(this.points, t)
 
-        // 计算两点距离
         let length = Math.sqrt(Math.pow(this.prevPos.pos.x - pos.x, 2) + Math.pow(this.prevPos.pos.y - pos.y, 2));
         let v3 = new BVector2(pos, length, 0);
 
-        // 存储当前节点z
         this.pointList.push(v3);
         this.prevPos = v3;
-        // 累计长度
         this._length += length;
     }
 
-
-
-
-    // 是否跟随旋转
     public isFollowRotate(): boolean {
         return this.angleOffset != null
     }
 
-    // 获取当前位置的旋转角度
     public getAngle(pos: Vec3) {
         return 0;
         let fmPos = this.prevRunPos;
@@ -425,12 +382,10 @@ export class CurveSegment {
         let dir: Vec3 = Vec3.ZERO;
         dir = toPos.subtract(fmPos);
 
-        // let radians = Vec3.RIGHT.signAngle(dir)
         let radians = v2(Vec3.RIGHT.x, Vec3.RIGHT.y).signAngle(v2(dir.x, dir.y))
         let angle = misc.radiansToDegrees(radians) - this.angleOffset
         return angle;
     }
-
 
     public clone() {
         let curveSegment = new CurveSegment();
@@ -439,6 +394,7 @@ export class CurveSegment {
             curveSegment.points.push(pos.clone())
         })
         curveSegment.ease = this.ease;
+        curveSegment.repeatCount = this.repeatCount;
         return curveSegment;
     }
 }

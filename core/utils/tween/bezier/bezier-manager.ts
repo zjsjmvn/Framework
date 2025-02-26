@@ -95,7 +95,7 @@ export default class BezierManager extends Component {
                     // 小于零部分是延迟执行
                     if (curve.curTime > 0) {
                         // 最后一帧
-                        if (curve.curTime >= curve.duration) {
+                        if (curve.curTime >= curve.totalDuration) {
                             target.position = Bezier.getLastCurvePos(curve.curveSegments)
                             this.removeCurveList(target);
                             log('delete');
@@ -103,7 +103,7 @@ export default class BezierManager extends Component {
                         } else {
                             // console.time('bezier');
 
-                            let pos = Bezier.calculateCurveListPos(curve.curveSegments, curve.timeList, curve.curTime, curve.duration, curve.ease);
+                            let pos = Bezier.calculateCurveListPos(curve.curveSegments, curve.curTime, curve.totalDuration, curve.ease);
                             // console.timeEnd('bezier');
                             target.position = pos
                         }

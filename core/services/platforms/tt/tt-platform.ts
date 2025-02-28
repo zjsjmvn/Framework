@@ -3,6 +3,9 @@ import { TTCanIUse } from './tt-decorators';
 import { versionCompare } from '../../../utils/version-util';
 import BasePlatform from '../base-platform';
 import { ViewModel } from '../../../ui/mvvm/view-model';
+import { screen } from 'cc';
+import { math } from 'cc';
+import { Widget } from '../../../../../../../extensions/plugin-import-2x/creator/components/Widget';
 
 export default class TTPlatform extends BasePlatform {
 
@@ -460,7 +463,32 @@ export default class TTPlatform extends BasePlatform {
         tt.reportAnalytics(name, data);
     }
 
+    public static showShareImageMenu(hashtagList: Array<string>) {
+        let info = tt.getSystemInfoSync();
+        const tempFilePath = canvas.toTempFilePathSync({
+            x: 0,
+            y: 0,
+            width: info.screenWidth * info.pixelRatio,
+            height: info.screenHeight * info.pixelRatio,
+            destWidth: info.screenWidth * info.pixelRatio,
+            destHeight: info.screenHeight * info.pixelRatio,
+        });
 
+        tt.shareAppMessage({
+            channel: ShareAppChannel.picture,
+            imageUrl: tempFilePath,
+            extra: {
+                picturePath: [tempFilePath],
+                hashtag_list: hashtagList,
+            },
+            success: () => {
+                console.log("分享成功");
+            },
+            fail: (e) => {
+                console.log("分享失败:'" + e.errMsg + "'", e);
+            }
+        });
+    }
 }
 
 

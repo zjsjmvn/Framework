@@ -2,38 +2,36 @@ import { Game, game } from 'cc';
 /**
  * 分享参数
  */
-interface ShareParams {
-    templateId?: string,
-    title?: string,
-    desc?: string,
-    query?: string,
-    extra?: ShareExtraParams,
+export class ShareParams {
+    templateId?: string;
+    title?: string;
+    desc?: string;
+    query?: string;
+    extra?: ShareExtraParams;
 }
 
-export interface ShareExtraParams {
-    //是否支持跳转到播放页， 以及支持获取视频信息等接口 （为 true 时会在 success 回调中带上 videoId）
-    withVideoId?: boolean,
-    //视频地址 ，分享一个本地视频
-    videoPath?: string,
-    //视频话题(仅抖音支持) ，目前由 hashtag_list 代替，为保证兼容性，建议同时填写两个。
-    videoTopics?: Array<string>
-    //是否分享为挑战视频 ( 仅头条支持 )
-    createChallenge?: boolean
-    //生成输入的默认文案
-    video_title?: string,
-    //视频话题(仅抖音支持)
-    hashtag_list?: Array<string>,
-    // /分享视频的标签，可以结合获取抖音视频排行榜使用
-    videoTag?: string,
-    //抖音 pgc 音乐的短链(仅抖音支持，需要基础库版本大于 1.90) 。形如https://v.douyin.com/JmcxWo8/， 参考 抖音小游戏录屏带配乐能力
-    defaultBgm?: string,
-    //抖音上可用的剪映模板 ID， 参考 录屏添加剪映视频模板能力
-    cutTemplateId?: string,
-    //剪映模板不可用或者剪映模板 ID 无效的时候是否直接回调失败。
-    abortWhenCutTemplateUnavailable?: boolean
+export class ShareExtraParams {
+    // 是否支持跳转到播放页，以及支持获取视频信息等接口（为 true 时会在 success 回调中带上 videoId）
+    withVideoId?: boolean;
+    // 视频地址，分享一个本地视频
+    videoPath?: string;
+    // 视频话题（仅抖音支持），目前由 hashtag_list 代替，为保证兼容性，建议同时填写两个。
+    videoTopics?: Array<string>;
+    // 是否分享为挑战视频（仅头条支持）
+    createChallenge?: boolean;
+    // 生成输入的默认文案
+    video_title?: string;
+    // 视频话题（仅抖音支持）
+    hashtag_list?: Array<string>;
+    // 分享视频的标签，可以结合获取抖音视频排行榜使用
+    videoTag?: string;
+    // 抖音 pgc 音乐的短链（仅抖音支持，需要基础库版本大于 1.90）。形如 https://v.douyin.com/JmcxWo8/，参考抖音小游戏录屏带配乐能力
+    defaultBgm?: string;
+    // 抖音上可用的剪映模板 ID，参考录屏添加剪映视频模板能力
+    cutTemplateId?: string;
+    // 剪映模板不可用或者剪映模板 ID 无效的时候是否直接回调失败
+    abortWhenCutTemplateUnavailable?: boolean;
 }
-
-
 /**
  * 录屏工具类
  * 支持 百度/头条
@@ -76,6 +74,7 @@ export default class RecordVideoManager {
                 this._recorder = this.platform.getGameRecorderManager();
             }
             if (!this._recorder) {
+                console.log("当前平台不支持录屏");
                 return;
             }
             // 错误打印
@@ -173,15 +172,15 @@ export default class RecordVideoManager {
         if (this.platform && this._videoPath && this._videoPath.length > 0) {
             this.platform.shareAppMessage({
                 channel: "video",
-                templateId: shareParams.templateId,
-                title: shareParams.title,
-                desc: shareParams.desc,
+                templateId: shareParams?.templateId,
+                title: shareParams?.title,
+                desc: shareParams?.desc,
                 extra: {
                     videoPath: this._videoPath, // 可替换成录屏得到的视频地址
-                    videoTopics: shareParams.extra.videoTopics,
-                    video_title: shareParams.extra.video_title,
-                    hashtag_list: shareParams.extra.hashtag_list,
-                    defaultBgm: shareParams.extra.defaultBgm,
+                    videoTopics: shareParams?.extra?.videoTopics,
+                    video_title: shareParams?.extra?.video_title,
+                    hashtag_list: shareParams?.extra?.hashtag_list,
+                    defaultBgm: shareParams?.extra?.defaultBgm,
                 },
                 success: () => {
                     console.log("分享视频成功");

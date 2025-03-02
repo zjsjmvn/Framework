@@ -226,6 +226,10 @@ export class AdsManager {
                 return Promise.resolve(msg);
             } else {
                 console.log("AdsManager showInterstitial: 时间间隔不够");
+                let msg = new ShowInterstitialAdCallBackMsg();
+                msg.success = false;
+                msg.errMsg = "时间间隔不够";
+                return Promise.resolve(msg);
             }
 
         } catch (e) {

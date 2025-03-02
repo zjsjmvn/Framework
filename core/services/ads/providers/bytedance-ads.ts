@@ -50,7 +50,6 @@ export default class ByteDanceAds implements IAdProvider {
     public showInterstitial(posName: string): Promise<ShowInterstitialAdCallBackMsg> {
         return new Promise((resolve, reject) => {
             console.log('>> ByteDanceAds::showInterstitial')
-
             let bundle = this.interstitialInstanceMap.get(posName);
             if (!!bundle) {
                 this.createInterstitialAdsWithBundle(bundle);
@@ -115,10 +114,10 @@ export default class ByteDanceAds implements IAdProvider {
                     console.log('插页广告加载成功')
                     bundle.hasInterstitialInCache = true;
                 });
-                bundle.interstitialInstance.onError(err => {
-                    console.log('插页广告 播放失败', err)
-                    bundle.hasInterstitialInCache = false;
-                });
+                // bundle.interstitialInstance.onError(err => {
+                //     console.log('插页广告 播放失败', err)
+                //     bundle.hasInterstitialInCache = false;
+                // });
             }
         }
     }

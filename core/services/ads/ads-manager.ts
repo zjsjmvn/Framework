@@ -149,6 +149,9 @@ export class AdsManager {
 
     }
 
+    public removeAllAdvertiser() {
+        this.adProviderArr = [];
+    }
 
     /**
      * @description 如果想直接使用provider 那么可以通过这个方法获取。

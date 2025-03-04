@@ -53,7 +53,8 @@ export default class ByteDanceAds implements IAdProvider {
             let bundle = this.interstitialInstanceMap.get(posName);
             if (!!bundle) {
                 this.createInterstitialAdsWithBundle(bundle);
-                const isDouyin = tt.getSystemInfoSync().appName === "Douyin";
+                const appName = tt.getSystemInfoSync().appName;
+                const isDouyin = ["Douyin", "douyin_lite"].includes(appName);
                 // 插屏广告仅今日头条安卓客户端支持
                 if (isDouyin) {
                     bundle.interstitialInstance
@@ -101,7 +102,9 @@ export default class ByteDanceAds implements IAdProvider {
 
     private createInterstitialAdsWithBundle(bundle: InterstitialAdBundle) {
         if (!!window.tt && !!window.tt.createInterstitialAd) {
-            const isDouyin = tt.getSystemInfoSync().appName === "Douyin";
+
+            const appName = tt.getSystemInfoSync().appName;
+            const isDouyin = ["Douyin", "douyin_lite"].includes(appName);
             if (isDouyin) {
                 if (bundle.interstitialInstance) {
                     bundle.interstitialInstance.destroy();

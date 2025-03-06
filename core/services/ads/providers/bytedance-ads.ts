@@ -37,7 +37,7 @@ export default class ByteDanceAds implements IAdProvider {
     hasInterstitial(): boolean {
         return this.interstitialInstanceMap.size > 0;
     }
-    preloadInterstitial(): Promise<boolean> {
+    preloadInterstitial(posName: string): Promise<boolean> {
         throw new Error("Method not implemented.");
     }
     private initInterstitialAds(interstitialAdsConfigArr: Array<InterstitialConfig>) {
@@ -47,64 +47,94 @@ export default class ByteDanceAds implements IAdProvider {
             this.interstitialInstanceMap.set(value.posName, bundle);
         });
     }
+
+    public isShowingInterstitial: boolean = false;
     public showInterstitial(posName: string): Promise<ShowInterstitialAdCallBackMsg> {
         return new Promise((resolve, reject) => {
-            console.log('>> ByteDanceAds::showInterstitial')
-            let bundle = this.interstitialInstanceMap.get(posName);
-            if (!!bundle) {
-                this.createInterstitialAdsWithBundle(bundle);
-                const appName = tt.getSystemInfoSync().appName;
-                const isDouyin = ["Douyin", "douyin_lite"].includes(appName);
-                // 插屏广告仅今日头条安卓客户端支持
-                if (isDouyin) {
-                    bundle.interstitialInstance
-                        .load()
-                        .then(() => {
-                            bundle.interstitialInstance.show().then(() => {
-                            }).catch(err => {
-                                console.log('show', err);
-                                let msg = new ShowInterstitialAdCallBackMsg();
-                                msg.success = false;
-                                msg.errMsg = "无可用广告";
-                                resolve(msg);
-                            })
-                        })
-                        .catch(err => {
-                            console.log('load', err);
-                            let msg = new ShowInterstitialAdCallBackMsg();
-                            msg.success = false;
-                            msg.errMsg = "无可用广告";
-                            resolve(msg);
-                        });
-                    let onCloseFunc = res => {
-                        console.log('>> ByteDanceAds::插页广告关闭')
-                        bundle.interstitialInstance.offClose(onCloseFunc);
+            console.log('>> ByteDanceAds::showInterstitial');
+
+            if (this.isShowingInterstitial) {
+                console.log(">> ByteDanceAds::showInterstitial 正在展示广告");
+                const msg = new ShowInterstitialAdCallBackMsg();
+                msg.success = false;
+                msg.errMsg = "正在展示广告";
+                resolve(msg);
+                return;
+            }
+
+            const bundle = this.interstitialInstanceMap.get(posName);
+            if (!bundle) {
+                const msg = new ShowInterstitialAdCallBackMsg();
+                msg.success = false;
+                msg.errMsg = `无法找到posName=${posName}的广告`;
+                console.error(`>> ByteDanceAds::showInterstitial 无法找到posName=${posName}的广告`);
+                reject(msg);
+                return;
+            }
+
+            const appName = tt.getSystemInfoSync().appName;
+            const isDouyin = ["Douyin", "douyin_lite"].includes(appName);
+
+            if (!isDouyin) {
+                const msg = new ShowInterstitialAdCallBackMsg();
+                msg.success = false;
+                msg.errMsg = `不支持的广告平台`;
+                reject(msg);
+                return;
+            }
+            this.createInterstitialAdsWithBundle(bundle);
+
+            console.log('>> ByteDanceAds::showInterstitial  load interstitial ads');
+
+
+            const onCloseFunc = () => {
+                console.log('>> ByteDanceAds::插页广告关闭');
+                bundle.interstitialInstance.offClose(onCloseFunc);
+                bundle.interstitialInstance.destroy();
+                bundle.interstitialInstance = null;
+                this.isShowingInterstitial = false;
+                const msg = new ShowInterstitialAdCallBackMsg();
+                msg.success = true;
+                resolve(msg);
+            };
+
+            bundle.interstitialInstance.onClose(onCloseFunc);
+
+            this.isShowingInterstitial = true;
+
+            bundle.interstitialInstance.load()
+                .then(() => {
+                    console.log(">> ByteDanceAds::showInterstitial 广告显示");
+
+                    bundle.interstitialInstance.show().then(() => {
+                    }).catch(err => {
+                        console.log('show', err);
+                        this.isShowingInterstitial = false;
+                        bundle.interstitialInstance.destroy();
+                        bundle.interstitialInstance = null;
                         let msg = new ShowInterstitialAdCallBackMsg();
                         msg.success = true;
                         resolve(msg);
-                    }
-                    bundle.interstitialInstance.onClose(onCloseFunc);
-                } else {
+                    })
+                })
+                .catch(err => {
+                    console.log('load', err);
+                    this.isShowingInterstitial = false;
+                    this.isShowingInterstitial = false;
+                    bundle.interstitialInstance.destroy();
                     let msg = new ShowInterstitialAdCallBackMsg();
                     msg.success = false;
-                    msg.errMsg = `不支持的广告平台`;
+                    msg.errMsg = `加载错误`;
                     return Promise.reject(msg);
-                }
-            } else {
-                error(`>> ByteDanceAds::showInterstitial 无法找到posName=${posName}的广告`);
-                let msg = new ShowInterstitialAdCallBackMsg();
-                msg.success = false;
-                msg.errMsg = `无法找到posName=${posName}的广告`;
-                return Promise.reject(msg);
-            }
+                });
         });
     }
 
     private createInterstitialAdsWithBundle(bundle: InterstitialAdBundle) {
         if (!!window.tt && !!window.tt.createInterstitialAd) {
-
             const appName = tt.getSystemInfoSync().appName;
             const isDouyin = ["Douyin", "douyin_lite"].includes(appName);
+
             if (isDouyin) {
                 if (bundle.interstitialInstance) {
                     bundle.interstitialInstance.destroy();
@@ -215,7 +245,7 @@ export default class ByteDanceAds implements IAdProvider {
                         resolve(msg);
                     });
                 } else {
-                    error(`>> ByteDanceAds::rewardedVideoAd rewardVideoInstance为空`);
+                    error(`>> ByteDanceAds:: rewardedVideoAd rewardVideoInstance为空`);
                     this.isShowingRewardVideo = false;
                     msg.success = false;
                     msg.errMsg = '广告初始化失败，实例为空';
@@ -223,10 +253,10 @@ export default class ByteDanceAds implements IAdProvider {
                 }
             }
             else {
-                error(`>> ByteDanceAds::rewardedVideoAd 无法找到posName=${posName}的广告`);
+                error(`>> ByteDanceAds:: rewardedVideoAd 无法找到posName = ${posName}的广告`);
                 msg.success = false;
                 this.isShowingRewardVideo = false;
-                msg.errMsg = `无法找到posName=${posName}的广告`;
+                msg.errMsg = `无法找到posName = ${posName}的广告`;
                 resolve(msg);
             }
         })

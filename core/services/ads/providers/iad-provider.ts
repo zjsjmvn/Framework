@@ -9,7 +9,7 @@ export interface IAdProvider {
     showRewardVideo(posName: string): Promise<ShowRewardVideoCallBackMsg>;
     preloadRewardVideo(): Promise<boolean>;
     hasInterstitial(posName: string): boolean;
-    preloadInterstitial(): Promise<boolean>;
+    preloadInterstitial(posName: string): Promise<boolean>;
 
 
     haveCacheVideo?(posName: string): boolean;

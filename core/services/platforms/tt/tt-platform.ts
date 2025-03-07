@@ -6,6 +6,8 @@ import { ViewModel } from '../../../ui/mvvm/view-model';
 import { screen } from 'cc';
 import { math } from 'cc';
 import { Widget } from '../../../../../../../extensions/plugin-import-2x/creator/components/Widget';
+import WXPlatform from '../wx/wx-platform';
+import { Node } from 'cc';
 
 export default class TTPlatform extends BasePlatform {
 
@@ -51,39 +53,47 @@ export default class TTPlatform extends BasePlatform {
         let func = (touches: []) => {
             if (verifyFunc(touches)) {
                 log('在点击范围内');
-                tt.addShortcut({
-                    success() {
-                        console.log("添加桌面成功");
-                        callback && callback(0);
-                    },
-                    fail(err) {
-                        console.log("添加桌面失败", err.errMsg);
-                        callback && callback(-1)
-                    },
-                    complete(sss) {
-                        console.log("添加桌面完成", sss);
-                        // tt.offTouchEnd(func)
-                    }
-                });
+
             }
         }
-        this.addTouchEndListener(func);
     }
 
     private static touchListener = null;
-    public static addTouchEndListener(callFunc: Function) {
-        this.touchListener = (event: { touches: [], changedTouches: [], timeStamp: number }) => {
-            // log('tt.onTouchEnd', event, view.getFrameSize());
-            let touches = [];
-            for (var i = 0; i < event.changedTouches.length; i++) {
-                let touch_event = event.changedTouches[i];
-                let ps = view.convertToLocationInView(touch_event.clientX, touch_event.clientY, { top: 0, left: 0, width: view.getFrameSize().width, height: view.getFrameSize().height })
-                view._convertPointWithScale(ps);
-                touches.push(ps);
+    public static addShortcutTouchEndListener(node: Node): Promise<boolean> {
+        return new Promise((resolve, reject) => {
+            let pos = WXPlatform.convertToWxPos(node);
+            let alreadyTouch = false;
+            let touchListener = (event: { touches: [], changedTouches: [], timeStamp: number }) => {
+                if (alreadyTouch) {
+                    return
+                };
+                for (var i = 0; i < event.changedTouches.length; i++) {
+                    let touch_event = event.changedTouches[i];
+                    let isTouch = TTPlatform.isPointInButton(touch_event.screenX, touch_event.screenY, pos);
+                    console.log("isTouch", isTouch);
+                    if (isTouch) {
+                        alreadyTouch = true;
+                        tt.addShortcut({
+                            success() {
+                                console.log("添加桌面成功");
+                                resolve(true);
+                            },
+                            fail(err) {
+                                console.log("添加桌面失败", err.errMsg);
+                                resolve(false);
+                            },
+                            complete(sss) {
+                                console.log("添加桌面完成", sss);
+                                // tt.offTouchEnd(func)
+                            }
+                        });
+                        this.removeTouchEndListener();
+                        return;
+                    }
+                }
             }
-            callFunc(touches);
-        }
-        tt.onTouchEnd(this.touchListener);
+            tt.onTouchEnd(touchListener);
+        });
     }
 
     public static removeTouchEndListener() {
@@ -98,17 +108,31 @@ export default class TTPlatform extends BasePlatform {
      * @param {({ errMsg: string }) => void} failCallback
      * @memberof TTPlatform
      */
-    public static checkShortcut(successCallback: (res: { status: { exist: boolean, needUpdate: boolean }, errMsg: string }) => void, failCallback: ({ errMsg: string }) => void) {
-        tt.checkShortcut({
-            success(res) {
-                console.log("检查快捷方式", res.status);
-                successCallback && successCallback(res)
-            },
-            fail(res) {
-                console.log("检查快捷方式失败", res.errMsg);
-                failCallback && failCallback(res);
-            },
+    public static checkShortcut(): Promise<boolean> {
+        return new Promise((resolve, reject) => {
+            tt.checkShortcut({
+                success(res: { status: { exist: boolean, needUpdate: boolean }, errMsg: string }) {
+                    console.log("检查快捷方式", res.status);
+                    if (res && res.status && res.status.exist) {
+                        if (res.status.needUpdate) {
+                            console.log("需要更新快捷方式");
+                            // 不用更新。有bug
+                            resolve(false);
+                        } else {
+                            console.log("不需要更新快捷方式");
+                            resolve(false);
+                        }
+                    } else {
+                        resolve(true);
+                    }
+                },
+                fail(res) {
+                    console.log("检查快捷方式失败", res.errMsg);
+                    resolve(false);
+                },
+            });
         });
+
     }
     /**
      * @description 收藏小程序
@@ -489,6 +513,69 @@ export default class TTPlatform extends BasePlatform {
             }
         });
     }
+
+
+    public static createButton(posNode: Node) {
+        let pos = posNode && WXPlatform.convertToWxPos(posNode);
+        //位置尺寸环境参数
+        let left = 0;
+        let top = 0;
+        let width = 0;
+        let height = 0;
+        if (pos) {
+            left = pos.left;
+            top = pos.top;
+            width = pos.width;
+            height = pos.height;
+        }
+
+
+        let button = window["tt"].createInteractiveButton({
+            type: 'text ',
+            text: '111',
+            style: {
+                left: left,
+                top: top,
+                width: width,
+                height: height,
+                lineHeight: 40,
+                borderColor: '#00000000',
+                borderWidth: 0,
+                // backgroundColor: '#ff0000',
+                backgroundColor: '#00000000',
+                color: '#ffffffff',
+                textAlign: 'center',
+                fontSize: 16,
+                borderRadius: 4
+            }
+        })
+
+
+
+    }
+
+
+    public static isPointInButton(x: number, y: number, pos: { left: number, top: number, width: number, height: number }): boolean {
+        let left = 0;
+        let top = 0;
+        let width = 0;
+        let height = 0;
+
+        if (pos) {
+            left = pos.left;
+            top = pos.top;
+            width = pos.width;
+            height = pos.height;
+        }
+
+        const right = left + width;
+        const bottom = top + height;
+
+        return x >= left && x <= right && y >= top && y <= bottom;
+    }
+
+
+
 }
 
 

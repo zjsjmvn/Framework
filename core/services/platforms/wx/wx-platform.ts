@@ -238,7 +238,7 @@ export default class WXPlatform {
     }
 
 
-    private static convertToWxPos(node?: Node): { left: number, top: number, width: number, height: number } {
+    public static convertToWxPos(node?: Node): { left: number, top: number, width: number, height: number } {
         if (!node) return null;
         let leftDownPos = node.getComponent(UITransform).convertToWorldSpaceAR(v3(-node.getComponent(UITransform).width * node.getComponent(UITransform).anchorX, -node.getComponent(UITransform).height * node.getComponent(UITransform).anchorY, 0));
         let rightUpPos = node.getComponent(UITransform).convertToWorldSpaceAR(v3(node.getComponent(UITransform).width * (1 - node.getComponent(UITransform).anchorX), node.getComponent(UITransform).height * (1 - node.getComponent(UITransform).anchorY), 0));

@@ -35,6 +35,7 @@ quick_gen_project_*_autogen.sh.meta
 !core/ui/components/*.ts.meta
 !core/utils/tween/bezier/**/*.ts.meta
 !core/guide/**/*.meta
+!core/services/audio/**/*.ts.meta
 
 !LongTouchComponent.ts.meta
 !EntityLink.ts.meta

@@ -8,6 +8,7 @@ import { math } from 'cc';
 import { Widget } from '../../../../../../../extensions/plugin-import-2x/creator/components/Widget';
 import WXPlatform from '../wx/wx-platform';
 import { Node } from 'cc';
+import { REPLCommand } from 'repl';
 
 export default class TTPlatform extends BasePlatform {
 
@@ -572,6 +573,73 @@ export default class TTPlatform extends BasePlatform {
         const bottom = top + height;
 
         return x >= left && x <= right && y >= top && y <= bottom;
+    }
+
+    public static requestFeedSubscribe(isAllScene: boolean, sceneId: number, contentIds: Array<string>): Promise<boolean> {
+        return new Promise(async (resolve, reject) => {
+            let options = {
+                scene: sceneId,
+                contentIDs: contentIds,
+                allScene: isAllScene,
+                type: "play",
+                success: (res: { errMsg, success }) => {
+                    console.log("requestFeedSubscribe success", res, res.errMsg, res.success);
+                    if (res.success) {
+                        console.log("订阅成功");
+                        resolve(true);
+                    } else {
+                        console.log("订阅失败");
+                        tt.showToast({
+                            title: `订阅失败 : ${res.errMsg}`
+                        });
+                        resolve(false);
+                    }
+                },
+                fail: (res) => {
+                    console.log("requestFeedSubscribe fail", res.errMsg);
+                    tt.showToast({
+                        title: `订阅失败 : ${res.errMsg}`
+                    });
+                    resolve(false);
+                },
+                complete: () => { },
+            }
+            tt.requestFeedSubscribe(options);
+
+        });
+    }
+
+    public static checkFeedSubscribeStatus(isAllScene: boolean, sceneId: number): Promise<boolean> {
+        return new Promise(async (resolve, reject) => {
+            await TTPlatform.login();
+            let options = {
+                scene: sceneId,
+                allScene: isAllScene,
+                type: "play",
+                success: ({ errMsg, status }) => {
+                    console.log("requestFeedSubscribe success", errMsg, status);
+                    if (status == 1) {
+                        resolve(true);
+                    }
+                    else {
+                        resolve(false);
+                    }
+                },
+                fail: (res) => {
+                    console.log("requestFeedSubscribe fail", res.errMsg);
+                    resolve(false);
+                },
+                complete: () => { },
+            }
+            tt.checkFeedSubscribeStatus(options);
+        });
+    }
+    public static canIUseCheckFeedSubscribeStatus() {
+        return tt.canIUse("checkFeedSubscribeStatus");
+    }
+
+    public static canIUseRequestFeedSubscribe() {
+        return tt.canIUse("requestFeedSubscribe");
     }
 
 

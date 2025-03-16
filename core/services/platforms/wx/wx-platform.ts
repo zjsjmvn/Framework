@@ -185,7 +185,7 @@ export default class WXPlatform {
                 if (res.userInfo) {
                     success && success(res.userInfo);
                 } else {
-                    console.log("授权失败" + res);
+                    console.log("授权失败" + JSON.stringify(res));
                     fail && fail();
                 }
             })

@@ -4,8 +4,10 @@ import { easing, IColor, IMat3Like, IVec3Like, math, Node, Tween, tween, UIOpaci
 export default class TweenUtil {
 
     /** 左右小幅度抖动 */
-    static shakeHorizontally(node: Node) {
-        tween(node).by(0.1, { position: v3(8, 0, 0) }).reverseTime().start();
+    static shakeHorizontally(node: Node, callback?) {
+        tween(node).by(0.1, { position: v3(8, 0, 0) }).reverseTime().call(() => {
+            callback && callback();
+        }).start();
     }
 
     /** scale翻转 翻转 */

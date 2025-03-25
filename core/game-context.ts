@@ -54,5 +54,9 @@ export default class GameContext {
     public static manualRegisterService(name, service) {
         GameContext._servicesDictionary.set(name, service);
     }
+    // remove service
+    public static removeService(name) {
+        GameContext._servicesDictionary.delete(name);
+    }
 }
 window.GameContext = GameContext

@@ -193,6 +193,7 @@ export default abstract class UIPopup<T extends UIData> extends UIBase {
 
 
 
+    public data: T;
 
     /**
      * @description 

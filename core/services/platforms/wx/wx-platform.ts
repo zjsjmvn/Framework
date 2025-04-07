@@ -366,7 +366,7 @@ export default class WXPlatform {
         })
     }
     public static requirePrivacyAuthorize() {
-        wx.requirePrivacyAuthorize({
+        window['wx']?.requirePrivacyAuthorize({
             success: res => {
                 // 进入success回调说明用户已同意隐私政策
                 // TODO：非标准API的方式处理用户个人信息

@@ -28,6 +28,7 @@ class StringFormat {
                 case 'per': res = this.per(value, num); break;
                 case 'sep': res = this.sep(value); break;
                 case 'timehms': res = this.time_h_m_s(value); break;
+                case 'zerotodash': res = this.zeroToDash(value); break;
                 default:
                     break;
             }
@@ -57,6 +58,9 @@ class StringFormat {
     }
     private ceilInt(value: number) {
         return Math.ceil(value);
+    }
+    private zeroToDash(value: number) {
+        return value === 0 ? '-' : value;
     }
 
     //将数字按分显示 00:00 显示 （ms制）

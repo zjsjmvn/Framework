@@ -28,6 +28,10 @@ export default class DebugAdsView extends Component {
         // this.node.setPosition(v3(0, 0, 0));
 
     }
+    defaultBannerStyle() {
+
+    }
+
     initInterstitialAds(callback) {
         this.interstitialCallFunc = callback;
         this.initUI(DebugAdsEnum.Interstitial)

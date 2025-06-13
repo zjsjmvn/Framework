@@ -18,7 +18,7 @@ export class RewardVideoConfig extends BaseAdConfig {
 }
 
 export class GeZiAdConfig extends BaseAdConfig {
-    public style: { width: number, height?: number, left: number, top: number };
+    public style: { width?: number, height?: number, left: number, top: number, fixed?: boolean };
 }
 
 /**
@@ -374,7 +374,7 @@ export class AdsManager {
         let screenWidth = screen.windowSize.width / screen.devicePixelRatio;
         let screenHeight = screen.windowSize.height / screen.devicePixelRatio;
         let bannerWidth = screenWidth;
-        let bannerHeight = bannerWidth / 20 * 7;
+        let bannerHeight = bannerWidth / 360 * 118.56;
         let left = screenWidth - bannerWidth;
         let top = screenHeight - bannerHeight;
         return {
@@ -400,14 +400,14 @@ export class AdsManager {
     }
 
     // 目前只有微信有格子广告
-    showGeZiAd(posName: string = 'PopupUI') {
+    showGeZiAd(posName: string = 'Default') {
         this.adProviderArr.find((adProvider) => {
             if (adProvider instanceof WeChatAds) {
                 (adProvider as WeChatAds).showGeZi(posName);
             }
         });
     }
-    closeGeZiAd(posName: string = 'PopupUI') {
+    closeGeZiAd(posName: string = 'Default') {
         this.adProviderArr.find((adProvider) => {
             if (adProvider instanceof WeChatAds) {
                 (adProvider as WeChatAds).closeGeZi(posName);

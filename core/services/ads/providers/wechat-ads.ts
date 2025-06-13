@@ -328,6 +328,7 @@ export default class WeChatAds implements IAdProvider {
     //#region 格子广告
 
     private initGeZi(geZiAdConfigArr: Array<GeZiAdConfig>) {
+        console.log('>> WeChatAds::initGeZi', geZiAdConfigArr);
         geZiAdConfigArr?.forEach((value) => {
             let bundle = new GeZiAdBundle();
             bundle.geZiId = value.id;
@@ -339,6 +340,7 @@ export default class WeChatAds implements IAdProvider {
 
 
     public showGeZi(posName: string) {
+        console.log('>> WeChatAds::showGeZi', posName);
         let bundle = this.geZiInstanceMap.get(posName);
         if (bundle) {
             if (window.wx && window.wx.createCustomAd) {
@@ -355,9 +357,14 @@ export default class WeChatAds implements IAdProvider {
                 bundle.geZiInstance.onClose(() => {
                     console.log("WeChat ge zi close: ")
                 });
+                bundle.geZiInstance.onResize(size => {
+                    console.log("WeChat ge zi resize: ", size)
+                });
 
                 bundle.geZiInstance.show();
             };
+        } else {
+            error(`>> WeChatAds::showGeZi 无法找到posName=${posName}的广告`);
         }
     }
     public closeGeZi(posName: string) {

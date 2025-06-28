@@ -1,6 +1,6 @@
 import { Node, _decorator, director, log, UITransform } from 'cc';
 import { IAdProvider } from '../iad-provider';
-import { ShowInterstitialAdCallBackMsg, ShowRewardVideoCallBackMsg } from '../../ads-manager';
+import { InterstitialConfig, BannerConfig, GeZiAdConfig, ShowInterstitialAdCallBackMsg, ShowRewardVideoCallBackMsg, RewardVideoConfig } from '../../ads-manager';
 import DebugAdsView from './debug-ads-view';
 
 export enum DebugAdsEnum {
@@ -18,7 +18,7 @@ export default class DebugAds implements IAdProvider {
     isShowingRewardVideo: boolean;
     isShowingInterstitial: boolean;
     private banner: Node = null;
-    init() {
+    init(rewardVideosConfigArr: Array<RewardVideoConfig>, interstitialAdsConfigArr: Array<InterstitialConfig>, bannersConfigArr: Array<BannerConfig>, geZiConfigArr: Array<GeZiAdConfig>) {
 
     }
     showInterstitial(): Promise<ShowInterstitialAdCallBackMsg> {

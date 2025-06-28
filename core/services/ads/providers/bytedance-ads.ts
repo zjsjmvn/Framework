@@ -27,7 +27,7 @@ export default class ByteDanceAds implements IAdProvider {
 
     public isShowingRewardVideo: boolean = false;
 
-    init(rewardVideosConfigArr: Array<RewardVideoConfig>, interstitialAdsConfigArr: Array<InterstitialConfig>, bannersConfigArr: Array<BannerConfig>) {
+    init(rewardVideosConfigArr: Array<RewardVideoConfig>, interstitialAdsConfigArr: Array<InterstitialConfig>, bannersConfigArr: Array<BannerConfig>, geZiConfigArr: Array<GeZiAdConfig>) {
         this.initRewardVideos(rewardVideosConfigArr);
         this.initInterstitialAds(interstitialAdsConfigArr);
         this.initBanners(bannersConfigArr);

@@ -1,4 +1,4 @@
-import { ShowInterstitialAdCallBackMsg, ShowRewardVideoCallBackMsg } from '../ads-manager';
+import { RewardVideoConfig, InterstitialConfig, BannerConfig, GeZiAdConfig, ShowInterstitialAdCallBackMsg, ShowRewardVideoCallBackMsg } from '../ads-manager';
 export interface IAdProvider {
     isShowingRewardVideo?: boolean;
     isShowingInterstitial?: boolean;
@@ -10,7 +10,7 @@ export interface IAdProvider {
     preloadRewardVideo(): Promise<boolean>;
     hasInterstitial(posName: string): boolean;
     preloadInterstitial(posName: string): Promise<boolean>;
-
+    init(rewardVideosConfigArr: Array<RewardVideoConfig>, interstitialAdsConfigArr: Array<InterstitialConfig>, bannersConfigArr: Array<BannerConfig>, geZiConfigArr: Array<GeZiAdConfig>);
 
     haveCacheVideo?(posName: string): boolean;
 }

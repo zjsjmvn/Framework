@@ -21,6 +21,29 @@ export class GeZiAdConfig extends BaseAdConfig {
     public style: { width?: number, height?: number, left: number, top: number, fixed?: boolean };
 }
 
+//#region define interface
+export interface AdsConfig {
+    /**
+     * @description 广告提供商
+     * @type {Array<{ new(): IAdProvider }>}
+     */
+    adsProviders: Array<{ new(rewardVideosMap?: Map<string, string>, interstitialAdsMap?: Map<string, string>, bannersMap?: Map<string, string>): IAdProvider }>
+    /**
+     * @description 一般广告会创建多个广告位，所以是 Map<string, string>
+     * @type {Map<IAdProvider, Map<string, string>>}
+     */
+    rewardVideoProviderAndPosIdsMap?: Map<{ new(): IAdProvider }, Array<RewardVideoConfig>>,
+    interstitialProviderAndPosIdsMap?: Map<{ new(): IAdProvider }, Array<InterstitialConfig>>,
+    bannerProviderAndPosIdsMap?: Map<{ new(): IAdProvider }, Array<BannerConfig>>,
+    geZiProviderAndPosIdsMap?: Map<{ new(): IAdProvider }, Array<GeZiAdConfig>>,
+    /**
+     * @description 插页广告展示间隔时间
+     * @type {number}
+     */
+    interstitialIntervalSeconds?: number,
+
+}
+
 /**
  * @description 视频广告播放回调，如果失败就读取errMsg
  * @date 2019-09-09
@@ -110,8 +133,8 @@ export class AdsManager {
      * @memberof AdsManager
      */
     private _last_show_interstitial_timestamp: number = 0;
-
-    private interstitialIntervalTime: number = 0 * 60;
+    // 插页广告展示间隔时间
+    private interstitialIntervalSeconds: number = 0 * 60;
 
     /**
      * @description 加入的广告提供商都会存在这里。
@@ -127,7 +150,7 @@ export class AdsManager {
     constructor() {
 
     }
-    public init(config: any) {
+    public init(config: AdsConfig) {
         if (!this.initialized) {
             this.initialized = true;
             for (let adProvider of config.adsProviders) {
@@ -138,6 +161,7 @@ export class AdsManager {
                 let geZiConfigArr = config.geZiProviderAndPosIdsMap?.get(adProvider);
                 provider.init(rewardVideosConfigArr, interstitialAdsConfigArr, bannersConfigArr, geZiConfigArr);
                 this.addAdProvider(provider);
+                this.interstitialIntervalSeconds = config.interstitialIntervalSeconds ?? 0;
             }
         }
     }
@@ -216,7 +240,7 @@ export class AdsManager {
         try {
             console.log("AdsManager showInterstitial");
             // 
-            if (Date.now() - this._last_show_interstitial_timestamp > this.interstitialIntervalTime * 1000) {
+            if (Date.now() - this._last_show_interstitial_timestamp > this.interstitialIntervalSeconds * 1000) {
                 for (let i of this.adProviderArr) {
                     if (i.hasInterstitial(posName)) {
                         this._last_show_interstitial_timestamp = Date.now();

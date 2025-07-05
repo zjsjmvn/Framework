@@ -378,6 +378,38 @@ export default class WXPlatform {
         })
     }
 
+    public static recommendPageManager = null;
+    /**
+     *  游戏内提前加载推荐组件数据
+     */
+    public static async loadRecommend() {
+        if (!wx.createPageManager) {
+            throw '当前基础库版本暂不支持。';
+        }
+        this.recommendPageManager = wx.createPageManager();
+        await this.recommendPageManager.load({
+            openlink: 'TWFRCqV5WeM2AkMXhKwJ03MhfPOieJfAsvXKUbWvQFQtLyyA5etMPabBehga950uzfZcH3Vi3QeEh41xRGEVFw', // 推荐组件OPENLINK常量，直接复制即可，无需理解含义
+        });
+    }
+    /**
+     *  拉起推荐组件
+     */
+    public static async showRecommend(): Promise<boolean> {
+        return new Promise(async (resolve) => {
+            if (!this.recommendPageManager) {
+                await this.loadRecommend();
+            }
 
+            this.recommendPageManager.on(
+                'destroy', // show | destroy | error
+                (res) => {
+                    console.log('recommend component destroy：', res.isRecommended);
+                    this.recommendPageManager = null;
+                    resolve(res.isRecommended);
+                },
+            )
+            this.recommendPageManager.show();
+        })
+    }
 
 }

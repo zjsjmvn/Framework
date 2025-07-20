@@ -3,6 +3,7 @@ import { assetManager } from 'cc';
 import { ImageAsset } from 'cc';
 import { SpriteFrame } from 'cc';
 import { _decorator, Component, Node, view, director, Size, log, UITransform, screen, v3, math, isValid } from 'cc';
+import { promises } from 'original-fs';
 export enum WeChatAuthScope {
     userInfo,
     writePhotosAlbum
@@ -383,10 +384,11 @@ export default class WXPlatform {
      *  游戏内提前加载推荐组件数据
      */
     public static async loadRecommend() {
-        if (!wx.createPageManager) {
-            throw '当前基础库版本暂不支持。';
+        if (!window['wx']?.createPageManager) {
+            console.error('当前基础库版本暂不支持。');
+            return Promise.resolve(false);
         }
-        this.recommendPageManager = wx.createPageManager();
+        this.recommendPageManager = window['wx']?.createPageManager();
         await this.recommendPageManager.load({
             openlink: 'TWFRCqV5WeM2AkMXhKwJ03MhfPOieJfAsvXKUbWvQFQtLyyA5etMPabBehga950uzfZcH3Vi3QeEh41xRGEVFw', // 推荐组件OPENLINK常量，直接复制即可，无需理解含义
         });
@@ -397,7 +399,8 @@ export default class WXPlatform {
     public static async showRecommend(): Promise<boolean> {
         return new Promise(async (resolve) => {
             if (!this.recommendPageManager) {
-                await this.loadRecommend();
+                let res = await this.loadRecommend();
+                if (res == false) return Promise.resolve(false);
             }
 
             this.recommendPageManager.on(

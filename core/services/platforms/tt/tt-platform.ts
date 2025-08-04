@@ -59,12 +59,12 @@ export default class TTPlatform extends BasePlatform {
         }
     }
 
-    private static touchListener = null;
+    private static addToDesktopTouchListener = null;
     public static addShortcutTouchEndListener(node: Node): Promise<boolean> {
         return new Promise((resolve, reject) => {
             let pos = WXPlatform.convertToWxPos(node);
             let alreadyTouch = false;
-            let touchListener = (event: { touches: [], changedTouches: [], timeStamp: number }) => {
+            this.addToDesktopTouchListener = (event: { touches: [], changedTouches: [], timeStamp: number }) => {
                 if (alreadyTouch) {
                     return
                 };
@@ -93,13 +93,13 @@ export default class TTPlatform extends BasePlatform {
                     }
                 }
             }
-            tt.onTouchEnd(touchListener);
+            tt.onTouchEnd(this.addToDesktopTouchListener);
         });
     }
 
     public static removeTouchEndListener() {
-        if (this.touchListener) {
-            tt.offTouchEnd(this.touchListener);
+        if (this.addToDesktopTouchListener) {
+            tt.offTouchEnd(this.addToDesktopTouchListener);
         }
     }
     public static removeAddShortcutTouchEndListener() { }

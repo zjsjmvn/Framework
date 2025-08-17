@@ -1,3 +1,4 @@
+import { sys } from "cc";
 import { native } from "cc";
 import { google } from "cc";
 
@@ -63,9 +64,9 @@ export default class GooglePlatform {
     }
 
     /**
-     * 异步登录方法
-     * @returns Promise<LoginResult> 返回登录结果
-     */
+         * 异步登录方法
+         * @returns Promise<LoginResult> 返回登录结果
+         */
     public static async login(): Promise<LoginResult> {
         console.log('🔄 开始获取玩家信息...');
 
@@ -84,8 +85,10 @@ export default class GooglePlatform {
                 }
             }, 50000); // 50秒超时
 
-            // 触发原生端获取玩家信息
-            native.jsbBridgeWrapper.dispatchEventToNative("fetchCurrentPlayerId", "");
+            if (sys.platform == sys.Platform.ANDROID) {
+                // 触发原生端获取玩家信息
+                native.jsbBridgeWrapper.dispatchEventToNative("fetchCurrentPlayerId", "");
+            }
         });
     }
 

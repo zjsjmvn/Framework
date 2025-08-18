@@ -71,19 +71,23 @@ export default class GooglePlatform {
         console.log('🔄 开始获取玩家信息...');
 
         return new Promise((resolve) => {
+            // return resolve({
+            //     success: true,
+            //     playerInfo: { playerId: "12ee3", displayName: "123" }
+            // });
             // 临时保存 resolve 函数，等待回调
             this._pendingLoginResolve = resolve;
 
             // 设置超时处理
-            this._loginTimeout = setTimeout(() => {
-                if (this._pendingLoginResolve) {
-                    this._pendingLoginResolve({
-                        success: false,
-                        error: '登录超时'
-                    });
-                    this._pendingLoginResolve = null;
-                }
-            }, 50000); // 50秒超时
+            // this._loginTimeout = setTimeout(() => {
+            //     if (this._pendingLoginResolve) {
+            //         this._pendingLoginResolve({
+            //             success: false,
+            //             error: '登录超时'
+            //         });
+            //         this._pendingLoginResolve = null;
+            //     }
+            // }, 50000); // 50秒超时
 
             if (sys.platform == sys.Platform.ANDROID) {
                 // 触发原生端获取玩家信息

@@ -319,7 +319,7 @@ export default class AdmobAds implements IAdProvider {
                     log("[AdmobAds]", "Banner onPaidEvent", paidNTF);
                 },
 
-            }, { size: BannerSize.BANNER, alignments: BottomCenter, type: BannerSizeType.Builtin });
+            }, { size: BannerSize.BANNER, alignments: BottomCenter, type: BannerSizeType.Portrait });
         });
 
     }

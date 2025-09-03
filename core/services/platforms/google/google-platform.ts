@@ -18,7 +18,6 @@ interface LoginResult {
 export default class GooglePlatform {
 
     public static init() {
-        google.play.PlayGamesSdk.initialize();
         native.jsbBridgeWrapper.addNativeEventListener("onGotPlayerId", (result: string) => {
             console.log('>> onGotPlayerId raw result:', result);
 

@@ -90,6 +90,7 @@ export class RewardVideoBundle {
 
     /** 是否预加载中 */
     public isPreloading: boolean = false;
+    rewardAdId
 }
 
 export class InterstitialAdBundle {

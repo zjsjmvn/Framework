@@ -24,6 +24,8 @@ export default class IronSourceAds implements IAdProvider {
     private currentRewardVideoResolver: ((value: ShowRewardVideoCallBackMsg) => void) | null = null;
 
     init(rewardVideosConfigArr: Array<RewardVideoConfig>, interstitialAdsConfigArr: Array<InterstitialConfig>, bannersConfigArr: Array<BannerConfig>, geZiAdsConfigArr: Array<GeZiAdConfig>) {
+        log(this.logTag, `初始化广告`);
+
         this.initRewardVideos(rewardVideosConfigArr);
         this.initInterstitialAds(interstitialAdsConfigArr);
         this.initBanners(bannersConfigArr);
@@ -370,6 +372,9 @@ export default class IronSourceAds implements IAdProvider {
                 },
 
             }, { size: BannerSize.BANNER, alignments: BottomCenter, type: BannerSizeType.Portrait });
+
+
+            client.show(true);
         });
 
 
@@ -380,6 +385,19 @@ export default class IronSourceAds implements IAdProvider {
     hideBanner(posName: string) {
         // TODO: 实现Banner广告隐藏
         log(this.logTag, `Banner广告隐藏待实现: ${posName}`);
+        let bundle = this.bannerInstanceMap.get(posName);
+        if (!bundle) {
+            error(`>> IronSourceAds::hideBanner 无法找到posName=${posName}的广告`);
+            return;
+        }
+
+        if (bundle.bannerInstance) {
+            try { bundle.bannerInstance.destroy?.(); } catch (e) { }
+            bundle.bannerInstance = null;
+        }
+        bundle.bShow = false;
+        log(this.logTag, `Banner已隐藏: ${posName}`);
+
     }
     //#endregion
 

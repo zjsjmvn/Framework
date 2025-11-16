@@ -112,10 +112,10 @@ export class BannerClient extends AdClient {
             req.alignments = [BannerAlignment.ALIGN_PARENT_BOTTOM, BannerAlignment.CENTER_HORIZONTAL];
         }
 
-        this.sendToNative("LoadBannerREQ", req, "LoadBannerACK", (response: LoadBannerACK) => {
-            // 处理加载响应
-            console.log("Banner load response:", response.unitId);
-        }, this);
+        // this.sendToNative("LoadBannerREQ", req, "LoadBannerACK", (response: LoadBannerACK) => {
+        //     // 处理加载响应
+        //     console.log("Banner load response:", response.unitId);
+        // }, this);
     }
 
     /**

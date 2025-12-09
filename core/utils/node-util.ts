@@ -1,3 +1,4 @@
+import { isValid } from 'cc';
 import { Component, Node, UITransform, Vec2, Vec3 } from 'cc';
 export default class NodeUtil {
 
@@ -105,9 +106,43 @@ declare module 'cc' {
         angleY: number,
         /**z轴旋转, 等同于angle */
         angleZ: number,
+        zIndex: number,
+
     }
 }
 
+Object.defineProperty(Node.prototype, 'zIndex', {
+    set(zIndex: number) {
+        if (this.zIndex === zIndex || !isValid(this)) {
+            return
+        }
+        this._zIndex = zIndex;
+        let self = this as Node;
+        if (self.parent) {
+            const children = self.parent.children;
+            let siblingIndex = binarySearch(children, zIndex);
+            self.setSiblingIndex(siblingIndex);
+        }
+    },
+    get(): number {
+        return this._zIndex || 0;
+    },
+    configurable: true,
+});
+
+function binarySearch(children: Node[], zIndex: number): number {
+    let left = 0;
+    let right = children.length - 1;
+    while (left <= right) {
+        let mid = Math.floor((left + right) / 2);
+        if (children[mid].zIndex < zIndex) {
+            left = mid + 1;
+        } else {
+            right = mid - 1;
+        }
+    }
+    return left;
+}
 Object.defineProperty(Node.prototype, 'x', {
     get: function () {
         return this.position.x;

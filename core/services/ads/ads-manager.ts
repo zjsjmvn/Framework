@@ -90,6 +90,7 @@ export class RewardVideoBundle {
 
     /** 是否预加载中 */
     public isPreloading: boolean = false;
+    rewardAdId
 }
 
 export class InterstitialAdBundle {
@@ -151,6 +152,7 @@ export class AdsManager {
 
     }
     public init(config: AdsConfig) {
+        console.log(" ads init")
         if (!this.initialized) {
             this.initialized = true;
             for (let adProvider of config.adsProviders) {

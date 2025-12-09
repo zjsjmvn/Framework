@@ -335,8 +335,9 @@ export class AdsManager {
         //     }
         // })
 
-        log("AdsManager showRewardVideo");
+        console.log("AdsManager showRewardVideo");
         if (this.isShowingRewardVideo) {
+            console.log("广告正在播放中");
             let msg = new ShowRewardVideoCallBackMsg();
             msg.success = false;
             msg.errMsg = "广告正在播放中";
@@ -351,6 +352,7 @@ export class AdsManager {
                 return result;
             }
         }
+        console.log("无可用广告");
         let msg = new ShowRewardVideoCallBackMsg();
         msg.success = false;
         msg.errMsg = "无可用广告";

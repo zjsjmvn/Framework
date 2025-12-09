@@ -199,6 +199,7 @@ export default class ByteDanceAds implements IAdProvider {
     }
 
     showRewardVideo(posName: string): Promise<ShowRewardVideoCallBackMsg> {
+        console.log("ByteDanceAds showRewardVideo", posName);
         return new Promise((resolve, reject) => {
             if (this.isShowingRewardVideo) {
                 let msg = new ShowRewardVideoCallBackMsg();
@@ -271,6 +272,7 @@ export default class ByteDanceAds implements IAdProvider {
         this.rewardVideoInstanceMap.forEach((value, key) => {
             if (!!value) {
                 if (!value.isPreloading) {
+                    console.log("ByteDanceAds preloadRewardVideo", key);
                     value.isPreloading = true;
                     value.rewardVideoInstance.load()
                         .then(() => {
@@ -284,6 +286,11 @@ export default class ByteDanceAds implements IAdProvider {
                             value.isPreloading = false;
                         })
                 }
+                else {
+                    console.log("ByteDanceAds preloadRewardVideo", key, "广告正在预加载");
+                }
+            } else {
+                console.log("ByteDanceAds preloadRewardVideo", key, "广告实例为空");
             }
         })
         return Promise.resolve(true);
@@ -303,6 +310,7 @@ export default class ByteDanceAds implements IAdProvider {
     }
 
     hasRewardVideo(posName: string): boolean {
+        return true;
         let bundle = this.rewardVideoInstanceMap.get(posName);
         return bundle && bundle.hasRewardVideoInCache;
     }

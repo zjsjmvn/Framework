@@ -74,6 +74,10 @@ export default class LongTouchComponent extends Component {
         this.node.off(Node.EventType.TOUCH_START, this._onTouchStart, this);
         this.node.off(Node.EventType.TOUCH_END, this._onTouchEnd, this);
         this.node.off(Node.EventType.TOUCH_CANCEL, this._onTouchCancel, this);
+        // 若在按下未松开时禁用/销毁，需清理定时器，避免回调访问已销毁组件
+        clearTimeout(this._touchLongTimer);
+        this._touchLongTimer = 0;
+        this.unscheduleAllCallbacks();
     }
 
     private _onTouchStart(event: EventTouch) {

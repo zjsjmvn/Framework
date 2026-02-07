@@ -269,6 +269,9 @@ export default class ByteDanceAds implements IAdProvider {
      * @memberof ByteDanceAds
      */
     preloadRewardVideo(): Promise<boolean> {
+        if (!window.tt) {
+            return Promise.resolve(true);
+        }
         this.rewardVideoInstanceMap.forEach((value, key) => {
             if (!!value) {
                 if (!value.isPreloading) {

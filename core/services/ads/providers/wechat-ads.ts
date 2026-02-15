@@ -226,6 +226,9 @@ export default class WeChatAds implements IAdProvider {
      * @memberof WeChatAds
      */
     preloadRewardVideo(): Promise<boolean> {
+        if (!window['wx']) {
+            return Promise.resolve(true);
+        }
         this.rewardVideoInstanceMap.forEach((value, key) => {
             if (!!value) {
                 value.rewardVideoInstance.load()

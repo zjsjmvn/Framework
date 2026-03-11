@@ -55,12 +55,14 @@ export class InterstitialAdClient extends AdClient {
         if (this._adListener) {
             this.removeEventListener("InterstitialAdLoadCalLBackNTF", this.onAdLoadCallback, this);
             this.removeEventListener("InterstitialPaidEventNotification", this.onPaidEvent, this);
+            this.removeEventListener("InterstitialPaidEventNTF", this.onPaidEvent, this);
             this.removeEventListener("InterstitialFullScreenContentCallbackNTF", this.onFullScreenContentCallback, this);
         }
         this._adListener = v;
         if (this._adListener) {
             this.addEventListener("InterstitialAdLoadCalLBackNTF", this.onAdLoadCallback, this);
             this.addEventListener("InterstitialPaidEventNotification", this.onPaidEvent, this);
+            this.addEventListener("InterstitialPaidEventNTF", this.onPaidEvent, this);
             this.addEventListener("InterstitialFullScreenContentCallbackNTF", this.onFullScreenContentCallback, this);
         }
     }
@@ -128,6 +130,7 @@ export class InterstitialAdClient extends AdClient {
         if (this._adListener) {
             this.removeEventListener("InterstitialAdLoadCalLBackNTF", this.onAdLoadCallback, this);
             this.removeEventListener("InterstitialPaidEventNotification", this.onPaidEvent, this);
+            this.removeEventListener("InterstitialPaidEventNTF", this.onPaidEvent, this);
             this.removeEventListener("InterstitialFullScreenContentCallbackNTF", this.onFullScreenContentCallback, this);
         }
 
@@ -140,7 +143,8 @@ export class InterstitialAdClient extends AdClient {
      * @en
      * Handle ad load callback
      */
-    private onAdLoadCallback = (ntf: InterstitialAdLoadCalLBackNTF) => {
+    private onAdLoadCallback = (ntf: InterstitialAdLoadCalLBackNTF | string) => {
+        ntf = typeof ntf === 'string' ? JSON.parse(ntf) : ntf;
         if (ntf.unitId !== this.unitId) return;
 
         // 检查是否为 InterstitialAdLoadCallback 类型
@@ -167,7 +171,8 @@ export class InterstitialAdClient extends AdClient {
      * @en
      * Handle paid events
      */
-    private onPaidEvent = (ntf: InterstitialPaidEventNotification) => {
+    private onPaidEvent = (ntf: InterstitialPaidEventNotification | string) => {
+        ntf = typeof ntf === 'string' ? JSON.parse(ntf) : ntf;
         if (ntf.unitId !== this.unitId) return;
 
         // 检查是否为 OnPaidEventListener 类型
@@ -183,7 +188,8 @@ export class InterstitialAdClient extends AdClient {
      * @en
      * Handle full screen content callback
      */
-    private onFullScreenContentCallback = (ntf: InterstitialFullScreenContentCallbackNTF) => {
+    private onFullScreenContentCallback = (ntf: InterstitialFullScreenContentCallbackNTF | string) => {
+        ntf = typeof ntf === 'string' ? JSON.parse(ntf) : ntf;
         if (ntf.unitId !== this.unitId) return;
 
         // 检查是否为 InterstitialFullScreenContentCallback 类型
@@ -202,7 +208,7 @@ export class InterstitialAdClient extends AdClient {
                     break;
                 case "onAdFailedToShowFullScreenContent":
                     if (fullScreenCallback.onAdFailedToShowFullScreenContent) {
-                        fullScreenCallback.onAdFailedToShowFullScreenContent(ntf.loadAdError);
+                        fullScreenCallback.onAdFailedToShowFullScreenContent((ntf as any).loadAdError ?? (ntf as any).adError);
                     }
                     break;
                 case "onAdImpression":

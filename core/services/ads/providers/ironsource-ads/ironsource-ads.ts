@@ -3,6 +3,7 @@ import { RewardedAdClient } from './ads/client/RewardedAdClient';
 import { IAdProvider } from '../iad-provider';
 import { BannerAdBundle, BannerConfig, GeZiAdBundle, GeZiAdConfig, InterstitialAdBundle, InterstitialConfig, RewardVideoBundle, RewardVideoConfig, ShowInterstitialAdCallBackMsg, ShowRewardVideoCallBackMsg } from '../../ads-manager';
 import { BannerClient } from './ads/client/BannerClient';
+import { InterstitialAdClient } from './ads/client/InterstitialAdClient';
 import { LoadAdError } from './ads/alias/TypeAlias';
 import { BannerSize } from './misc/BannerSize';
 import { BottomCenter } from './misc/BannerAlignment';
@@ -22,6 +23,9 @@ export default class IronSourceAds implements IAdProvider {
 
     // 保存当前激励广告的 resolver
     private currentRewardVideoResolver: ((value: ShowRewardVideoCallBackMsg) => void) | null = null;
+    // 保存当前插屏广告的 resolver
+    private currentInterstitialResolver: ((value: ShowInterstitialAdCallBackMsg) => void) | null = null;
+    private interstitialLoadingMap: Map<string, boolean> = new Map();
 
     init(rewardVideosConfigArr: Array<RewardVideoConfig>, interstitialAdsConfigArr: Array<InterstitialConfig>, bannersConfigArr: Array<BannerConfig>, geZiAdsConfigArr: Array<GeZiAdConfig>) {
         log(this.logTag, `初始化广告`);
@@ -36,6 +40,7 @@ export default class IronSourceAds implements IAdProvider {
                 log(this.logTag, "IronSourceAdsJavaSideInitSuccess");
                 // 预加载广告
                 this.preloadRewardVideo();
+                this.preloadInterstitial();
             });
         }
     }
@@ -285,25 +290,189 @@ export default class IronSourceAds implements IAdProvider {
     //#region 插屏广告
     private initInterstitialAds(interstitialAdsConfigArr: Array<InterstitialConfig
     >) {
-        // TODO: 实现插屏广告初始化
-        log(this.logTag, "插屏广告初始化待实现");
+        interstitialAdsConfigArr?.forEach((value) => {
+            const bundle = new InterstitialAdBundle();
+            bundle.interstitialId = value.id;
+            bundle.hasInterstitialInCache = false;
+            bundle.bShow = false;
+
+            const interstitialClient = new InterstitialAdClient(value.id);
+            bundle.interstitialInstance = interstitialClient;
+            this.interstitialLoadingMap.set(value.posName, false);
+
+            interstitialClient.adListener = {
+                onAdLoaded: () => {
+                    log(this.logTag, `插屏广告加载成功: ${value.posName}`);
+                    bundle.hasInterstitialInCache = true;
+                    this.interstitialLoadingMap.set(value.posName, false);
+                },
+                onAdFailedToLoad: (loadAdError) => {
+                    log(this.logTag, `插屏广告加载失败: ${value.posName}`, loadAdError);
+                    bundle.hasInterstitialInCache = false;
+                    this.interstitialLoadingMap.set(value.posName, false);
+                },
+                onAdImpression: () => {
+                    log(this.logTag, `插屏广告展示曝光: ${value.posName}`);
+                },
+                onAdDismissedFullScreenContent: () => {
+                    log(this.logTag, `插屏广告关闭: ${value.posName}`);
+                    this.isShowingInterstitial = false;
+                    bundle.bShow = false;
+                    bundle.hasInterstitialInCache = false;
+                    this.loadInterstitial(value.posName);
+
+                    if (this.currentInterstitialResolver) {
+                        const msg = new ShowInterstitialAdCallBackMsg();
+                        msg.success = true;
+                        this.currentInterstitialResolver(msg);
+                        this.currentInterstitialResolver = null;
+                    }
+                },
+                onAdFailedToShowFullScreenContent: (adError) => {
+                    log(this.logTag, `插屏广告展示失败: ${value.posName}`, adError);
+                    this.isShowingInterstitial = false;
+                    bundle.bShow = false;
+                    bundle.hasInterstitialInCache = false;
+                    this.loadInterstitial(value.posName);
+
+                    if (this.currentInterstitialResolver) {
+                        const msg = new ShowInterstitialAdCallBackMsg();
+                        msg.success = false;
+                        msg.errMsg = "广告展示失败";
+                        this.currentInterstitialResolver(msg);
+                        this.currentInterstitialResolver = null;
+                    }
+                }
+            } as any;
+
+            this.interstitialInstanceMap.set(value.posName, bundle);
+            log(this.logTag, `初始化插屏广告: posName=${value.posName}, unitId=${value.id}`);
+        });
     }
 
     showInterstitial(posName: string): Promise<ShowInterstitialAdCallBackMsg> {
-        // TODO: 实现插屏广告展示
-        log(this.logTag, `插屏广告展示待实现: ${posName}`);
-        return Promise.resolve(new ShowInterstitialAdCallBackMsg());
+        return new Promise(async (resolve) => {
+            if (this.isShowingInterstitial) {
+                const msg = new ShowInterstitialAdCallBackMsg();
+                msg.success = false;
+                msg.errMsg = "广告正在播放中";
+                resolve(msg);
+                return;
+            }
+
+            const bundle = this.interstitialInstanceMap.get(posName);
+            if (!bundle) {
+                const msg = new ShowInterstitialAdCallBackMsg();
+                msg.success = false;
+                msg.errMsg = `无法找到posName=${posName}的插屏广告`;
+                resolve(msg);
+                return;
+            }
+
+            if (!bundle.hasInterstitialInCache) {
+                const loaded = await this.loadInterstitial(posName);
+                if (!loaded) {
+                    const msg = new ShowInterstitialAdCallBackMsg();
+                    msg.success = false;
+                    msg.errMsg = "广告加载失败";
+                    resolve(msg);
+                    return;
+                }
+            }
+
+            this.isShowingInterstitial = true;
+            bundle.bShow = true;
+            this.currentInterstitialResolver = resolve;
+
+            try {
+                bundle.interstitialInstance.show();
+            } catch (e) {
+                this.isShowingInterstitial = false;
+                bundle.bShow = false;
+                this.currentInterstitialResolver = null;
+                const msg = new ShowInterstitialAdCallBackMsg();
+                msg.success = false;
+                msg.errMsg = "展示广告时发生错误";
+                resolve(msg);
+            }
+        });
     }
 
     hasInterstitial(posName: string): boolean {
-        // TODO: 实现插屏广告检查
-        return false;
+        return this.interstitialInstanceMap.has(posName);
     }
 
-    preloadInterstitial(): Promise<boolean> {
-        // TODO: 实现插屏广告预加载
-        log(this.logTag, "插屏广告预加载待实现");
-        return Promise.resolve(false);
+    preloadInterstitial(posName?: string): Promise<boolean> {
+        if (posName) {
+            return this.loadInterstitial(posName);
+        }
+
+        const tasks: Promise<boolean>[] = [];
+        this.interstitialInstanceMap.forEach((_, key) => {
+            tasks.push(this.loadInterstitial(key));
+        });
+        if (tasks.length === 0) {
+            return Promise.resolve(false);
+        }
+        return Promise.all(tasks).then(results => results.some(Boolean));
+    }
+
+    private loadInterstitial(posName: string): Promise<boolean> {
+        return new Promise((resolve) => {
+            const bundle = this.interstitialInstanceMap.get(posName);
+            if (!bundle) {
+                resolve(false);
+                return;
+            }
+
+            if (bundle.hasInterstitialInCache) {
+                resolve(true);
+                return;
+            }
+
+            if (this.interstitialLoadingMap.get(posName)) {
+                let waitCount = 0;
+                const timer = setInterval(() => {
+                    waitCount++;
+                    if (!this.interstitialLoadingMap.get(posName)) {
+                        clearInterval(timer);
+                        resolve(!!bundle.hasInterstitialInCache);
+                        return;
+                    }
+                    if (waitCount >= 100) {
+                        clearInterval(timer);
+                        resolve(false);
+                    }
+                }, 100);
+                return;
+            }
+
+            this.interstitialLoadingMap.set(posName, true);
+            bundle.hasInterstitialInCache = false;
+
+            try {
+                bundle.interstitialInstance.load(bundle.interstitialId);
+            } catch (e) {
+                this.interstitialLoadingMap.set(posName, false);
+                resolve(false);
+                return;
+            }
+
+            let waitCount = 0;
+            const timer = setInterval(() => {
+                waitCount++;
+                if (!this.interstitialLoadingMap.get(posName)) {
+                    clearInterval(timer);
+                    resolve(!!bundle.hasInterstitialInCache);
+                    return;
+                }
+                if (waitCount >= 100) {
+                    clearInterval(timer);
+                    this.interstitialLoadingMap.set(posName, false);
+                    resolve(false);
+                }
+            }, 100);
+        });
     }
     //#endregion
 
@@ -408,7 +577,6 @@ export default class IronSourceAds implements IAdProvider {
     }
     //#endregion
 }
-
 
 
 

@@ -52,19 +52,23 @@ export class StringUtil {
      * 12345 = 1.23万
      */
     static numberToTenThousand(value: number, fixed: number = 2, k = 10000): string {
-        // var k = 10000;
-        var sizes = ['', '万', '亿', '万亿'];
-        var sign = Math.sign(value);
-        value = Math.abs(value)
+        const sizes = ['', '万', '亿', '万亿']; // 可继续扩展
+        const sign = Math.sign(value);
+        value = Math.abs(value);
+
         if (value < k) {
-            let fixedValue = value.toFixed(fixed)
+            const fixedValue = value.toFixed(fixed);
             return (sign * parseFloat(fixedValue)).toString();
         }
-        else {
-            var i = Math.floor(Math.log(value) / Math.log(k));
-            return parseFloat((sign * value / Math.pow(k, i)).toFixed(fixed)) + sizes[i];
-        }
+
+        let i = Math.floor(Math.log(value) / Math.log(k));
+        const maxIndex = sizes.length - 1;
+        i = Math.min(i, maxIndex); // 防越界
+
+        const num = parseFloat((sign * value / Math.pow(k, i)).toFixed(fixed));
+        return `${num}${sizes[i]}`;
     }
+
 
     /**
      * 时间格式化

@@ -28,64 +28,6 @@ export class UIData {
  */
 @ccclass('UIPopup')
 export default abstract class UIPopup<T extends UIData> extends UIBase {
-
-    //#region  animation
-    @property
-    _useAnimation: boolean = false;
-    @property({ displayName: "使用animation" })
-    get useAnimation() {
-        return this._useAnimation;
-    }
-    set useAnimation(value) {
-        this._useAnimation = value;
-        if (value == true) {
-            if (EDITOR) {
-                let anim: Animation = this.node.getComponent(Animation);
-                if (!anim) {
-                    anim = this.node.addComponent(Animation);
-                }
-                if (this.openClip == null) {
-                    EditorTool.load<AnimationClip>("script/framework/core/ui/ui-framework/default_uipopup_open_animation.anim").then((v) => { this.openClip = v; });
-                }
-                if (this.closeClip == null) {
-                    EditorTool.load<AnimationClip>("script/framework/core/ui/ui-framework/default_uipopup_close_animation.anim").then((v) => { this.closeClip = v; });
-                }
-            }
-        } else {
-            let anim = this.node.getComponent(Animation);
-            if (anim) {
-                anim.destroy()
-            }
-            this.animation = null;
-            this.openClip = null;
-            this.closeClip = null;
-        }
-
-    }
-
-    @property({
-        type: Animation,
-        visible() { return !!this._useAnimation; }
-    })
-    protected animation: Animation = null;
-
-    @property({
-        type: AnimationClip,
-        tooltip: DEV && "打开弹窗的动画",
-        visible() { return !!this._useAnimation; }
-
-    })
-    protected openClip: AnimationClip = null;
-
-    @property({
-        type: AnimationClip,
-        tooltip: DEV && "关闭弹窗的动画",
-        visible() { return !!this._useAnimation; }
-    })
-    protected closeClip: AnimationClip = null;
-
-
-    //#endregion
     //#region  空白处关闭，任意处关闭设置
 
     /**
@@ -205,11 +147,7 @@ export default abstract class UIPopup<T extends UIData> extends UIBase {
 
 
     public onLoad() {
-        if (this.animation) {
-            this.openClip && this.animation.addClip(this.openClip);
-            this.closeClip && this.animation.addClip(this.closeClip);
-            this.animation.on(Animation.EventType.FINISHED, this.onAnimFinished, this);
-        }
+
 
         if (this._touchBlankPlaceToClose) {
             this.node.on(Node.EventType.TOUCH_END, this.onThisNodeTouchEnd_UsedFor_TouchMarginToClose, this, true);
@@ -224,14 +162,12 @@ export default abstract class UIPopup<T extends UIData> extends UIBase {
         await this.beforeShow();
         super.show();
         this.onShow();
-        this.playOpenAnimation();
         this.runOpenAction();
         await this.afterShow();
     }
 
     public async hide() {
         await this.beforeHide();
-        await this.playCloseAnimation();
         super.hide();
         this.onHide();
         await this.afterHide();
@@ -243,7 +179,6 @@ export default abstract class UIPopup<T extends UIData> extends UIBase {
         this.isClosing = true;
 
         await this.beforeClose();
-        this.playCloseAnimation();
         await this.runCloseAction();
         // 不需要缓存才destroy。
         if (!this.needCache) {
@@ -251,6 +186,8 @@ export default abstract class UIPopup<T extends UIData> extends UIBase {
         }
         this.onClose();
         await this.afterClose();
+
+        this.isClosing = false;
     }
 
 
@@ -268,31 +205,7 @@ export default abstract class UIPopup<T extends UIData> extends UIBase {
         await action?.runCloseAction();
     }
     //#endregion
-    protected onAnimFinished(type, state: AnimationState): void {
-        if (state.clip === this.closeClip) {
-            this.closeAnimationPromiseResolve && this.closeAnimationPromiseResolve();
-        }
-    }
 
-    public playOpenAnimation(): void {
-        if (this.animation && this.openClip) {
-            this.animation.play(this.openClip.name);
-        }
-    }
-
-    public async playCloseAnimation(): Promise<void> {
-        return new Promise<void>((resolve, reject) => {
-            if (this.animation && this.closeClip) {
-                this.closeAnimationPromiseResolve = resolve;
-                if (this.animation.getState(this.closeClip.name).isPlaying) {
-                    return;
-                }
-                this.animation.play(this.closeClip.name);
-            } else {
-                resolve();
-            }
-        });
-    }
 
     //#endregion
     private onThisNodeTouchEnd_UsedFor_TouchMarginToClose(event: EventTouch) {

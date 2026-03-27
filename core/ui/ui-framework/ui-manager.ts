@@ -162,12 +162,16 @@ export default class UIManager {
             error(`没有找到uiClass = ${js.getClassName(uiClass)}对应的预制体路径`)
             return;
         }
-        let prefab = await this.loadPrefab(pathAndBundle.path, pathAndBundle.bundle);
-        let node = instantiate(prefab);
-        //@ts-ignore
-        let uiInstance = node.getComponent(UIBase);
-        // this._currentShowingPopup.node = node;
-        initUI(uiInstance);
+        try {
+            let prefab = await this.loadPrefab(pathAndBundle.path, pathAndBundle.bundle);
+            let node = instantiate(prefab);
+            //@ts-ignore
+            let uiInstance = node.getComponent(UIBase);
+            // this._currentShowingPopup.node = node;
+            initUI(uiInstance);
+        } catch (e) {
+            error(`showTips error: ${e}`);
+        }
     }
 
 
@@ -279,7 +283,7 @@ export default class UIManager {
         this._waitingQueue.sort((a, b) => (b.params.priority - a.params.priority));
     }
 
-    private showNextPopup() {
+    private async showNextPopup() {
         if (this.showingUIStack.length > 0) {
             // 等于最后一个
             this._currentShowingPopup = this.showingUIStack[this.showingUIStack.length - 1];
@@ -289,8 +293,10 @@ export default class UIManager {
             return;
         }
         let bundle: PopupDataBundle = null;
+        let fromSuspendedQueue = false;
         if (this._suspendedQueue.length > 0) {
             bundle = this._suspendedQueue.shift();
+            fromSuspendedQueue = true;
         } else {
             bundle = this._waitingQueue.shift();
         }
@@ -299,58 +305,55 @@ export default class UIManager {
             if (isValid(bundle.node)) {
                 // 设为当前弹窗
                 this._currentShowingPopup = bundle;
+                if (!this.showingUIStack.includes(bundle)) {
+                    this.showingUIStack.push(bundle);
+                }
                 // 直接展示
                 //@ts-ignore
-                bundle.node.getComponent(UIPopup).show();
+                let popup = bundle.node.getComponent(UIPopup);
+                if (!popup) {
+                    error(`showNextPopup error: node ${bundle.node.name} 没有绑定UIPopup脚本`);
+                    this._currentShowingPopup = null;
+                    return;
+                }
+                if (fromSuspendedQueue) {
+                    // @ts-ignore
+                    await popup.onResume();
+                }
+                await popup.show();
                 return;
             }
             // 加载并展示
-            this.openClassTypePopup(bundle);
+            await this.openClassTypePopup(bundle);
         }
 
     }
 
     private async openClassTypePopup(popupDataBundle: PopupDataBundle): Promise<void> {
-        return new Promise(async res => {
-            if (this._currentShowingPopup) {
-                // 是否立即强制展示
-                if (popupDataBundle.params && popupDataBundle.params.immediately) {
-                    if (popupDataBundle.params.suspendCurrent) {
-                        await this.suspendCurrentPopup();
-                    }
-                } else {
-                    // 将请求推入等待队列
-                    this.pushQueue(popupDataBundle);
-                    res();
-                    return;
+        if (this._currentShowingPopup) {
+            // 是否立即强制展示
+            if (popupDataBundle.params && popupDataBundle.params.immediately) {
+                if (popupDataBundle.params.suspendCurrent) {
+                    await this.suspendCurrentPopup();
                 }
+            } else {
+                // 将请求推入等待队列
+                this.pushQueue(popupDataBundle);
+                return;
             }
-            this._currentShowingPopup = popupDataBundle;
-            let initUI = (uiInstance: UIBase) => {
-                if (!uiInstance) {
-                    console.error(`${js.getClassName(popupDataBundle.uiClass)}没有绑定UI脚本!!!`);
-                    return;
-                }
-                let uiRoot = director.getScene().getChildByName('Canvas');
-                if (!uiRoot) {
-                    console.error(`当前场景没有${director.getScene().name}Canvas!!!`);
-                    return;
-                }
-                uiInstance.node.parent = uiRoot;
-                uiInstance.node.setPosition(0, 0);
-                uiInstance.init(popupDataBundle.data);
-                uiInstance.node.setSiblingIndex(popupDataBundle.zOrder as number);
-                uiInstance.show();
-                this.showingUIStack.push(popupDataBundle);
-                res();
-            }
+        }
 
+        this._currentShowingPopup = popupDataBundle;
+        try {
             let uiInstance = this.getUIFromCachedMap(popupDataBundle.uiClass);
+            console.log("huan cun nadao ")
             let node = uiInstance?.node;
             if (!uiInstance) {
                 let pathAndBundle = this.uiPrefabNameAndPathMap.get(js.getClassName(popupDataBundle.uiClass));
                 if (!pathAndBundle) {
-                    error(`没有找到uiClass = ${js.getClassName(popupDataBundle.uiClass)}对应的预制体路径`)
+                    error(`没有找到uiClass = ${js.getClassName(popupDataBundle.uiClass)}对应的预制体路径`);
+                    this._currentShowingPopup = null;
+                    await this.showNextPopup();
                     return;
                 }
                 let prefab = await this.loadPrefab(pathAndBundle.path, pathAndBundle.bundle);
@@ -358,9 +361,37 @@ export default class UIManager {
                 //@ts-ignore
                 uiInstance = node.getComponent(UIBase);
             }
+            if (!uiInstance) {
+                error(`${js.getClassName(popupDataBundle.uiClass)}没有绑定UI脚本!!!`);
+                if (isValid(node)) {
+                    node.destroy();
+                }
+                this._currentShowingPopup = null;
+                await this.showNextPopup();
+                return;
+            }
+            let scene = director.getScene();
+            let uiRoot = scene?.getChildByName('Canvas');
+            if (!uiRoot) {
+                console.error(`当前场景没有${scene?.name ?? ''}Canvas!!!`);
+                this._currentShowingPopup = null;
+                await this.showNextPopup();
+                return;
+            }
             popupDataBundle.node = node;
-            initUI(uiInstance);
-        });
+            uiInstance.node.parent = uiRoot;
+            uiInstance.node.setPosition(0, 0);
+            uiInstance.init(popupDataBundle.data);
+            uiInstance.node.setSiblingIndex(popupDataBundle.zOrder as number);
+            await uiInstance.show();
+            if (!this.showingUIStack.includes(popupDataBundle)) {
+                this.showingUIStack.push(popupDataBundle);
+            }
+        } catch (e) {
+            error(`openClassTypePopup error: ${e}`);
+            this._currentShowingPopup = null;
+            await this.showNextPopup();
+        }
     }
 
     private generatePopupDataBundle(uiClass, data, node, zOrder, params: PopupParams) {
@@ -478,7 +509,7 @@ export default class UIManager {
                     log('this._currentShowingPopup set to null');
                 }
                 await ui.close();
-                this.showNextPopup();
+                await this.showNextPopup();
                 if (ui.needCache) {
                     this.setUIToCachedMap(ui);
                 }
@@ -554,7 +585,7 @@ export default class UIManager {
                     } else {
                         await ui.close();
                         this._currentShowingPopup = null;
-                        this.showNextPopup();
+                        await this.showNextPopup();
                         return Promise.resolve(true);
                     }
                 }
@@ -603,11 +634,15 @@ export default class UIManager {
         })
     }
 
-    private loadPrefab(path: string, bundle): Promise<Prefab> {
-        return new Promise(res => {
+    private loadPrefab(path: string, bundle: AssetManager.Bundle): Promise<Prefab> {
+        return new Promise((res, reject) => {
             bundle.load(path, (error, prefab: Prefab) => {
                 if (error) {
-                    console.error(`UIManager loadPrefab error: ${error}`);
+                    reject(new Error(`UIManager loadPrefab error: ${error}`));
+                    return;
+                }
+                if (!prefab) {
+                    reject(new Error(`UIManager loadPrefab error: prefab is null, path=${path}`));
                     return;
                 }
                 res(prefab);
@@ -617,6 +652,4 @@ export default class UIManager {
 
 
 }
-
-
 

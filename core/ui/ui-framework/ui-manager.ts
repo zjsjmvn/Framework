@@ -344,53 +344,47 @@ export default class UIManager {
         }
 
         this._currentShowingPopup = popupDataBundle;
-        try {
-            let uiInstance = this.getUIFromCachedMap(popupDataBundle.uiClass);
-            console.log("huan cun nadao ")
-            let node = uiInstance?.node;
-            if (!uiInstance) {
-                let pathAndBundle = this.uiPrefabNameAndPathMap.get(js.getClassName(popupDataBundle.uiClass));
-                if (!pathAndBundle) {
-                    error(`没有找到uiClass = ${js.getClassName(popupDataBundle.uiClass)}对应的预制体路径`);
-                    this._currentShowingPopup = null;
-                    await this.showNextPopup();
-                    return;
-                }
-                let prefab = await this.loadPrefab(pathAndBundle.path, pathAndBundle.bundle);
-                node = instantiate(prefab);
-                //@ts-ignore
-                uiInstance = node.getComponent(UIBase);
-            }
-            if (!uiInstance) {
-                error(`${js.getClassName(popupDataBundle.uiClass)}没有绑定UI脚本!!!`);
-                if (isValid(node)) {
-                    node.destroy();
-                }
+        let uiInstance = this.getUIFromCachedMap(popupDataBundle.uiClass);
+        console.log("huan cun nadao ")
+        let node = uiInstance?.node;
+        if (!uiInstance) {
+            let pathAndBundle = this.uiPrefabNameAndPathMap.get(js.getClassName(popupDataBundle.uiClass));
+            if (!pathAndBundle) {
+                error(`没有找到uiClass = ${js.getClassName(popupDataBundle.uiClass)}对应的预制体路径`);
                 this._currentShowingPopup = null;
                 await this.showNextPopup();
                 return;
             }
-            let scene = director.getScene();
-            let uiRoot = scene?.getChildByName('Canvas');
-            if (!uiRoot) {
-                console.error(`当前场景没有${scene?.name ?? ''}Canvas!!!`);
-                this._currentShowingPopup = null;
-                await this.showNextPopup();
-                return;
+            let prefab = await this.loadPrefab(pathAndBundle.path, pathAndBundle.bundle);
+            node = instantiate(prefab);
+            //@ts-ignore
+            uiInstance = node.getComponent(UIBase);
+        }
+        if (!uiInstance) {
+            error(`${js.getClassName(popupDataBundle.uiClass)}没有绑定UI脚本!!!`);
+            if (isValid(node)) {
+                node.destroy();
             }
-            popupDataBundle.node = node;
-            uiInstance.node.parent = uiRoot;
-            uiInstance.node.setPosition(0, 0);
-            uiInstance.init(popupDataBundle.data);
-            uiInstance.node.setSiblingIndex(popupDataBundle.zOrder as number);
-            await uiInstance.show();
-            if (!this.showingUIStack.includes(popupDataBundle)) {
-                this.showingUIStack.push(popupDataBundle);
-            }
-        } catch (e) {
-            error(`openClassTypePopup error: ${e}`);
             this._currentShowingPopup = null;
             await this.showNextPopup();
+            return;
+        }
+        let scene = director.getScene();
+        let uiRoot = scene?.getChildByName('Canvas');
+        if (!uiRoot) {
+            console.error(`当前场景没有${scene?.name ?? ''}Canvas!!!`);
+            this._currentShowingPopup = null;
+            await this.showNextPopup();
+            return;
+        }
+        popupDataBundle.node = node;
+        uiInstance.node.parent = uiRoot;
+        uiInstance.node.setPosition(0, 0);
+        uiInstance.init(popupDataBundle.data);
+        uiInstance.node.setSiblingIndex(popupDataBundle.zOrder as number);
+        await uiInstance.show();
+        if (!this.showingUIStack.includes(popupDataBundle)) {
+            this.showingUIStack.push(popupDataBundle);
         }
     }
 

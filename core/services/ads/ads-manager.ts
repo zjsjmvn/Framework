@@ -90,6 +90,10 @@ export class RewardVideoBundle {
 
     /** 是否预加载中 */
     public isPreloading: boolean = false;
+    /** 当前激励加载等待中的 Promise。 */
+    public loadPromise: Promise<boolean> | null = null;
+    /** 当前激励加载等待中的 resolver。 */
+    public loadResolver: ((value: boolean) => void) | null = null;
     rewardAdId
 }
 
@@ -105,7 +109,18 @@ export class BannerAdBundle {
     public bannerInstance;
     public bannerId;
 
-    public bShow;
+    /** 业务当前是否希望展示 Banner。 */
+    public bShow: boolean = false;
+    /** Banner 是否已经加载成功，可以直接展示。 */
+    public hasBannerInCache: boolean = false;
+    /** Banner 是否正在加载，避免重复请求原生加载。 */
+    public isLoading: boolean = false;
+    /** 加载成功后是否需要立刻展示，用于 showBanner 触发的异步加载。 */
+    public pendingShow: boolean = false;
+    /** 当前 Banner 加载等待中的 Promise。 */
+    public loadPromise: Promise<boolean> | null = null;
+    /** 当前 Banner 加载等待中的 resolver。 */
+    public loadResolver: ((value: boolean) => void) | null = null;
     public style: { width: number, height: number, left: number, top: number };
 }
 export class GeZiAdBundle {
@@ -443,4 +458,3 @@ export class AdsManager {
         });
     }
 }
-

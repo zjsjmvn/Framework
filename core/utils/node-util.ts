@@ -113,16 +113,23 @@ declare module 'cc' {
 
 Object.defineProperty(Node.prototype, 'zIndex', {
     set(zIndex: number) {
-        if (this.zIndex === zIndex || !isValid(this)) {
+        const self = this as Node;
+        if (!isValid(self)) {
             return
         }
-        this._zIndex = zIndex;
-        let self = this as Node;
-        if (self.parent) {
-            const children = self.parent.children;
-            let siblingIndex = binarySearch(children, zIndex);
-            self.setSiblingIndex(siblingIndex);
+        const currentZIndex = getNodeZIndex(self);
+        if (currentZIndex === zIndex) {
+            return;
         }
+
+        self._zIndex = zIndex;
+        if (!self.parent) {
+            return;
+        }
+
+        const siblingIndex = findSiblingIndexByZIndex(self.parent.children, self, zIndex);
+        console.log('siblingIndex', siblingIndex);
+        self.setSiblingIndex(siblingIndex);
     },
     get(): number {
         return this._zIndex || 0;
@@ -130,18 +137,21 @@ Object.defineProperty(Node.prototype, 'zIndex', {
     configurable: true,
 });
 
-function binarySearch(children: Node[], zIndex: number): number {
-    let left = 0;
-    let right = children.length - 1;
-    while (left <= right) {
-        let mid = Math.floor((left + right) / 2);
-        if (children[mid].zIndex < zIndex) {
-            left = mid + 1;
-        } else {
-            right = mid - 1;
+function getNodeZIndex(node: Node): number {
+    return node._zIndex || -1;
+}
+
+function findSiblingIndexByZIndex(children: Node[], self: Node, zIndex: number): number {
+    let targetIndex = 0;
+    for (const child of children) {
+        if (child === self) {
+            continue;
+        }
+        if (getNodeZIndex(child) < zIndex) {
+            targetIndex++;
         }
     }
-    return left;
+    return targetIndex;
 }
 Object.defineProperty(Node.prototype, 'x', {
     get: function () {
@@ -250,4 +260,3 @@ Object.defineProperty(Node.prototype, 'angleZ', {
     enumerable: true,
     configurable: true,
 });
-

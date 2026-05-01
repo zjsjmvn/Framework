@@ -128,7 +128,6 @@ Object.defineProperty(Node.prototype, 'zIndex', {
         }
 
         const siblingIndex = findSiblingIndexByZIndex(self.parent.children, self, zIndex);
-        console.log('siblingIndex', siblingIndex);
         self.setSiblingIndex(siblingIndex);
     },
     get(): number {

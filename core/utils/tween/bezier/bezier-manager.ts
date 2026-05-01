@@ -64,6 +64,22 @@ export default class BezierManager extends Component {
         this.curveList.delete(target)
     }
 
+    public backCurveList(target: Node, distance: number, speed: number = 200) {
+        let curve = this.curveList.get(target);
+        if (!curve) {
+            return
+        }
+        curve.requestBack(distance, speed);
+    }
+
+    public setCurveSpeed(target: Node, speedScale: number) {
+        let curve = this.curveList.get(target);
+        if (!curve) {
+            return
+        }
+        curve.speedScale = speedScale;
+    }
+
 
     update(dt) {
         // this.curveSegmentList.forEach((curve, target) => {
@@ -94,11 +110,20 @@ export default class BezierManager extends Component {
         this.curveList.forEach((curve, target) => {
             if (target.isValid && curve) {
                 if (curve.state == CurveState.Running) {
-                    curve.curTime += 0.01;
+                    if (curve.isBacking()) {
+                        curve.curTime -= curve.consumeBackTime(dt);
+                    } else {
+                        curve.curTime += dt * curve.speedScale;
+                    }
+                    if (curve.curTime <= 0) {
+                        curve.curTime = 0;
+                        curve.clearBack();
+                    }
                     // 小于零部分是延迟执行
-                    if (curve.curTime > 0) {
+                    if (curve.curTime >= 0) {
                         // 最后一帧
                         if (curve.curTime >= curve.totalDuration) {
+                            curve.curTime = curve.totalDuration;
                             target.position = Bezier.getLastCurvePos(curve.curveSegments)
                             this.removeCurveList(target);
                             log('delete');

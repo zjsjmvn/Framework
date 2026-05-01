@@ -57,7 +57,7 @@ export class Bezier {
                 // b.curveSegment.stop()
             }
             if (b.curve) {
-                // b.curve.stop()
+                b.curve.state = CurveState.Stop
             }
         })
     }
@@ -70,7 +70,7 @@ export class Bezier {
                 // b.curveSegment.pause()
             }
             if (b.curve) {
-                // b.curve.pause()
+                b.curve.state = CurveState.Pause
             }
         })
     }
@@ -82,7 +82,7 @@ export class Bezier {
                 // b.curveSegment.resume()
             }
             if (b.curve) {
-                // b.curve.resume()
+                b.curve.state = CurveState.Running
             }
         })
     }
@@ -333,8 +333,26 @@ export class Bezier {
         if (ease == EaseType.Constant) {
             error('')
         }
+        if (duration != null && duration > 0) {
+            curve.totalDuration = duration;
+        }
+        curve.ease = ease;
+        curve.completeCallBack = callBack;
         BezierManager.Instant.addCurveList(target, curve)
-        return;
+        return new Bezier(curve);
+    }
+
+    public static back(target: Node, distance: number, speed: number = 200) {
+        BezierManager.Instant.backCurveList(target, distance, speed);
+    }
+
+    public static setSpeed(target: Node, speedScale: number) {
+        BezierManager.Instant.setCurveSpeed(target, speedScale);
+    }
+
+    public static moveQueue(target: Node, curveSegments: CurveSegment[], callBack = () => { }): Bezier {
+        let curve = new Curve(curveSegments, EaseType.Linear, callBack);
+        return Bezier.runBezierAction(target, curve, 0, curve.totalDuration, curve.ease, callBack);
     }
 
 
@@ -414,7 +432,7 @@ export class Bezier {
      * @param {*} [callback=() => { }] 回调
      * @memberof Bezier
      */
-    private static async constantMoveTargetsWithPos(targets: Node[], pointArrays: Vec3[][], delayBetweenTwoTarget: number, totalDuration: number, repeatTimes: number = 1, callback = () => { }) {
+    public static async constantMoveTargetsWithPos(targets: Node[], pointArrays: Vec3[][], delayBetweenTwoTarget: number, totalDuration: number, repeatTimes: number = 1, callback = () => { }) {
         if (!targets || !pointArrays || pointArrays.length == 0) {
             return
         }
@@ -424,7 +442,8 @@ export class Bezier {
             curveSegment.points = pointArr
             curveSegments.push(curveSegment);
         });
-        let curve = new Curve(curveSegments, [], totalDuration, EaseType.Constant, callback);
+        let curve = new Curve(curveSegments, EaseType.Constant, callback);
+        curve.totalDuration = totalDuration;
         this.constantMoveTargetsWithCurve(targets, curve, totalDuration, delayBetweenTwoTarget, repeatTimes, callback);
         // let bezier = new Bezier(curveSegment);
         // return bezier;
@@ -443,7 +462,7 @@ export class Bezier {
      * @param {*} [callback=() => { }] 回调
      * @memberof Bezier
      */
-    private static constantMoveTargetsWithCurve(targets: Node[], curve: Curve, delayBetweenTwoTarget, totalDuration: number, repeatTimes: number = 1, callback = () => { }) {
+    public static constantMoveTargetsWithCurve(targets: Node[], curve: Curve, delayBetweenTwoTarget, totalDuration: number, repeatTimes: number = 1, callback = () => { }) {
         let totalLen = 0;
         let points: BVector2[] = [];
         curve.curveSegments.forEach((curveSegment, index) => {

@@ -131,6 +131,12 @@ export class Bezier {
         if (!points || points.length == 0) {
             return;
         }
+        if (time <= 0) {
+            return points[0].clone();
+        }
+        if (time >= 1) {
+            return points[points.length - 1].clone();
+        }
 
         // 预计算贝塞尔曲线的弧长
         const arcLength = Bezier.calculateArcLength(points);
@@ -143,14 +149,23 @@ export class Bezier {
             const u = i / 100;
             const currentPoint = Bezier.calculateBezierPoint(points, u);
             const segmentLength = Vec3.distance(previousPoint, currentPoint);
-            currentLength += segmentLength;
-            if (currentLength >= targetLength) {
-                return currentPoint;
+            const nextLength = currentLength + segmentLength;
+            if (nextLength >= targetLength) {
+                if (segmentLength <= 0) {
+                    return currentPoint;
+                }
+                const segmentTime = (targetLength - currentLength) / segmentLength;
+                return new Vec3(
+                    previousPoint.x + (currentPoint.x - previousPoint.x) * segmentTime,
+                    previousPoint.y + (currentPoint.y - previousPoint.y) * segmentTime,
+                    previousPoint.z + (currentPoint.z - previousPoint.z) * segmentTime
+                );
             }
+            currentLength = nextLength;
             previousPoint = currentPoint;
         }
 
-        return points[points.length - 1];
+        return points[points.length - 1].clone();
     }
 
 
@@ -169,14 +184,15 @@ export class Bezier {
 
     private static calculateBezierPoint(points: Vec3[], t: number): Vec3 {
         const n = points.length - 1;
-        let x = 0, y = 0;
+        let x = 0, y = 0, z = 0;
         points.forEach((item, index) => {
             const binomialCoefficient = Bezier.factorial(n) / (Bezier.factorial(index) * Bezier.factorial(n - index));
             const term = binomialCoefficient * Math.pow(1 - t, n - index) * Math.pow(t, index);
             x += item.x * term;
             y += item.y * term;
+            z += item.z * term;
         });
-        return new Vec3(x, y);
+        return new Vec3(x, y, z);
     }
     private static factorial(i: number) {
         let n = 1;

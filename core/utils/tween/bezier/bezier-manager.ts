@@ -11,6 +11,7 @@ import { Bezier } from "./tools/bezier";
 import { EaseType, Evaluate } from "./tools/ease-type";
 import NodeUtil from '../../node-util';
 import { CurveSegment } from './curve-segment';
+import { director } from 'cc';
 const { ccclass, property } = _decorator;
 
 @ccclass
@@ -20,7 +21,9 @@ export default class BezierManager extends Component {
     public static get Instant(): BezierManager {
         if (this.instance == null) {
             let node = new Node("BezierManager")
-            this.node.addChild(node);
+            let uiRoot = director.getScene().getChildByName('Canvas');
+
+            uiRoot.addChild(node);
             this.instance = node.addComponent(BezierManager);
             return this.instance
         } else {

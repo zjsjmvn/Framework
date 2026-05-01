@@ -1,5 +1,5 @@
 import { EDITOR } from 'cc/env';
-import { } from './curve';
+import { Curve } from './curve';
 import { EaseType } from './tools/ease-type';
 import { CCFloat, CCObject, Color, Component, Enum, Layers, Node, Vec3, _decorator, color, log, screen, v3, view } from 'cc';
 import { Bezier } from './tools/bezier';
@@ -240,6 +240,22 @@ export class BezierCurve extends Component {
         this._isWholeRun = v;
     }
 
+    // 多条曲线时，前一条曲线的末尾点和下一条曲线的起始点保持相同
+    @property({ visible: false })
+    private _isConnectHeadTail: boolean = false;
+    @property({ displayName: "设置一次首尾相连", tooltip: "多条曲线时，前一条曲线的末尾点作为下一条曲线的起始点" })
+    public get isConnectHeadTail(): boolean {
+        return this._isConnectHeadTail;
+    }
+    public set isConnectHeadTail(v: boolean) {
+        this._isConnectHeadTail = v;
+        if (v) {
+            this.syncConnectedCurvePoints();
+            this.calculateCurveRunTime();
+            this._isConnectHeadTail = false;
+        }
+    }
+
 
 
     onLoad() {
@@ -292,7 +308,7 @@ export class BezierCurve extends Component {
             this.pathNode.layer = Layers.Enum.UI_2D;
             this.pathNode.setWorldPosition(v3(0, 0, 0));
 
-            this.pathNode.parent = this.node;
+            this.pathNode.parent = this.node.parent;
             this.preCurve = curve
 
             // this.pathNode.on(Node.EventType.POSITION_CHANGED, () => {
@@ -327,6 +343,7 @@ export class BezierCurve extends Component {
         if (EDITOR) {
             this.foreachCurve(this.curve, (curve, i) => {
                 if (curve.checkPositionChanged()) {
+                    // curve.length = null;
                     curve.update();
                     this.updateControlPointList(curve, i);
                 }
@@ -357,6 +374,39 @@ export class BezierCurve extends Component {
 
     private updateControlPointList(curve: CurveSegment, i: number) {
         // console.warn("UpdateControlPointList")
+    }
+
+    private syncConnectedCurvePoints() {
+        if (!this._curveList || this._curveList.length <= 1) {
+            return
+        }
+
+        for (let i = 1; i < this._curveList.length; i++) {
+            this.syncCurveStartWithPrevious(this._curveList[i - 1], this._curveList[i]);
+        }
+    }
+
+    private syncCurveStartWithPrevious(prevCurve: CurveSegment, curve: CurveSegment) {
+        if (!prevCurve || !curve) {
+            return
+        }
+        let prevPoints = prevCurve.points;
+        if (!prevPoints || prevPoints.length == 0 || !curve.points || curve.points.length == 0) {
+            return
+        }
+
+        let endPos = prevPoints[prevPoints.length - 1].clone();
+        if (curve.points[0].equals(endPos)) {
+            return
+        }
+        curve.points[0] = endPos.clone();
+        curve.length = null;
+
+        let controlPoint = curve.controlPoints && curve.controlPoints[0];
+        if (controlPoint) {
+            controlPoint.position = endPos.clone();
+        }
+        curve.update();
     }
 
     private setCurveColor(color: Color = Color.WHITE) {
@@ -596,7 +646,7 @@ export class BezierCurve extends Component {
      */
     public play(): void {
         if (this.isWholeRun) {
-            this.bezier = Bezier.runBezierAction(this.node, this.curveList, this.duration, this.ease, this._completeCallBack);
+            this.bezier = Bezier.runBezierAction(this.node, new Curve(this.curveList), 0, this.duration, this.ease, this._completeCallBack);
 
         } else {
             this.bezier = Bezier.moveQueue(this.node, this.curveList, this._completeCallBack)

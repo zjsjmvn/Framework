@@ -5,10 +5,61 @@ import { Node, Vec3, bezier, error, log, tween, v2, v3 } from "cc";
 import PromiseUtil from "../../../promise-util";
 import { CurveSegment } from "../curve-segment";
 
+/**
+ * Bezier 轨道移动库使用说明
+ *
+ * 主要概念：
+ * - CurveSegment：一段贝塞尔曲线，保存控制点、段时长、缓动、重复次数等编辑数据。
+ * - Curve：运行时曲线，由多段 CurveSegment 组成，并保存当前运行时间、速度、后退状态。
+ * - BezierManager：挂在 Canvas 下的运行时调度器，每帧根据 Curve.curTime 计算节点 position。
+ * - Bezier：对外调用入口，业务层通常只需要使用这个类的静态方法。
+ *
+ * 基础用法：
+ * ```ts
+ * const bezierCurve = this.node
+ *     .getChildByName("Path")
+ *     .getChildByName("Node")
+ *     .getComponent(BezierCurve);
+ *
+ * const curve = new Curve(bezierCurve.curveList);
+ * Bezier.runBezierAction(this._Pig1, curve, 0, 6);
+ * ```
+ *
+ * 沿曲线后退一小段距离后继续前进：
+ * ```ts
+ * // 后退 80 像素，后退速度 300 像素/秒，退完自动继续前进。
+ * Bezier.back(this._Pig1, 80, 300);
+ * ```
+ *
+ * 调速和暂停：
+ * ```ts
+ * Bezier.setSpeed(this._Pig1, 0); // 暂停在当前曲线进度
+ * Bezier.setSpeed(this._Pig1, 1); // 正常前进
+ * Bezier.setSpeed(this._Pig1, 2); // 2 倍速前进
+ * ```
+ *
+ * 坐标系注意：
+ * - BezierManager 会直接执行 `target.position = curvePosition`。
+ * - 曲线点必须和 target.position 所在父节点坐标系一致。
+ * - 如果路径节点和怪物节点不在同一个父节点下，需要先把路径点转换到怪物父节点的本地坐标。
+ *
+ * 时间注意：
+ * - runBezierAction 的 duration 参数会覆盖本次 Curve.totalDuration。
+ * - 每段曲线自身的 duration 仍用于计算多段曲线之间的时间占比。
+ */
+
+/**
+ * 曲线采样点信息。
+ *
+ * constantMoveTargetsWithCurve 会把曲线离散成很多小段，每个 BVector2 表示：
+ * - pos：当前采样点位置。
+ * - length：上一个采样点到当前采样点的距离。
+ * - lenScale：预留字段，用于记录长度比例，目前运行逻辑没有实际使用。
+ */
 export class BVector2 {
     public pos: Vec3;
     public length: number; //上一点到当前点的距离
-    public lenScale: number;// 
+    public lenScale: number;//
 
 
     constructor(pos: Vec3, length: number, lenScale: number) {
@@ -19,6 +70,16 @@ export class BVector2 {
 }
 
 
+/**
+ * Bezier 对外门面类。
+ *
+ * 这个类负责：
+ * - 创建简单曲线包装对象。
+ * - 将 Curve 注册到 BezierManager 开始播放。
+ * - 对运行中的节点执行后退、调速、暂停、恢复等控制。
+ *
+ * 注意：真正的每帧位置更新在 BezierManager.update() 中完成。
+ */
 export class Bezier {
     private curveSegment: CurveSegment
     private curve: Curve;
@@ -49,7 +110,10 @@ export class Bezier {
 
     }
     /**
-     * 停止
+     * 停止当前 Bezier 实例控制的曲线。
+     *
+     * Stop 状态下 BezierManager 不再推进 curTime。当前实现只改变运行状态，
+     * 不会自动从 BezierManager 中移除 target。
      */
     public stop() {
         this.foreachBezier((b) => {
@@ -62,7 +126,9 @@ export class Bezier {
         })
     }
     /**
-     * 暂停
+     * 暂停当前 Bezier 实例控制的曲线。
+     *
+     * Pause 和 Stop 都会让 BezierManager 停止推进曲线，保留当前节点位置。
      */
     public pause() {
         this.foreachBezier((b) => {
@@ -75,7 +141,9 @@ export class Bezier {
         })
     }
 
-    // 恢复
+    /**
+     * 恢复曲线运行。
+     */
     public resume() {
         this.foreachBezier((b) => {
             if (b.curveSegment) {
@@ -87,7 +155,11 @@ export class Bezier {
         })
     }
 
-    // 设置偏移角度
+    /**
+     * 设置旋转偏移角度。
+     *
+     * 当前方法保留为兼容入口，具体 angleOffset 数据仍由 Curve/CurveSegment 持有。
+     */
     public setAngleOffset(angle) {
         this.foreachBezier((b) => {
             if (b.curveSegment) {
@@ -127,6 +199,13 @@ export class Bezier {
     //     })
     //     return new Vec3(x, y);
     // }
+    /**
+     * 根据归一化进度获取曲线上的位置。
+     *
+     * @param points 贝塞尔控制点列表。2 个点表示直线，3 个点表示二阶贝塞尔，4 个点表示三阶贝塞尔。
+     * @param time 归一化进度，范围通常为 0 到 1。
+     * @returns 曲线在该进度处的位置。内部使用弧长采样加段内插值，直线移动不会出现采样点跳动。
+     */
     public static getCurTimePos(points: Vec3[], time: number): Vec3 {
         if (!points || points.length == 0) {
             return;
@@ -170,6 +249,11 @@ export class Bezier {
 
 
 
+    /**
+     * 估算控制点对应贝塞尔曲线的弧长。
+     *
+     * 这里用 100 段采样近似弧长，主要用于让移动速度更接近匀速。
+     */
     private static calculateArcLength(points: Vec3[]): number {
         let length = 0;
         let previousPoint = points[0];
@@ -182,6 +266,11 @@ export class Bezier {
         return length;
     }
 
+    /**
+     * 按贝塞尔公式计算参数 t 对应的理论点。
+     *
+     * 这里的 t 是数学参数，不是弧长均匀进度；外部一般不要直接使用。
+     */
     private static calculateBezierPoint(points: Vec3[], t: number): Vec3 {
         const n = points.length - 1;
         let x = 0, y = 0, z = 0;
@@ -227,17 +316,25 @@ export class Bezier {
         return points
     }
 
-    // 计算曲线点
+    /**
+     * 按指定时长和缓动计算单段曲线位置。
+     *
+     * @param pointArr 单段曲线控制点。
+     * @param curTime 当前段运行时间。
+     * @param duration 当前段总时长。
+     * @param ease 缓动类型。
+     */
     public static calculateCurvePos(pointArr: Vec3[], curTime: number, duration: number, ease: EaseType): Vec3 {
         let t = Evaluate.calculate(ease, curTime, duration);
         let v3 = Bezier.getCurTimePos(pointArr, t)
         return v3;
     }
 
-
-
-
-
+    /**
+     * 获取曲线列表最后一段的最后一个点。
+     *
+     * 通常用于动画结束时把节点精确贴到终点。
+     */
     public static getLastCurvePos(curveList: CurveSegment[]) {
         let lastCurve = curveList[curveList.length - 1]
         return lastCurve.points[lastCurve.points.length - 1]
@@ -301,7 +398,15 @@ export class Bezier {
     //         index: durationList.length - 1
     //     };
     // }
-    // 计算曲线点(曲线列表)
+    /**
+     * 计算多段曲线在某个整体时间上的位置。
+     *
+     * @param curveSegments 曲线段列表。
+     * @param curTime 当前整体运行时间。
+     * @param totalDuration 整条曲线总运行时长。
+     * @param ease 整体缓动类型。
+     * @returns 当前应该设置给 target.position 的坐标。
+     */
     public static calculateCurveListPos(curveSegments: CurveSegment[], curTime: number, totalDuration: number, ease: EaseType): Vec3 {
         // 根据easing计算时间。
         let newTime = Evaluate.calculate(ease, curTime, totalDuration);
@@ -318,16 +423,15 @@ export class Bezier {
     }
 
     /**
-     * @description  曲线列表整体以ease缓动移动，共享duration(生命周期)，ease(缓动)。
-     * @static
-     * @param {Node[]} targets 目标节点
-     * @param {number} delayBetweenTwoTarget 两个目标节点之间的时间间隔。如果为0，则同时移动
-     * @param {CurveSegment[]} curveList 曲线列表
-     * @param {number} duration 生命周期
-     * @param {EaseType} [ease=EaseType.Linear] 缓动
-     * @param {*} [callBack=() => { }] 回调
-     * @return {*}  {Bezier}
-     * @memberof Bezier
+     * 播放一条 Curve。
+     *
+     * @param target 被移动的节点。BezierManager 会直接写入 target.position。
+     * @param curve 运行时曲线对象。
+     * @param delayBetweenTwoTarget 兼容旧接口的参数，当前单目标播放逻辑未使用。
+     * @param duration 本次运行总时长。传入正数时会覆盖 curve.totalDuration。
+     * @param ease 整体缓动类型。
+     * @param callBack 曲线播放到终点后的回调。
+     * @returns Bezier 控制对象，可调用 pause/resume/stop。
      */
     public static runBezierAction(target: Node, curve: Curve, delayBetweenTwoTarget?: number, duration?: number, ease: EaseType = EaseType.Linear, callBack = () => { }): Bezier {
         if (ease == EaseType.Constant) {
@@ -342,14 +446,32 @@ export class Bezier {
         return new Bezier(curve);
     }
 
+    /**
+     * 让正在沿曲线移动的节点后退一段距离，退完后自动继续前进。
+     *
+     * @param target 已经通过 runBezierAction 注册到 BezierManager 的节点。
+     * @param distance 后退距离，单位是曲线所在坐标系下的像素/坐标单位。
+     * @param speed 后退速度，单位是像素/秒。
+     */
     public static back(target: Node, distance: number, speed: number = 200) {
         BezierManager.Instant.backCurveList(target, distance, speed);
     }
 
+    /**
+     * 设置曲线运行速度倍率。
+     *
+     * @param target 已经在曲线上运行的节点。
+     * @param speedScale 速度倍率。0 表示暂停，1 表示正常，2 表示二倍速，负数表示持续倒退。
+     */
     public static setSpeed(target: Node, speedScale: number) {
         BezierManager.Instant.setCurveSpeed(target, speedScale);
     }
 
+    /**
+     * 兼容旧接口：按曲线段队列播放。
+     *
+     * 内部会把 CurveSegment[] 包装成 Curve，再交给 runBezierAction。
+     */
     public static moveQueue(target: Node, curveSegments: CurveSegment[], callBack = () => { }): Bezier {
         let curve = new Curve(curveSegments, EaseType.Linear, callBack);
         return Bezier.runBezierAction(target, curve, 0, curve.totalDuration, curve.ease, callBack);

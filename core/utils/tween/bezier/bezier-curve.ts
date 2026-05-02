@@ -17,6 +17,17 @@ export enum State {
 @executeInEditMode
 @menu('Bezier')
 // @inspector("packages://bezier/inspector.js")
+/**
+ * Bezier 编辑器组件。
+ *
+ * 挂到一个节点上后，会在编辑器中生成控制点和路径绘制节点，方便手动编辑曲线。
+ * 运行时可以直接调用 play() 播放自身节点，也可以从外部读取 curveList 后构造 Curve，
+ * 再用 Bezier.runBezierAction(target, curve) 驱动其他节点。
+ *
+ * 注意：
+ * - 曲线点是本地 position 数据，播放其他节点时要保证坐标系一致。
+ * - 不要同时在同一个节点挂多个 BezierCurve，onEnable 会自动阻止重复组件。
+ */
 export class BezierCurve extends Component {
 
     private defaultPoints: Vec3[] = [
@@ -28,7 +39,7 @@ export class BezierCurve extends Component {
 
     @property({ type: CurveSegment, visible: false })
     public curve: CurveSegment;
-    // 是否编辑
+    // 是否处于编辑状态。编辑状态下会显示控制点和辅助线。
     @property({ visible: false })
     private _isEdit: boolean = true;
     @property({ displayName: "编辑", })
@@ -43,7 +54,7 @@ export class BezierCurve extends Component {
         this.edit();
     }
 
-    // 是否绘制路径
+    // 是否在运行时仍绘制路径。关闭编辑时才会生效。
     @property({ visible: false })
     private _isDrawPath: boolean = true;
     @property({ displayName: "运行时绘制路径", })
@@ -58,7 +69,7 @@ export class BezierCurve extends Component {
         }
     }
 
-    // 根节点
+    // 编辑器中生成的路径根节点，保存控制点和线段绘制节点。
     @property({ type: Node, displayName: "路径根节点", visible: true, readonly: true })
     private pathNode: Node = null;
 
@@ -142,7 +153,7 @@ export class BezierCurve extends Component {
         this._isReLoad = v;
     }
 
-    // 曲线列表
+    // 曲线列表。每个 CurveSegment 是一段贝塞尔曲线，多段按数组顺序播放。
     @property({ visible: false })
     private _curveList: CurveSegment[] = [];
     @property({ type: CurveSegment, displayName: "曲线列表", visible: true })
@@ -165,7 +176,7 @@ export class BezierCurve extends Component {
     //     this._curveList = v;
     // }
 
-    // 缓动动画
+    // 整体缓动动画。isWholeRun 开启时会作为整条曲线的缓动使用。
     @property({ type: CCFloat, visible: false })
     private _ease: EaseType = EaseType.Linear;
     @property({ type: Enum(EaseType), displayName: "缓动动画", visible: true })
@@ -178,7 +189,7 @@ export class BezierCurve extends Component {
         this.isReLoad = true
     }
 
-    // 持续时间
+    // 整条路径总运行时间。多段曲线会按长度比例重新分配每段 duration。
     @property({ type: CCFloat, visible: false })
     private _duration = 1;
     @property({ type: CCFloat, displayName: "运行时间", visible: true })
@@ -193,7 +204,7 @@ export class BezierCurve extends Component {
         this._duration = v;
     }
 
-    //是否跟随路径旋转
+    // 是否跟随路径方向旋转节点。
     @property({ visible: false })
     private _isRotate: boolean = false;
     @property({ displayName: "跟随旋转", tooltip: "是否跟随轨迹旋转", })
@@ -206,7 +217,7 @@ export class BezierCurve extends Component {
             this.setAngleOffset(null);
         }
     }
-    // 角度偏移
+    // 跟随旋转时的角度偏移，用于修正资源默认朝向。
     @property({ visible: false })
     private _angleOffset: number = 0;
     @property({
@@ -229,7 +240,9 @@ export class BezierCurve extends Component {
         this.setAngleOffset(v);
     }
 
-    //是否整体采用一个Ease缓动动画
+    // 是否整体采用一个 Ease 缓动动画。
+    // 开启：整条路径共享 duration/ease。
+    // 关闭：按 CurveSegment 队列播放，保留每段自身 duration。
     @property({ visible: false })
     private _isWholeRun: boolean = false;
     @property({ displayName: "整体运行", tooltip: "是否整体采用一个Ease缓动动画(尽量不勾选)", })
@@ -240,7 +253,8 @@ export class BezierCurve extends Component {
         this._isWholeRun = v;
     }
 
-    // 多条曲线时，前一条曲线的末尾点和下一条曲线的起始点保持相同
+    // 一次性工具开关：勾选后把后一条曲线起点设置为前一条曲线终点，然后自动取消勾选。
+    // 这不是持续约束；后续手动拖动控制点不会自动保持连接。
     @property({ visible: false })
     private _isConnectHeadTail: boolean = false;
     @property({ displayName: "设置一次首尾相连", tooltip: "多条曲线时，前一条曲线的末尾点作为下一条曲线的起始点" })
@@ -300,6 +314,11 @@ export class BezierCurve extends Component {
     }
 
     private preCurve: CurveSegment;
+    /**
+     * 将一段曲线加入当前编辑器组件。
+     *
+     * 这里同时维护链表关系(prevCurve/nextCurve)、显示线节点父级、曲线样式和 index。
+     */
     private addCurve_M(curve: CurveSegment) {
         if (this.curve == null) {
             log('AddCurve_M', null);
@@ -376,6 +395,11 @@ export class BezierCurve extends Component {
         // console.warn("UpdateControlPointList")
     }
 
+    /**
+     * 按 curveList 数组顺序执行一次首尾连接。
+     *
+     * 第 i 条曲线的第 0 个点会被设置为第 i-1 条曲线的最后一个点。
+     */
     private syncConnectedCurvePoints() {
         if (!this._curveList || this._curveList.length <= 1) {
             return
@@ -386,6 +410,11 @@ export class BezierCurve extends Component {
         }
     }
 
+    /**
+     * 把 curve 的起点同步为 prevCurve 的终点。
+     *
+     * 同步后会清空 curve.length 缓存，并刷新控制点节点和线段显示。
+     */
     private syncCurveStartWithPrevious(prevCurve: CurveSegment, curve: CurveSegment) {
         if (!prevCurve || !curve) {
             return
@@ -485,7 +514,10 @@ export class BezierCurve extends Component {
     }
 
     /**
-     * 重新加载曲线
+     * 重新加载曲线编辑节点。
+     *
+     * Cocos 序列化保存的是 CurveSegment 数据；编辑器显示用的控制点节点和 Graphics 线条
+     * 需要在这里重新创建。
      */
     public reLoadCurveList() {
         // if (!CC_EDITOR) {
@@ -511,7 +543,7 @@ export class BezierCurve extends Component {
             index++
         }
     }
-    // 编辑
+    // 切换编辑/非编辑状态。
     private edit() {
         if (!this.enabled) {
             return
@@ -525,7 +557,7 @@ export class BezierCurve extends Component {
         }
     }
 
-    // 绘制路径
+    // 非编辑状态下按配置绘制或隐藏路径。
     private drawPath() {
         if (!this.enabled) {
             return
@@ -592,6 +624,11 @@ export class BezierCurve extends Component {
 
     }
 
+    /**
+     * 根据每段曲线长度，按总 duration 自动分配每段运行时长。
+     *
+     * 适合“总时间固定，长段跑久一点，短段跑快一点”的编辑方式。
+     */
     private calculateCurveRunTime() {
         if (this.curveList.length == 0) {
             return
@@ -614,6 +651,11 @@ export class BezierCurve extends Component {
         })
         this.isReLoad = true
     }
+    /**
+     * 根据每段 CurveSegment.duration 反推整条路径 duration。
+     *
+     * 适合用户手动编辑每段运行时长后，同步总运行时间显示。
+     */
     public calculateCurveRunTimeInversion() {
         console.warn("CalculateCurveRunTimeInversion: ", this.curveList)
         if (this.curveList.length == 1) {
@@ -642,7 +684,9 @@ export class BezierCurve extends Component {
 
     private bezier: Bezier;
     /**
-     * 播放
+     * 播放当前 BezierCurve 所在节点。
+     *
+     * 如果要让其他节点沿这条路径移动，请读取 curveList 构造 Curve 后调用 Bezier.runBezierAction。
      */
     public play(): void {
         if (this.isWholeRun) {

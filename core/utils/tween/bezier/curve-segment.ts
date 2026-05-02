@@ -7,22 +7,26 @@ import CurvePoint from "./curve-point";
 const { ccclass, property, executeInEditMode, inspector, menu } = _decorator;
 
 /**
- * @description 曲线片段，由曲线片段组成曲线。
- * @export
- * @class CurveSegment
- * @implements {CurveAction}
+ * 单段贝塞尔曲线数据。
+ *
+ * CurveSegment 同时承担两类职责：
+ * - 编辑器数据：控制点、控制点节点、绘制线条、颜色、宽度等。
+ * - 运行数据：段 duration、ease、repeatCount、length 等。
+ *
+ * 多个 CurveSegment 会组成一个 Curve，最终由 BezierManager 按顺序播放。
  */
 @ccclass('CurveSegment')
 export class CurveSegment {
 
+    /** 上一帧运行位置。旧单段曲线运行逻辑预留字段。 */
     public prevRunPos: Vec3 = Vec3.ZERO;
-    // 当前运行时间
+    /** 当前段运行时间。旧单段曲线运行逻辑预留字段。 */
     public curTime: number = 0;
 
-    // 完成回调
+    /** 当前段播放完成回调。旧单段曲线运行逻辑预留字段。 */
     public completeCallBack: () => void = () => { }
 
-    // 状态
+    /** 当前段状态。 */
     private _state: CurveState;
     public get state(): CurveState {
         return this._state
@@ -31,7 +35,7 @@ export class CurveSegment {
         this._state = v;
     }
 
-    // 所属者索引
+    /** 在 BezierCurve.curveList 中的索引。 */
     private _index: number = 0;
     public get index(): number {
         return this._index;
@@ -40,6 +44,7 @@ export class CurveSegment {
         this._index = v;
     }
 
+    /** 所属 BezierCurve 编辑器组件。 */
     private _owner: BezierCurve = null
     public get owner(): BezierCurve {
         return this._owner
@@ -48,11 +53,11 @@ export class CurveSegment {
         this._owner = v;
     }
 
-    // 控制节点
+    // 编辑器中可拖拽的控制点节点。
     @property({ visible: false })
     public controlPoints: Node[] = null;
 
-    // 控制点
+    // 控制点坐标列表。运行时曲线采样直接使用这个数组。
     @property({ visible: false })
     private _points: Vec3[] = [];
     @property({ type: Vec3, tooltip: "控制点列表", visible: true })
@@ -63,7 +68,7 @@ export class CurveSegment {
         this._points = v;
     }
 
-    // 曲线运行时间
+    // 当前曲线段运行时间。
     @property({ visible: false })
     private _duration: number = 0;
     @property({ type: CCFloat, displayName: "运行时长", visible: true })
@@ -82,7 +87,7 @@ export class CurveSegment {
         this._duration = v;
     }
 
-    // 缓动动画
+    // 当前曲线段缓动动画。
     @property({ visible: false })
     private _ease: EaseType = EaseType.Linear;
     @property({ type: Enum(EaseType), displayName: "缓动动画", visible: true })
@@ -95,7 +100,7 @@ export class CurveSegment {
             this.owner.isReLoad = false
     }
 
-    // 重复次数
+    // 当前曲线段重复次数。
     @property({ type: CCFloat, displayName: "重复次数", visible: true })
     private _repeatCount: number = 1;
     public get repeatCount(): number {
@@ -106,9 +111,12 @@ export class CurveSegment {
     }
 
     public line: Node;
+    /** 下一条曲线段，用于编辑器链表遍历。 */
     public nextCurve: CurveSegment;
+    /** 上一条曲线段，用于编辑器链表遍历。 */
     public prevCurve: CurveSegment;
 
+    /** 曲线绘制采样密度。数值越高，编辑器绘制越平滑。 */
     @property({ type: CCFloat, visible: false })
     public smoothness: number = 300;
 
@@ -121,6 +129,15 @@ export class CurveSegment {
     @property({ visible: false })
     public angleOffset: number = null;
 
+    /**
+     * 初始化曲线段。
+     *
+     * @param points 控制点坐标。
+     * @param duration 当前段运行时长。
+     * @param color 曲线颜色。
+     * @param width 曲线宽度。
+     * @param owner 所属 BezierCurve。
+     */
     public init(points: Vec3[], duration: number, color?: Color, width?: number, owner?: BezierCurve) {
         log("Curve Init")
         this.controlPoints = []
@@ -146,6 +163,9 @@ export class CurveSegment {
         return this
     }
 
+    /**
+     * 新增一个控制点，并同步创建编辑器控制点节点。
+     */
     private prePoint: CurvePoint
     public addPoint(pos: Vec3) {
         let go = new Node()
@@ -210,6 +230,11 @@ export class CurveSegment {
         this.points = [...this.points];
     }
 
+    /**
+     * 刷新曲线主线。
+     *
+     * 这里会根据 controlPoints 的当前位置重新采样曲线并绘制到 Graphics。
+     */
     public updatePoints() {
         if (this.lineRenderer) {
             let posList = this.controlPoints.map(node => {
@@ -241,6 +266,9 @@ export class CurveSegment {
         this.lineRenderer.stroke();
     }
 
+    /**
+     * 绘制控制点之间的辅助折线。
+     */
     private updateSubLine() {
         if (!this.controlPoints) {
             return
@@ -270,6 +298,11 @@ export class CurveSegment {
         })
     }
 
+    /**
+     * 检查编辑器控制点节点是否被拖动。
+     *
+     * 如果位置变化，会把 controlPoints 上的节点位置同步回 points 数据。
+     */
     public checkPositionChanged(): boolean {
         let isChange = false;
 
@@ -323,6 +356,12 @@ export class CurveSegment {
         }
     }
 
+    /**
+     * 当前段近似长度。
+     *
+     * length 是懒计算缓存：第一次读取时会调用 getPointList 采样计算。
+     * 控制点变化后应把 length 设为 null，避免继续使用旧长度。
+     */
     private pointList: BVector2[] = [];
     private prevPos: BVector2;
     public _length: number;
@@ -342,6 +381,11 @@ export class CurveSegment {
         this.prevPos = new BVector2(this.points[0], 0, 0);
     }
 
+    /**
+     * 获取当前段的采样点列表。
+     *
+     * 每个采样点记录当前位置以及上一采样点到当前采样点的距离。
+     */
     public getPointList(): BVector2[] {
         this.resetData();
         let duration = this.duration;
@@ -387,6 +431,11 @@ export class CurveSegment {
         return angle;
     }
 
+    /**
+     * 克隆曲线段数据。
+     *
+     * 只克隆运行/控制点数据，不克隆编辑器绘制节点。
+     */
     public clone() {
         let curveSegment = new CurveSegment();
         curveSegment.duration = this.duration;

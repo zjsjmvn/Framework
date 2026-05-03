@@ -458,6 +458,13 @@ export class Bezier {
     }
 
     /**
+     * 查询节点当前是否正在执行一次性后退。
+     */
+    public static isBacking(target: Node): boolean {
+        return BezierManager.Instant.isCurveBacking(target);
+    }
+
+    /**
      * 设置曲线运行速度倍率。
      *
      * @param target 已经在曲线上运行的节点。

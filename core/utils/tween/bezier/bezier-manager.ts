@@ -95,6 +95,13 @@ export default class BezierManager extends Component {
     }
 
     /**
+     * 查询 target 当前曲线是否正在执行一次性后退。
+     */
+    public isCurveBacking(target: Node): boolean {
+        return this.curveList.get(target)?.isBacking() ?? false;
+    }
+
+    /**
      * 设置 target 当前曲线的速度倍率。
      */
     public setCurveSpeed(target: Node, speedScale: number) {

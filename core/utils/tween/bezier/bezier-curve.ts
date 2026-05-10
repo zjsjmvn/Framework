@@ -288,7 +288,7 @@ export class BezierCurve extends Component {
             return
         }
 
-        this._isEdit = true
+        // this._isEdit = true
         this.init()
     }
 

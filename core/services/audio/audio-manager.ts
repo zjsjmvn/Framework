@@ -280,6 +280,20 @@ export class AudioManager extends Component {
         }
     }
 
+    /** 恢复当前暂停的背景音乐播放 */
+    resumeMusic() {
+        if (this.audioMusic && this._audioMusicSwitchState) {
+            this.audioMusic.play();
+        }
+    }
+
+    /** 暂停当前背景音乐播放，不影响音效 */
+    pauseMusic() {
+        if (this.audioMusic) {
+            this.audioMusic.pause();
+        }
+    }
+
     /** 停止当前音乐与音效的播放 */
     stopAll() {
         if (this.audioMusic) {

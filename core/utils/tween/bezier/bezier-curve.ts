@@ -301,7 +301,12 @@ export class BezierCurve extends Component {
 
     init() {
         if (!EDITOR) {
-            this.isEdit = false
+            this._isEdit = false
+            this.destroyPathNode()
+            return
+        }
+        if (!this._isEdit) {
+            this.destroyPathNode()
             return
         }
         if (this.curveList.length > 0) {
@@ -557,9 +562,13 @@ export class BezierCurve extends Component {
         }
     }
 
-    // 非编辑状态下按配置绘制或隐藏路径。
+    // 只在编辑状态下重建路径辅助节点，避免加载场景时写入 Node_BezierPathNode。
     private drawPath() {
         if (!this.enabled) {
+            return
+        }
+        if (!this._isEdit) {
+            this.destroyPathNode()
             return
         }
 

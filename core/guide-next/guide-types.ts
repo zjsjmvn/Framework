@@ -1,4 +1,4 @@
-import { Node, Rect, Vec2 } from 'cc';
+import type { Node, Rect, Vec2 } from 'cc';
 
 /** 引导步骤类型。每一种类型都由 GuideRunner 绑定不同的完成条件。 */
 export enum GuideStepKind {

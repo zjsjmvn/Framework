@@ -1,4 +1,4 @@
-import { _decorator, Color, Component, EventTouch, Graphics, Label, Node, Rect, tween, Tween, UITransform, v2, v3, Vec2, Vec3 } from 'cc';
+import { _decorator, assetManager, Color, Component, EventTouch, Graphics, Label, Node, Rect, Sprite, SpriteFrame, tween, Tween, UITransform, v2, v3, Vec2, Vec3 } from 'cc';
 import { GuideAnchorSnapshot, GuideStepConfig, IGuideOverlay, IGuideTouchHandler } from './guide-types';
 
 const { ccclass, property } = _decorator;
@@ -18,14 +18,22 @@ export class GuideDefaultOverlay extends Component implements IGuideOverlay {
     @property({ displayName: '手指移动速度', tooltip: '拖拽或滑动引导中，默认手指动画在多个目标之间移动的速度。单位为 UI 坐标每秒。' })
     public fingerMoveSpeed: number = 520;
 
+    /** 默认手指图片路径，格式为 bundle/path/to/sprite/spriteFrame。为空时使用内置绘制手指。 */
+    @property({ displayName: '手指图片路径', tooltip: '引导手指 SpriteFrame 的资源路径，格式为 bundle/path/to/sprite/spriteFrame。为空或加载失败时使用内置绘制手指。' })
+    public fingerSpritePath: string = '';
+
     /** 暗色遮罩绘制组件。 */
     private maskGraphics: Graphics = null;
     /** 目标边框高亮绘制组件。 */
     private highlightGraphics: Graphics = null;
     /** 默认手指动画节点。 */
     private fingerNode: Node = null;
+    /** 默认手指图片组件。 */
+    private fingerSprite: Sprite = null;
     /** 默认手指图形绘制组件。 */
     private fingerGraphics: Graphics = null;
+    /** 已尝试加载的手指图片路径，避免 ensureBuilt 反复发起加载。 */
+    private loadedFingerSpritePath: string = '';
     /** 提示文案节点。 */
     private textNode: Node = null;
     /** 提示文案 Label。 */
@@ -126,10 +134,11 @@ export class GuideDefaultOverlay extends Component implements IGuideOverlay {
             this.node.addChild(this.fingerNode);
             const fingerTransform = this.fingerNode.addComponent(UITransform);
             fingerTransform.setContentSize(44, 56);
+            this.fingerSprite = this.fingerNode.addComponent(Sprite);
             this.fingerGraphics = this.fingerNode.addComponent(Graphics);
-            this.drawFinger();
             this.fingerNode.active = false;
         }
+        this.refreshFingerVisual();
 
         if (!this.textNode) {
             this.textNode = new Node('Text');
@@ -306,6 +315,13 @@ export class GuideDefaultOverlay extends Component implements IGuideOverlay {
 
     /** 用 Graphics 画一个简单手指图形，避免默认实现依赖外部图片资源。 */
     private drawFinger(): void {
+        if (this.fingerSprite) {
+            this.fingerSprite.spriteFrame = null;
+            this.fingerSprite.enabled = false;
+        }
+        if (this.fingerGraphics) {
+            this.fingerGraphics.enabled = true;
+        }
         this.fingerGraphics.clear();
         this.fingerGraphics.fillColor = new Color(255, 255, 255, 255);
         this.fingerGraphics.strokeColor = new Color(70, 70, 70, 255);
@@ -317,6 +333,57 @@ export class GuideDefaultOverlay extends Component implements IGuideOverlay {
         this.fingerGraphics.circle(0, 24, 10);
         this.fingerGraphics.fill();
         this.fingerGraphics.stroke();
+    }
+
+    /** 刷新手指视觉。优先加载外部 SpriteFrame，失败时回退到内置 Graphics 手指。 */
+    private refreshFingerVisual(): void {
+        const path = (this.fingerSpritePath || '').trim();
+        if (!path) {
+            this.loadedFingerSpritePath = '';
+            this.drawFinger();
+            return;
+        }
+
+        if (this.loadedFingerSpritePath === path) {
+            return;
+        }
+        this.loadedFingerSpritePath = path;
+        this.loadFingerSpriteFrame(path, (spriteFrame) => {
+            if (!this.node?.isValid || this.loadedFingerSpritePath !== path) {
+                return;
+            }
+            if (!spriteFrame) {
+                this.drawFinger();
+                return;
+            }
+
+            this.fingerGraphics.clear();
+            this.fingerGraphics.enabled = false;
+            this.fingerSprite.enabled = true;
+            this.fingerSprite.spriteFrame = spriteFrame;
+        });
+    }
+
+    /** 支持 bundle/path/spriteFrame 格式，便于业务传 game_base 子包内的手指图。 */
+    private loadFingerSpriteFrame(path: string, callback: (spriteFrame: SpriteFrame | null) => void): void {
+        const splitIndex = path.indexOf('/');
+        const bundleName = splitIndex > 0 ? path.slice(0, splitIndex) : '';
+        const assetPath = splitIndex > 0 ? path.slice(splitIndex + 1) : path;
+        const bundle = bundleName ? assetManager.getBundle(bundleName) : null;
+
+        if (!bundle) {
+            callback(null);
+            return;
+        }
+
+        bundle.load(assetPath, SpriteFrame, (error, spriteFrame) => {
+            if (error || !spriteFrame) {
+                console.warn(`[GuideNext] finger sprite load failed: ${path}`, error);
+                callback(null);
+                return;
+            }
+            callback(spriteFrame);
+        });
     }
 
     /** 计算矩形中心点，作为手指动画的默认位置。 */

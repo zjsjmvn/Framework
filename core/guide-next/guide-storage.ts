@@ -54,6 +54,19 @@ export class GuideLocalStorage implements IGuideStorage {
         keys.forEach((key) => sys.localStorage.removeItem(key));
     }
 
+    /** 清理所有 guide-next 引导进度，GM 清档时使用。 */
+    public clearAllProgress(): void {
+        const keys: string[] = [];
+        for (let i = 0; i < sys.localStorage.length; i++) {
+            const key = sys.localStorage.key(i);
+            if (key && key.indexOf(STORAGE_PREFIX) === 0) {
+                keys.push(key);
+            }
+        }
+
+        keys.forEach((key) => sys.localStorage.removeItem(key));
+    }
+
     /** 生成本地存储 key。 */
     private getKey(guideId: string, version: number): string {
         return `${STORAGE_PREFIX}${guideId}:${version || 1}`;

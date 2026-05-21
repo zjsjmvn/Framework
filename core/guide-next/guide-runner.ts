@@ -19,6 +19,7 @@ import {
 import { GuideAnchorRegistry } from './guide-anchor-registry';
 import { GuideLocalStorage } from './guide-storage';
 import { GuideEventBus } from './guide-event-bus';
+import { normalizeGuideFlowConfig } from './guide-flow-utils';
 
 /** 当前步骤等待状态。步骤可能由触摸、事件、定时器或自定义逻辑完成，统一放在这里清理。 */
 interface StepWaiter {
@@ -64,7 +65,7 @@ export class GuideRunner implements IGuideRuntime {
     private destroyOverlayOnComplete: boolean = true;
 
     constructor(flow: GuideFlowConfig, overlay: IGuideOverlay, options: GuideStartOptions = {}) {
-        this.flow = flow;
+        this.flow = normalizeGuideFlowConfig(flow);
         this.overlay = overlay;
         this.options = options;
         this.storage = options.storage || new GuideLocalStorage();
@@ -88,8 +89,10 @@ export class GuideRunner implements IGuideRuntime {
         const progress = this.flow.restartFromBeginning ? null : this.storage.loadProgress(this.flow.guideId, version);
         // 进度记录的是“最后完成的步骤”，恢复时从下一个步骤开始。
         let startIndex = progress && !progress.completed ? progress.completedStepIndex + 1 : 0;
+        this.trace(`start guide, version=${version}, startStep=${startIndex}, completed=${!!progress?.completed}`);
 
         if (progress?.completed && !this.flow.restartFromBeginning) {
+            this.trace('skip guide because progress is already completed');
             this.finishGuide();
             return;
         }
@@ -97,15 +100,14 @@ export class GuideRunner implements IGuideRuntime {
         while (this.isRunning && !this.stopped && startIndex < this.flow.steps.length) {
             this.currentStepIndex = startIndex;
             const step = this.flow.steps[startIndex];
+            this.trace(`step start: ${this.getStepName(step, startIndex)}`);
 
             try {
                 const reason = await this.runStep(step, startIndex);
                 if (autoSave) {
                     this.saveProgress(startIndex, false);
                 }
-                if (this.flow.debug) {
-                    console.log(`[GuideNext] step completed: ${this.getStepName(step, startIndex)}, reason=${reason}`);
-                }
+                this.trace(`step completed: ${this.getStepName(step, startIndex)}, reason=${reason}`);
             } catch (error) {
                 console.error(`[GuideNext] step failed: ${this.getStepName(step, startIndex)}`, error);
                 this.isRunning = false;
@@ -142,6 +144,7 @@ export class GuideRunner implements IGuideRuntime {
 
     /** 停止整条引导，并按跳过原因结束当前等待中的步骤。 */
     public stop(reason: string = 'stopped'): void {
+        this.trace(`stop guide, reason=${reason}`);
         this.stopped = true;
         this.stopReason = reason;
         this.isRunning = false;
@@ -168,6 +171,7 @@ export class GuideRunner implements IGuideRuntime {
 
         const context = this.createContext(step, stepIndex);
         if (step.canStart && await step.canStart(context) === false) {
+            this.trace(`step skipped by canStart: ${this.getStepName(step, stepIndex)}`);
             return GuideStepCompleteReason.Skipped;
         }
 
@@ -209,10 +213,10 @@ export class GuideRunner implements IGuideRuntime {
             if (!anchor) {
                 const policy = step.targetMissPolicy || GuideTargetMissPolicy.FailGuide;
                 if (policy === GuideTargetMissPolicy.SkipStep) {
-                    console.warn(`[GuideNext] skip step because target missing: ${guideId}`);
+                    console.warn(`[GuideNext] skip step because target missing: flow=${this.flow.guideId}, target=${guideId}`);
                     return null;
                 }
-                throw new Error(`Guide target missing: ${guideId}`);
+                throw new Error(`Guide target missing: ${guideId}, flow=${this.flow.guideId}`);
             }
             anchors.push(anchor);
         }
@@ -241,6 +245,7 @@ export class GuideRunner implements IGuideRuntime {
             return null;
         }
 
+        this.trace(`wait target: ${guideId}, timeout=${step.waitTargetTimeout || 5}`);
         return this.anchorRegistry.waitFor(guideId, step.waitTargetTimeout || 5);
     }
 
@@ -581,6 +586,15 @@ export class GuideRunner implements IGuideRuntime {
     /** 生成日志里使用的步骤名。 */
     private getStepName(step: GuideStepConfig, index: number): string {
         return step.id || step.debugName || `${this.flow.guideId}[${index}]`;
+    }
+
+    /** flow.debug=true 时输出生命周期日志，方便排查启动和步骤推进。 */
+    private trace(message: string): void {
+        if (!this.flow.debug) {
+            return;
+        }
+
+        console.log(`[GuideNext] ${this.flow.guideId}: ${message}`);
     }
 
     /** 秒级延迟工具。 */

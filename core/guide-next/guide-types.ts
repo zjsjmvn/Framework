@@ -48,6 +48,54 @@ export interface GuidePadding {
     bottom?: number;
 }
 
+/** 流程级步骤默认配置。步骤自身字段优先，未配置时才继承这里的默认值。 */
+export interface GuideStepDefaults {
+    /** 当前步骤显示的引导文案。 */
+    text?: string;
+    /** 步骤完成后短暂显示的文案。 */
+    completeText?: string;
+    /** 是否显示遮罩；事件和计时步骤通常不需要遮罩。 */
+    showMask?: boolean;
+    /** 是否显示默认手指动画。 */
+    showFinger?: boolean;
+    /** 当前步骤是否把命中的触摸透传给下方真实节点。 */
+    passThrough?: boolean;
+    /** 是否强制拦截所有触摸。 */
+    blockOthers?: boolean;
+    /** 点击步骤需要命中几次才完成。 */
+    requiredTouchCount?: number;
+    /** 步骤开始前等待秒数。 */
+    beforeDelay?: number;
+    /** 步骤完成后等待秒数，兼容旧命名。 */
+    afterDelay?: number;
+    /** 步骤完成后等待秒数，优先级高于 afterDelay。 */
+    finishDelay?: number;
+    /** 步骤最大等待秒数，超时会失败。 */
+    timeout?: number;
+    /** targetMissPolicy=Wait 时等待目标出现的秒数。 */
+    waitTargetTimeout?: number;
+    /** 目标缺失策略。 */
+    targetMissPolicy?: GuideTargetMissPolicy | string;
+    /** 覆盖锚点自己的 padding，用于某一步临时放大或缩小镂空区域。 */
+    maskPadding?: GuidePadding;
+    /** 固定文案位置；不填时默认围绕第一个目标自动摆放。 */
+    textPosition?: Vec2;
+    /** 手指动画相对目标中心的偏移。 */
+    fingerOffset?: Vec2;
+}
+
+/** 默认遮罩的流程级默认配置，只会应用到 GuideDefaultOverlay。 */
+export interface GuideOverlayDefaults {
+    /** 遮罩不透明度，0 完全透明，255 完全不透明。 */
+    maskOpacity?: number;
+    /** 目标高亮圆角半径。 */
+    holeRadius?: number;
+    /** 多目标手指动画移动速度，单位是 UI 坐标每秒。 */
+    fingerMoveSpeed?: number;
+    /** 默认手指图片路径，格式为 bundle/path/to/sprite/spriteFrame。 */
+    fingerSpritePath?: string;
+}
+
 /** 目标在某个步骤开始时的快照。 */
 export interface GuideAnchorSnapshot {
     /** 目标业务 id。 */
@@ -115,7 +163,7 @@ export interface GuideStepBaseConfig {
     /** targetMissPolicy=Wait 时等待目标出现的秒数。 */
     waitTargetTimeout?: number;
     /** 目标缺失策略。代码配置默认失败，Inspector 配置默认等待。 */
-    targetMissPolicy?: GuideTargetMissPolicy;
+    targetMissPolicy?: GuideTargetMissPolicy | string;
     /** 覆盖锚点自己的 padding，用于某一步临时放大或缩小镂空区域。 */
     maskPadding?: GuidePadding;
     /** 固定文案位置；不填时默认围绕第一个目标自动摆放。 */
@@ -213,6 +261,10 @@ export interface GuideFlowConfig {
     guideId: string;
     /** 修改步骤数量或顺序后要提升版本，避免旧进度从错误步骤继续。 */
     version?: number;
+    /** 所有步骤共享的默认配置；步骤自身字段优先。 */
+    stepDefaults?: GuideStepDefaults;
+    /** 默认遮罩共享配置；只应用到 GuideDefaultOverlay。 */
+    overlayDefaults?: GuideOverlayDefaults;
     /** 按顺序执行的步骤列表。 */
     steps: GuideStepConfig[];
     /** 忽略已有进度，强制从第一步开始。 */

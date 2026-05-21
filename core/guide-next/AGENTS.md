@@ -59,7 +59,13 @@ import { GuideFlowConfig, GuideService, GuideStepKind, GuideTargetMissPolicy } f
 - `guideId` 使用稳定流程 id。
 - 修改步骤数量、顺序或含义后提升 `version`。
 - `autoSaveProgress` 保持 `true`。
-- 需要异步等待 UI 出现时使用 `targetMissPolicy: GuideTargetMissPolicy.Wait`。
+- 多个步骤共享的 `targetMissPolicy`、`waitTargetTimeout`、`passThrough`、`maskPadding` 等字段优先放在 `GuideFlowConfig.stepDefaults`。
+- 默认遮罩共用的手指图、遮罩透明度等字段优先放在 `GuideFlowConfig.overlayDefaults`。
+- 代码里判断“能不能起引导”时，优先返回 `GuideStartDecision` 之类的结构化结果，再由业务层打印原因，不要只留一个裸 `boolean`。
+- 需要异步等待 UI 出现时，默认还是使用 `targetMissPolicy: GuideTargetMissPolicy.Wait`。
+- 排查流程时临时打开 `GuideFlowConfig.debug`，能看到启动、恢复、等待目标、步骤完成和停止日志。
+- `GuideService` 只负责启动和遮罩默认值，不要把业务选择逻辑塞进来。
+- `guide-flow-utils.ts` 和 `guide-start-decision.ts` 这类纯工具优先写成无场景依赖的小函数，便于 seed-searcher 直接测。
 
 测试引导建议：
 
@@ -120,4 +126,3 @@ Cocos 3.8 中，`event.preventSwallow = true` 才表示阻止当前节点吞掉�
 4. `GuideAnchor.passThrough = true` 时，真实按钮能收到点击。
 5. 目标不存在时，`Wait`、`SkipStep`、`FailGuide` 三种策略行为符合预期。
 6. 修改步骤顺序或数量后，确认是否需要提升 `GuideFlowConfig.version`。
-

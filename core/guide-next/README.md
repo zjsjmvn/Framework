@@ -153,20 +153,26 @@ const flow: GuideFlowConfig = {
     guideId: 'game.first-play',
     version: 1,
     autoSaveProgress: true,
+    stepDefaults: {
+        targetMissPolicy: GuideTargetMissPolicy.Wait,
+        waitTargetTimeout: 5,
+        passThrough: true,
+        maskPadding: { left: 8, right: 8, top: 8, bottom: 8 },
+    },
+    overlayDefaults: {
+        fingerSpritePath: 'game_base/art/guide/finger/spriteFrame',
+    },
     steps: [
         {
             kind: GuideStepKind.Tap,
             target: 'game.first-box',
             text: '点击这个箭头盒',
-            targetMissPolicy: GuideTargetMissPolicy.Wait,
-            passThrough: true,
         },
         {
             kind: GuideStepKind.Drag,
             from: 'game.first-box',
             to: 'game.shoot-zone',
             text: '移动到射击区域',
-            passThrough: true,
         },
         {
             kind: GuideStepKind.WaitEvent,
@@ -178,6 +184,12 @@ const flow: GuideFlowConfig = {
 
 GuideService.start(flow);
 ```
+
+## 流程级默认配置
+
+代码流程可以配置 `stepDefaults`，把所有步骤共享的字段前置到流程层，例如 `targetMissPolicy`、`waitTargetTimeout`、`passThrough`、`maskPadding`、`showMask` 和 `showFinger`。运行器会在执行前把默认值合并到每个步骤，步骤自身字段优先。
+
+默认遮罩可配置 `overlayDefaults`，当前支持 `fingerSpritePath`、`maskOpacity`、`holeRadius` 和 `fingerMoveSpeed`。如果传入自定义遮罩，这些字段由业务遮罩自己处理。
 
 ## Inspector 配置
 
@@ -245,6 +257,7 @@ EventManager.instance.emit('guide:first-pig-killed');
 - 引导没有出现：确认 `GuideService.start()` 已调用，且当前场景有 `Canvas`，或传入了 `GuideStartOptions.parent`。
 - 报 `Guide target missing`：确认目标节点挂了 `GuideAnchor`，`guideId` 拼写一致，节点处于激活状态。
 - 动态节点等不到：确认节点创建后调用了 `getOrAddGuideAnchor()`，并检查 `waitTargetTimeout` 是否太短。
+- 需要看步骤推进：在 `GuideFlowConfig` 上设置 `debug: true`，运行时会输出启动、恢复进度、等待目标、步骤完成和停止原因。
 - 点目标后业务没响应：检查步骤 `passThrough` 和锚点 `passThrough` 是否为 `true`。
 - 点目标外还能操作其它 UI：检查是否把步骤配置成了 `passThrough: true`，目标外默认应该被拦截；强制流程可加 `blockOthers: true`。
 - 改了步骤但老账号流程异常：提升 `GuideFlowConfig.version`，或清理本地引导进度。

@@ -23,6 +23,10 @@ export class GuideService {
 
         // 全局只保留一个活动 runner，避免多个遮罩和触摸处理互相抢输入。
         const overlay = options.overlay || await this.createOverlay(options);
+        this.applyOverlayDefaults(flowConfig, overlay);
+        if (flowConfig.debug) {
+            console.log(`[GuideNext] start guide: ${flowConfig.guideId}, steps=${flowConfig.steps.length}`);
+        }
         const runner = new GuideRunner(flowConfig, overlay, options);
         this.activeRunner = runner;
 
@@ -49,6 +53,9 @@ export class GuideService {
 
         const runner = this.activeRunner;
         this.activeRunner = null;
+        if (runner.flow.debug) {
+            console.log(`[GuideNext] stop active guide: ${runner.flow.guideId}, reason=${reason}`);
+        }
         runner.stop(reason);
     }
 
@@ -79,6 +86,27 @@ export class GuideService {
         }
 
         return node.addComponent(GuideDefaultOverlay);
+    }
+
+    /** 把流程级默认遮罩配置应用到默认遮罩。自定义遮罩保持业务自己处理。 */
+    private static applyOverlayDefaults(flow: GuideFlowConfig, overlay: IGuideOverlay): void {
+        const defaults = flow.overlayDefaults;
+        if (!defaults || !(overlay instanceof GuideDefaultOverlay)) {
+            return;
+        }
+
+        if (defaults.maskOpacity !== undefined) {
+            overlay.maskOpacity = defaults.maskOpacity;
+        }
+        if (defaults.holeRadius !== undefined) {
+            overlay.holeRadius = defaults.holeRadius;
+        }
+        if (defaults.fingerMoveSpeed !== undefined) {
+            overlay.fingerMoveSpeed = defaults.fingerMoveSpeed;
+        }
+        if (defaults.fingerSpritePath !== undefined) {
+            overlay.fingerSpritePath = defaults.fingerSpritePath;
+        }
     }
 
     /** 从 resources 加载遮罩 prefab，并确保节点上有 GuideDefaultOverlay。 */

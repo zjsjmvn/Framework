@@ -62,7 +62,7 @@ export module ECS {
     /**
      * 组件构造函数
      */
-    let componentCtors: (ComponentCtor<any> | number)[] = [];
+    let componentCtors: (ComponentCtor<any> | number | null)[] = [];
 
     /**
      * 每个组件的添加和删除的动作都要派送到“关心”它们的group上。goup对当前拥有或者之前（删除前）拥有该组件的实体进行组件规则判断。判断该实体是否满足group
@@ -154,9 +154,8 @@ export module ECS {
         let entity = entityPool.pop();
         if (!entity) {
             entity = new Entity();
-            // @ts-ignore
-            entity.eid = eid++; // 实体id也是有限的资源
         }
+        entity.eid = eid++; // 实体id也是有限的资源
         eid2Entity.set(entity.eid, entity);
         return entity as E;
     }
@@ -369,22 +368,38 @@ export module ECS {
             this.size = length;
         }
 
+        private ensureSize(num: number) {
+            let index = ((num / 31) >>> 0);
+            if (index < this.size) {
+                return;
+            }
+
+            let newMask = new Uint32Array(index + 1);
+            newMask.set(this.mask);
+            this.mask = newMask;
+            this.size = newMask.length;
+        }
+
         set(num: number) {
             // https://stackoverflow.com/questions/34896909/is-it-correct-to-set-bit-31-in-javascript
             // this.mask[((num / 32) >>> 0)] |= ((1 << (num % 32)) >>> 0);
+            this.ensureSize(num);
             this.mask[((num / 31) >>> 0)] |= (1 << (num % 31));
         }
 
         delete(num: number) {
+            this.ensureSize(num);
             this.mask[((num / 31) >>> 0)] &= ~(1 << (num % 31));
         }
 
         has(num: number) {
+            this.ensureSize(num);
             return !!(this.mask[((num / 31) >>> 0)] & (1 << (num % 31)));
         }
 
         or(other: Mask) {
-            for (let i = 0; i < this.size; i++) {
+            let size = Math.min(this.size, other.size);
+            for (let i = 0; i < size; i++) {
                 // &操作符最大也只能对2^30进行操作，如果对2^31&2^31会得到负数。当然可以(2^31&2^31) >>> 0，这样多了一步右移操作。
                 if (this.mask[i] & other.mask[i]) {
                     return true;
@@ -422,6 +437,7 @@ export module ECS {
         private componentTid2Ctor: Map<number, ComponentType<IComponent>> = new Map();
 
         public componentTid2Obj: Map<number, IComponent> = new Map();
+        private removedComponentTid2Obj: Map<number, IComponent> = new Map();
 
         constructor() { }
 
@@ -458,9 +474,9 @@ export module ECS {
                 this.mask.set(componentTid);
 
                 let component: T;
-                if (this.componentTid2Obj.has(componentTid)) {
-                    component = this.componentTid2Obj.get(componentTid) as T;
-                    this.componentTid2Obj.delete(componentTid);
+                if (this.removedComponentTid2Obj.has(componentTid)) {
+                    component = this.removedComponentTid2Obj.get(componentTid) as T;
+                    this.removedComponentTid2Obj.delete(componentTid);
                 }
                 else {
                     // 创建组件对象
@@ -504,7 +520,7 @@ export module ECS {
                 }
 
                 this.mask.set(componentTid);
-                this[tmpCtor.componentName] = ctor;
+                (this as any)[tmpCtor.componentName] = ctor;
                 this.componentTid2Ctor.set(componentTid, tmpCtor);
                 ctor.entityId = this.eid;
                 ctor.canRecycle = false;
@@ -566,31 +582,37 @@ export module ECS {
                 compName = ctor.componentName;
                 if (this.mask.has(componentTypeId)) {
                     hasComp = true;
-                    let comp = this[ctor.componentName] as IComponent;
+                    let comp = (this as any)[ctor.componentName] as IComponent;
                     comp.entityId = -1;
                     if (isRecycle) {
                         comp.init();
                         if (comp.canRecycle) {
-                            componentPools.get(componentTypeId).push(comp);
+                            componentPools.get(componentTypeId)!.push(comp);
                         }
                     }
                     else {
-                        this.componentTid2Obj.set(componentTypeId, comp);
+                        this.removedComponentTid2Obj.set(componentTypeId, comp);
                     }
                 }
             }
 
             if (hasComp) {
-                this[compName] = null;
+                (this as any)[compName] = null;
                 this.mask.delete(componentTypeId);
                 this.componentTid2Ctor.delete(componentTypeId);
-                // TODO： componentTid2Obj没有移除？
+                if (isRecycle) {
+                    this.componentTid2Obj.delete(componentTypeId);
+                    this.removedComponentTid2Obj.delete(componentTypeId);
+                }
+                else {
+                    this.componentTid2Obj.delete(componentTypeId);
+                }
                 broadcastComponentAddOrRemove(this, componentTypeId);
             }
         }
 
         private _remove(comp: ComponentType<IComponent>) {
-            this.remove(comp, false);
+            this.remove(comp, true);
         }
 
         /**
@@ -600,6 +622,7 @@ export module ECS {
             this.componentTid2Ctor.forEach(this._remove, this);
             destroyEntity(this);
             this.componentTid2Obj.clear();
+            this.removedComponentTid2Obj.clear();
         }
     }
 
@@ -645,7 +668,10 @@ export module ECS {
         }
 
         public onComponentAddOrRemove(entity: E) {
-            if (this.matcher.isMatch(entity)) { // Group只关心指定组件在实体身上的添加和删除动作。
+            let isMatched = this.matcher.isMatch(entity);
+            let wasMatched = this._matchEntities.has(entity.eid);
+
+            if (isMatched && !wasMatched) { // Group只关心指定组件在实体身上的添加和删除动作。
                 this._matchEntities.set(entity.eid, entity);
                 this._entitiesCache = null;
                 this.count++;
@@ -655,7 +681,7 @@ export module ECS {
                     this._removedEntities!.delete(entity.eid);
                 }
             }
-            else if (this._matchEntities.has(entity.eid)) { // 如果Group中有这个实体，但是这个实体已经不满足匹配规则，则从Group中移除该实体
+            else if (!isMatched && wasMatched) { // 如果Group中有这个实体，但是这个实体已经不满足匹配规则，则从Group中移除该实体
                 this._matchEntities.delete(entity.eid);
                 this._entitiesCache = null;
                 this.count--;
@@ -842,7 +868,7 @@ export module ECS {
             this.rules.push(new AllOf(...args));
             let otherTids: ComponentType<IComponent>[] = [];
             for (let ctor of componentCtors) {
-                if (args.indexOf(ctor) < 0) {
+                if (ctor !== null && args.indexOf(ctor) < 0) {
                     otherTids.push(ctor);
                 }
             }
@@ -983,7 +1009,7 @@ export module ECS {
             }
             this.dt = dt;
             // 处理刚进来的实体
-            if (this.enteredEntities!.size > 0) {
+            if (this.enteredEntities && this.enteredEntities.size > 0) {
                 (this as unknown as IEntityEnterSystem).entityEnter(Array.from(this.enteredEntities!.values()) as E[]);
                 this.enteredEntities!.clear();
             }

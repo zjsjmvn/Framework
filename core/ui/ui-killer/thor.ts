@@ -16,7 +16,7 @@ const { ccclass, property } = _decorator;
  *   nodeC
  *    nodeD
  * - 特别的:
- *  - 如果子节点是下划线_开头，则会监听触摸事件。并且直接绑定到脚本上。可以使用脚本直接访问。
+ *  - 如果子节点是下划线_开头，则会监听触摸事件。如： _ABC,则会自动绑定脚本种的  _onABCTouchStart,_onABCTouchMove,_onABCTouchEnd,_onABCTouchCancel。直接绑定到脚本上。点击时会调用这些方法，如果没有则不调用。
  *  - 如果子节点是下划线+名字+$+数字。如：_image$1，则为其绑定触摸事件。事件类型为           
  *          `_on${name}TouchStart`,
             `_on${name}TouchMove`,

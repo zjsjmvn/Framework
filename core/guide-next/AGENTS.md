@@ -65,7 +65,7 @@ import { GuideFlowConfig, GuideService, GuideStepKind, GuideTargetMissPolicy } f
 - 需要异步等待 UI 出现时，默认还是使用 `targetMissPolicy: GuideTargetMissPolicy.Wait`。
 - 排查流程时临时打开 `GuideFlowConfig.debug`，能看到启动、恢复、等待目标、步骤完成和停止日志。
 - `GuideService` 只负责启动和遮罩默认值，不要把业务选择逻辑塞进来。
-- `guide-flow-utils.ts` 和 `guide-start-decision.ts` 这类纯工具优先写成无场景依赖的小函数，便于 seed-searcher 直接测。
+- `guide-flow-utils.ts` 和 `guide-start-decision.ts` 这类纯工具优先写成无场景依赖的小函数，便于根目录 `test/` 下的 Node 测试直接测。
 
 测试引导建议：
 

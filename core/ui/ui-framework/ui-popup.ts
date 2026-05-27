@@ -214,34 +214,40 @@ export default abstract class UIPopup<T extends UIData> extends UIBase {
         // 判断是否点击的是外面,如果点击的是container外面。则关闭。
         // if (event.eventPhase == Event.CAPTURING_PHASE) return;
         // 允许触摸穿透
-        let containerNode: Node = this.node.getChildByName("Container");
-        let containerNodeUITransform = containerNode.getComponent(UITransform);
+        if (!!this._touchBlankPlaceToClose) {
+            let containerNode: Node = this.node.getChildByName("Container");
+            let containerNodeUITransform = containerNode.getComponent(UITransform);
 
-        if (!!!containerNode) {
-            error("快速关闭需要container节点来判断是否点击ui外部。请参考其他弹框界面的层级结构。");
-            return;
+            if (!!!containerNode) {
+                error("快速关闭需要container节点来判断是否点击ui外部。请参考其他弹框界面的层级结构。");
+                return;
+            }
+            let containerNodeRect: Rect = null;
+            if (this.blankJudgeType == BlankJudgeType.BoundingBoxToWorld) {
+                containerNodeRect = containerNodeUITransform.getBoundingBoxToWorld();
+                let nodePos = this.node.getComponent(UITransform).convertToNodeSpaceAR(v3(containerNodeRect.x, containerNodeRect.y));
+                containerNodeRect.x = nodePos.x
+                containerNodeRect.y = nodePos.y
+            } else if (this.blankJudgeType == BlankJudgeType.ContentSize) {
+                let contentSize = containerNodeUITransform.contentSize;
+                containerNodeRect = rect(containerNode.position.x - contentSize.width / 2, containerNode.position.y - contentSize.height / 2, contentSize.width, contentSize.height);
+            }
+            let nodePos = this.node.getComponent(UITransform).convertToNodeSpaceAR(v3(event.getUILocation().x, event.getUILocation().y, 0))
+            let contains = containerNodeRect.contains(v2(nodePos.x, nodePos.y));
+            if (!contains) {
+                UIManager.instance.closePopup(this);
+            }
         }
-        let containerNodeRect: Rect = null;
-        if (this.blankJudgeType == BlankJudgeType.BoundingBoxToWorld) {
-            containerNodeRect = containerNodeUITransform.getBoundingBoxToWorld();
-            let nodePos = this.node.getComponent(UITransform).convertToNodeSpaceAR(v3(containerNodeRect.x, containerNodeRect.y));
-            containerNodeRect.x = nodePos.x
-            containerNodeRect.y = nodePos.y
-        } else if (this.blankJudgeType == BlankJudgeType.ContentSize) {
-            let contentSize = containerNodeUITransform.contentSize;
-            containerNodeRect = rect(containerNode.position.x - contentSize.width / 2, containerNode.position.y - contentSize.height / 2, contentSize.width, contentSize.height);
-        }
-        let nodePos = this.node.getComponent(UITransform).convertToNodeSpaceAR(v3(event.getUILocation().x, event.getUILocation().y, 0))
-        let contains = containerNodeRect.contains(v2(nodePos.x, nodePos.y));
-        if (!contains) {
-            UIManager.instance.closePopup(this);
-        }
+
         return;
     }
 
     private onThisNodeTouchEnd_UsedFor_TouchAnyWhereToClose(event) {
         log('onThisNodeTouchEnd_UsedFor_TouchAnyWhereToClose', this.node.name);
-        UIManager.instance.closePopup(this);
+        if (this.touchAnyWhereToClose) {
+            UIManager.instance.closePopup(this);
+
+        }
     }
 
 

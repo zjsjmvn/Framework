@@ -270,5 +270,6 @@ export class GuideView extends Thor {
 
     onDestroy() {
         log("----guide over----");
+        super.onDestroy();
     }
 }

@@ -1,5 +1,5 @@
 import { DEV, EDITOR } from 'cc/env';
-import { Enum, Node, Rect, _decorator, error, Sprite, SpriteFrame, resources, log, UIOpacity, v3, UITransform, tween, v2, EventTouch, rect, AnimationClip, Animation, AnimationState, ValueType, assetManager, Texture2D, Asset } from 'cc';
+import { Enum, Node, Rect, _decorator, error, Sprite, SpriteFrame, resources, log, UIOpacity, v3, UITransform, tween, v2, EventTouch, rect, AnimationClip, Animation, AnimationState, ValueType, assetManager, Texture2D, Asset, isValid } from 'cc';
 import UIBase from './ui-base';
 import EditorTool from '../../utils/editor-util';
 import UIManager from './ui-manager';
@@ -253,16 +253,14 @@ export default abstract class UIPopup<T extends UIData> extends UIBase {
 
 
     onDestroy() {
-
-        if (this._touchBlankPlaceToClose) {
+        if (this._touchBlankPlaceToClose && isValid(this.node, true)) {
             this.node.off(Node.EventType.TOUCH_END, this.onThisNodeTouchEnd_UsedFor_TouchMarginToClose, this, true);
         }
-        if (this.touchAnyWhereToClose) {
+        if (this.touchAnyWhereToClose && isValid(this.node, true)) {
             this.node.off(Node.EventType.TOUCH_END, this.onThisNodeTouchEnd_UsedFor_TouchAnyWhereToClose, this, true);
         }
+        super.onDestroy();
     }
 }
-
-
 
 

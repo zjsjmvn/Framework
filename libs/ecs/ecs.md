@@ -1,357 +1,352 @@
-# 简介
-libs/ecs 这是一个 Typescript 语言版的Entity-Component-System框架架。
+# Framework ECS 使用说明
 
-# 使用说明
-创建实体
-```Typescript
-ecs.getEntity<ecs.Entity>(ecs.Entity);
-```
+`libs/ecs` 是项目当前使用的 TypeScript ECS 框架。它借鉴了 Entitas 的组件、实体、Matcher、Group、System 思路，但不是 Entitas 直搬：这里没有代码生成、Context、Collector、cleanup attribute，也没有字段级 replaced 事件。
+
+适用目标：
+
+- 纯逻辑可在 Node 测试中运行。
+- 战斗逻辑可以脱离 Cocos View/UI 单独跑。
+- 未来可以把同一套逻辑放到 AI 模拟或权威服务器。
+- View/UI 只消费快照、delta 或领域事件，不直接承载核心规则。
+
+更多 MOBA/权威服务器/AI 测试模式见同目录的 `moba-combat-pattern.md`。
 
 ## 组件
-自定义组件必须继承ecs.Comp，并且需要使用ecs.register注册组件。
-```TypeScript
-@ecs.register('Hello')
-export class HelloComponent extends ecs.Comp {
-    info: string;
-    data: number;
 
-    // 组件被回收前会调用这个方法。
-    reset() {
-        this.info = '';
-        this.data = 0;
+组件必须继承 `ECS.Component`，并用稳定名字注册。不要依赖类名，因为打包压缩后类名可能变化。
+
+```ts
+@ECS.register("Position")
+export class PositionComponent extends ECS.Component {
+    x = 0;
+    y = 0;
+
+    init(): void {
+        this.x = 0;
+        this.y = 0;
     }
 }
 ```
 
-## ecs.register功能
-- 能通过```entity.Hello```获得组件对象；
-- 将组件的构造函数存入ecs上下文中，并且给该类组件分配一个组件id。
+`init()` 不是首次添加时的初始化函数，而是组件回收前的重置函数。组件从池里复用时，旧数组、Map、函数、节点引用、实体 id 都可能还在，所以 `init()` 要清干净引用和脏数据。
 
-## 实体
-为了能利用Typescript的类型提示机制，在使用实体的时候需要用户自己继承ecs.Entity。
-```TypeScript
-ecs.register('HelloEntity')
-export class HelloEntity extends ecs.Entity {
-    Hello: HelloComponent; // 这里的Hello要和ecs.register中填入的参数一致
+如果组件对象由 Cocos 或外部系统创建，ECS 不能 `new`，注册时使用：
+
+```ts
+@ECS.register("View", false)
+export class ViewComponent extends Component {
+    // Cocos component lifecycle is owned by Cocos.
 }
 ```
 
-- 管理子实体
-```TypeScript
-// 添加子实体
-entity.addChild(ecs.Entity);
+这类外部对象挂到实体上后，生命周期仍由创建方负责，ECS 不负责回收实例。
 
-// 移除子实体
-entity.removeChild(ecs.Entity);
+## 实体
+
+实体使用手写 TypeScript 类型提示，不使用 Entitas 代码生成。
+
+```ts
+export class ActorEntity extends ECS.Entity {
+    Position!: PositionComponent;
+    Velocity!: VelocityComponent;
+    Health!: HealthComponent;
+    View?: ViewComponent;
+}
 ```
 
-- 添加组件：
-```TypeScript
-entity.add(HelloComponent); // 添加组件时会优先从组件缓存池中获取无用的组件对象，如果没有才会新创建一个组件对象
+这些属性只是告诉 TypeScript：当实体运行时挂上对应组件后，可以通过 `entity.Position` 访问。真正注册组件的是 `@ECS.register("Position")`，真正添加组件的是 `entity.add(PositionComponent)`。
+
+创建和销毁：
+
+```ts
+const actor = ECS.createEntity<ActorEntity>();
+actor.add(PositionComponent);
+actor.add(VelocityComponent);
+actor.add(HealthComponent);
+
+actor.destroy();
 ```
 
-- 添加组件对象：注意，外部创建的组件对象ecs系统不负责回收，需要用户自己管理该组件对象的声明周期。
-```Typescript
-let compObj = new HelloComponent();
-entity.add(compObj)
+常用操作：
+
+```ts
+const position = actor.get(PositionComponent);
+const hasHealth = actor.has(HealthComponent);
+
+actor.remove(VelocityComponent);
+actor.remove(HealthComponent, false);
 ```
 
-- 删除组件：
-```TypeScript
-entity.remove(HelloComponent); // 组件对象会从实体身上移除并放入组件缓存池中
+`remove(Component, false)` 会让组件从匹配关系中移除，但对象留在实体的缓存里，下次重新添加时复用原对象。只有确实需要保留大对象或临时状态时才使用，并给这种行为写测试。
+
+## Matcher 和 Group
+
+Matcher 是 ECS 的查询语言，Group 是缓存后的匹配实体集合。
+
+```ts
+ECS.allOf(PositionComponent, VelocityComponent);
+ECS.anyOf(StunComponent, SlowComponent);
+ECS.allOf(PositionComponent, HealthComponent).excludeOf(DeadComponent);
+ECS.allOf(PositionComponent).anyOf(VelocityComponent, MoveInputComponent).excludeOf(StunComponent);
 ```
 
-- 删除组件但不删除组件对象：实际开发中，组件身上有很多属性，如果删除了后面再添加，属性值还原是个麻烦的问题，
-remove方法可以删除组件，但是不真正从实体身上移除该组件对象，这样下次重新添加组件时还是会添加那个组件对象。
-```Typescript
-entity.remove(HelloComponent, false)
+规则语义：
+
+- `allOf(A, B)`：同时拥有 A 和 B。
+- `anyOf(A, B)`：拥有 A 或 B 任意一个。
+- `excludeOf(A, B)`：不同时拥有这里列出的排除条件。
+- `onlyOf(A, B)`：只拥有这些组件，监听面很广，非特殊情况不要使用。
+
+推荐把 Matcher 当作粗筛。队伍、距离、隐身/显形、无敌、护盾、技能优先级等字段级规则放在 System 里判断。
+
+查询：
+
+```ts
+const movers = ECS.query<ActorEntity>(
+    ECS.allOf(PositionComponent, VelocityComponent).excludeOf(DeadComponent)
+);
+
+const game = ECS.querySingle<GameEntity>(ECS.allOf(GameStateComponent));
 ```
 
-- 获得组件对象
-```TypeScript
-entity.Hello; // 见上方自定义实体操作
+`querySingle()` 适合唯一实体：没有匹配返回 `null`，匹配超过一个会抛错。
 
-entity.get(HelloComponent);
+等价 Matcher 会复用同一个 Group；新 Group 创建时会扫描已有实体，所以系统晚于实体创建也能看到已存在的匹配实体。
+
+## System
+
+`ComblockSystem` 是最常用的系统基类。`update`、`entityEnter`、`entityRemove`、`firstUpdate` 的参数都是实体数组，不是单个实体。
+
+```ts
+class MovementSystem extends ECS.ComblockSystem<ActorEntity> {
+    filter(): ECS.IMatcher {
+        return ECS.allOf(PositionComponent, VelocityComponent).excludeOf(StunComponent, DeadComponent);
+    }
+
+    update(entities: ActorEntity[]): void {
+        for (const entity of entities) {
+            entity.Position.x += entity.Velocity.x * this.dt;
+            entity.Position.y += entity.Velocity.y * this.dt;
+        }
+    }
+}
 ```
 
-- 判断是否拥有组件：
-```TypeScript
-entity.has(HelloComponent);
+进入/移除匹配组：
 
-!!entity.Hello;
+```ts
+class SpawnViewEventSystem extends ECS.ComblockSystem<ActorEntity> {
+    filter(): ECS.IMatcher {
+        return ECS.allOf(PositionComponent, HealthComponent);
+    }
+
+    entityEnter(entities: ActorEntity[]): void {
+        for (const entity of entities) {
+            // 记录领域事件或同步数据，不要在核心逻辑里创建 Cocos 节点。
+        }
+    }
+
+    entityRemove(entities: ActorEntity[]): void {
+        for (const entity of entities) {
+            // 清理逻辑侧引用或输出 despawn 事件。
+        }
+    }
+
+    update(_entities: ActorEntity[]): void {
+    }
+}
 ```
 
-- 销毁实体：
-```TypeScript
-entity.destroy() // 销毁实体时会先删除实体身上的所有组件，然后将实体放入实体缓存池中
+执行顺序由 `RootSystem` 或 `ECS.System` 明确决定：
+
+```ts
+const root = new ECS.RootSystem();
+root
+    .add(new StatusTimerSystem())
+    .add(new MovementSystem())
+    .add(new AttackSystem())
+    .add(new DamageSystem())
+    .add(new DeathSystem())
+    .add(new ECS.DestroySystem(ECS.allOf(DamageRequestComponent)));
+
+root.init();
+root.execute(fixedDt);
 ```
 
-## 实体筛选
-目前提供了四种类型的筛选能力，但是这四种筛选能力可以组合从而提供更强大的筛选功能。
-- anyOf: 用来描述包含任意一个这些组件的实体；
-- allOf: 用来描述同时包含了这些组件的实体；
-- onlyOf: 用来描述只包含了这些组件的实体；不是特殊情况不建议使用onlyOf，因为onlyOf会监听所有组件的添加和删除事件；
-- excludeOf: 表示不包含所有这里面的组件（与关系）；
+`RootSystem.clear()` 会释放 root 持有的系统，并调用系统 `onDestroy()` 解绑 Group 监听；它不会销毁实体。完整结束一个 ECS 世界时使用：
+
+```ts
+root.clear();
+ECS.clear();
+```
+
+## ReactiveSystem
+
+当前 ECS 有轻量 `ReactiveSystem`，用于响应实体进入或离开某个 Matcher。
+
+```ts
+class DeathEventSystem extends ECS.ReactiveSystem<ActorEntity> {
+    trigger(): ECS.TriggerOnEvent {
+        return ECS.onAdded(ECS.allOf(DeadComponent));
+    }
+
+    protected ensure(): ECS.IMatcher | null {
+        return ECS.allOf(HealthComponent);
+    }
+
+    executeReactive(entities: ActorEntity[]): void {
+        for (const entity of entities) {
+            // 输出死亡事件、记日志、生成一帧请求等。
+        }
+    }
+}
+```
+
+可用触发：
+
+- `ECS.onAdded(matcher)`
+- `ECS.onRemoved(matcher)`
+- `ECS.onAddedOrRemoved(matcher)`
+
+`ensure()` 和 `exclude()` 是触发后的二次过滤。它们不会变成字段级监听，也不会因为 `Health.hp` 这样的字段变化而触发。需要值变化响应时，用显式 dirty/tag/request 组件表达。
+
+## 一帧命令和清理
+
+输入、技能释放、伤害、Buff 申请等短生命周期意图建议用 request entity。
+
+```ts
+const requestEntity = ECS.createEntity();
+const request = requestEntity.add(DamageRequestComponent);
+request.sourceEid = attacker.eid;
+request.targetEid = target.eid;
+request.amount = 100;
+```
+
+处理后在流水线末尾清掉：
+
+```ts
+root.add(new DamageSystem());
+root.add(new ECS.DestroySystem(ECS.allOf(DamageRequestComponent)));
+```
+
+如果只是移除一个一次性组件，可以用：
+
+```ts
+root.add(new ECS.RemoveComponentSystem(
+    ECS.allOf(MoveInputRequestComponent),
+    MoveInputRequestComponent
+));
+```
+
+不要让 `DamageRequest`、`CastRequest`、`MoveInputRequest`、`BuffApplyRequest` 这类一帧意图长期留在世界里。
+
+## View/UI 边界
+
+核心 ECS 只做数据和逻辑计算。UI 和显示不要放进 ECS 流水线里。
+
+推荐分层：
+
+- Cocos View：负责节点、预制体、动画、音效、点击、弹窗、插值显示。
+- Presenter/ViewModel：把 ECS 快照、delta、领域事件转换成界面显示数据。
+- Runtime/Facade：接收 UI 输入，创建 command/request，固定 tick 驱动 ECS，导出快照和事件。
+- ECS Systems：只处理纯逻辑，不访问 Cocos API、UIManager、tween、audio、prefab。
+
+输入方向：
+
+```text
+UI click/input -> Runtime facade -> command/request entity -> ordered ECS systems
+```
+
+输出方向：
+
+```text
+ECS state/events -> snapshot/delta/domain events -> Presenter -> Cocos View
+```
+
+这能保证逻辑可以在本地 Node 测试、AI 模拟和服务器环境里运行。
+
+## MOBA 战斗建议
+
+MOBA 或类似实时战斗建议按小组件拆分：
+
+- 耐久数据：`Identity/NetId`、`Position`、`Velocity`、`Team`、`Health`、`Attack`、`Mana`、`SkillCooldown`。
+- 状态标签/计时：`Dead`、`Stun`、`Slow`、`Invisible`、`Revealed`、`Untargetable`、`Invulnerable`、`Respawn`。
+- 一帧命令：`MoveInputRequest`、`CastRequest`、`DamageRequest`、`BuffApplyRequest`、`DispelRequest`。
+- 运行时对象：`Projectile`。
+- 策略数值：`BuffState`、小型 stat 组件，或 `NumericComponent`。
+
+推荐帧顺序：
+
+```text
+Cooldown/status timers -> Movement -> Targeting/Attack -> Cast command -> Projectile -> Damage -> Death -> Respawn -> Cleanup
+```
+
+网络和回放不要依赖 ECS `eid` 作为业务身份。`eid` 是运行时对象 id，快照、预测、服务器同步应使用稳定的 `Identity` 或 `NetId`。
+
+## NumericComponent
+
+`NumericComponent` 用于可叠加数值。不要直接累加 `Base` 或 `Final`。
 
 使用方式：
 
-- 表示同时拥有多个组件
-```TypeScript
-ecs.allOf(AComponent, BComponent, CComponent);
-```
-- 表示拥有任意一个组件
-```Typescript
-ecs.anyOf(AComponent, BComponent);
-```
-- 表示拥有某些组件，并且不包含某些组件
-```Typescript
-// 不包含CComponent或者DComponent
-ecs.allOf(AComponent, BComponent).excludeOf(CComponent, DComponent);
+```ts
+numeric.setByKey(NumericType.Base, 100);
+numeric.addByKey(NumericType.BaseAddValue, 20);
+numeric.addByKey(NumericType.BaseAddPercent, 15);
+numeric.update();
 
-// 不同时包含CComponent和DComponent
-ecs.allOf(AComponent, BComponent).excludeOf(CComponent).excludeOf(DComponent);
+const finalValue = numeric.Final;
 ```
 
-### 直接查询并获得实体
-```Typescript
-ecs.query(ecs.allOf(Comp1, Comp2))
+公式：
+
+```text
+((Base + BaseAddValue) * (100 + BaseAddPercent) / 100 + FinalAddValue) * (100 + FinalAddPercent) / 100
 ```
 
-## 系统
-- ecs.System: 用来组合某一功能所包含的System；
-- ecs.RootSystem: System的root；
-- ecs.ComblockSystem: 抽象类，组合式的System。默认情况，如果该System有实体，则每帧都会执行update方法；
-- ecs.IEntityEnterSystem: 实现这个接口表示关注实体的首次进入；
-- ecs.IEntityRemoveSystem: 实现这个接口表示关注实体的移除；
-- ecs.ISystemFirstUpdate: 实现这个接口会在System第一次执行update前执行一次firstUpdate
-- ecs.ISystemUpdate:实现这个接口会在System中每帧出发update方法
+百分比低于 `-100` 会产生反向或异常结果，当前实现会警告。
 
-# 怎么使用
-1、声明组件
-```TypeScript
-@ecs.register('Node')
-export class NodeComponent extends ecs.Comp {
-    val: cc.Node = null;
+## 性能和生命周期
 
-    reset() {
-        this.val = null;
-    }
-}
+常见性能规则：
 
-@ecs.reigster('Move')
-export class MoveComponent extends ecs.Comp {
-    heading: cc.Vec2 = cc.v2();
-    speed: number = 0;
+- 组件保持小而清晰，避免一个巨型组件承载所有状态。
+- 高频对象用组件池和实体池，不要在每帧创建大量临时普通对象。
+- 用 Matcher/Group 做组件存在性的缓存查询，不要每帧手写全世界扫描。
+- `onlyOf` 和无锚点的宽泛 `excludeOf` 谨慎使用。
+- 一帧命令处理完立刻清理，避免世界里积累无效实体。
+- Group 复用是正常优化，多个系统使用等价 Matcher 时各自仍有独立 enter/remove 缓冲。
 
-    reset() {
-        this.heading.x = 0;
-        this.heading.y = 0;
-        this.speed = 0;
-    }
-}
+对象池持有实体或组件内存是预期缓存行为，不等于泄漏。真正需要排查的是：
 
-@ecs.register('Transform')
-export class TransformComponent extends ecs.Comp {
-    position: cc.Vec2 = cc.v2();
-    angle: number;
-    reset() {
-    
-    }
-}
+- `RootSystem.clear()` 后旧系统仍被执行。
+- 旧系统仍挂在 Group watcher 上。
+- View 节点或 Cocos Component 被核心组件长期引用。
+- 一帧 request entity 没有销毁。
+- 逻辑世界结束时只 `root.clear()`，忘了 `ECS.clear()`。
 
-export class AvatarEntity extends ecs.Entity {
-    Node: NodeComponent;
-    Move: MoveComponent;
-    Transform: TransformComponent;
-}
+## 测试入口
+
+ECS 相关修改优先跑：
+
+```powershell
+npm run test:ecs
 ```
 
-2、创建系统
-```TypeScript
-export class RoomSystem extends ecs.RootSystem {
-    constructor() {
-        super();
-        this.add(new MoveSystem());
-        this.add(new RenderSystem());
-    }
-}
+需要和旧 Entitas 行为或性能对比时跑：
 
-export class MoveSystem extends ecs.ComblockSystem<AvatarEntity> implements ecs.IEntityEnterSystem, ecs.ISystemUpdate {
-    init() {
-    
-    }
-
-    filter(): ecs.IMatcher {
-        return ecs.allOf(MoveComponent, TransformComponent);
-    }
-
-     // 实体第一次进入MoveSystem会进入此方法
-    entityEnter(e: AvatarEntity) {
-        e.Move.speed = 100;
-    }
-    
-    // 每帧都会更新
-    update(e: AvatarEntity) {
-        let moveComp = e.Move;                      // e.get(MoveComponent);
-        lel position = e.Transform.position;
-        
-        position.x += moveComp.heading.x * moveComp.speed * this.dt;
-        position.y += moveComp.heading.y * moveComp.speed * this.dt;
-        
-        e.Transform.angle = cc.misc.lerp(e.Transform.angle, Math.atan2(moveComp.speed.y, moveComp.speed.x) * cc.macro.DEG, dt);
-    }
-}
-
-export class RenderSystem extends ecs.ComblockSystem<AvatarEntity> implements ecs.IEntityEnterSystem, ecs.IEntityRemoveSystem, ecs.ISystemUpdate {
-    filter(): ecs.IMatcher {
-        return ecs.allOf(NodeComponent, TransformComponent);
-    }
-    
-    // 实体第一次进入MoveSystem会进入此方法
-    entityEnter(e: AvatarEntity) {
-        e.Node.val.active = true;
-    }
-    
-    entityRemove(e: AvatarEntity) {
-       
-    }
-    
-    update(e: AvatarEntity) {
-        e.Node.val.setPosition(e.Transform.position);
-        e.Node.val.angle = e.Transform.angle;
-    }
-}
+```powershell
+npm run test:ecs:compare
 ```
 
-3、驱动ecs框架
-```TypeScript
-const { ccclass, property } = cc._decorator;
-@ccclass
-export class GameControllerBehaviour extends Component {
-    rootSystem: RootSystem = null;
+覆盖重点：
 
-    onLoad() {
-        this.rootSystem = new RootSystem();
-        this.rootSystem.init();
-    }
-    
-    createAvatar(node: cc.Node) {
-        let entity = ecs.createEntityWithComps<AvatarEntity>(NodeComponent, TransformComponent, MoveComponent);
-        entity.Node.val = node;
-    }
-
-    update(dt: number) {
-        this.rootSystem.execute(dt);
-    }
-}
-
-```
-
-# 和Cocos Creator的组件混合使用
-## 创建基类
-```Typescript
-import { Component, _decorator } from "cc";
-import { ecs } from "../../../Libs/ECS";
-const { ccclass, property } = _decorator;
-
-@ccclass('CCComp')
-export abstract class CCComp extends Component implements ecs.IComp {
-    static tid: number = -1;
-    static compName: string;
-
-    canRecycle: boolean;
-    ent: ecs.Entity;
-
-    onLoad() {
-        this.ent = ecs.createEntity();
-        this.ent.add(this);    
-    }
-
-    abstract reset(): void;
-}
-```
-
-## 创建ecs组件并且赋予序列化的功能，这样就能在Cocos Creator的“属性检查器”上修改参数
-```Typescript
-import { _decorator, toDegree, v3, Node, Vec3 } from "cc";
-import { ecs } from "../../../Libs/ECS";
-const { ccclass, property } = _decorator;
-
-let outV3 = v3();
-@ccclass('MovementComponent')
-@ecs.register('Movement')
-export class MovementComponent extends CCComp {
-    pos: Vec3 = v3();
-    angle: number = 0;
-    speed: number = 0;
-
-    @property
-    acceleration: number = 0;
-
-    @property
-    private _maxSpeed: number = 0;
-    @property
-    set maxSpeed(val: number) {
-        this._maxSpeed = val;
-    }
-    get maxSpeed() {
-        return this._maxSpeed;
-    }
-
-    @property
-    heading: Vec3 = v3();
-    
-    @property
-    targetHeading: Vec3 = v3();
-
-    reset() {
-
-    }
-
-    update(dt: number) {
-        if(!Vec3.equals(this.heading, this.targetHeading, 0.01)) {
-            Vec3.subtract(outV3, this.targetHeading, this.heading);
-            outV3.multiplyScalar(0.025);
-            this.heading.add(outV3);
-            this.heading.normalize();
-            this.angle = toDegree(Math.atan2(this.heading.y, this.heading.x)) - 90;
-        }
-        
-        this.speed = Math.min(this.speed + this.acceleration * dt, this._maxSpeed);
-
-        this.pos.add3f(this.heading.x * this.speed * dt, this.heading.y * this.speed * dt, 0);
-    }
-
-    calcAngle() {
-        this.angle = toDegree(Math.atan2(this.heading.y, this.heading.x)) - 90;
-        return this.angle;
-    }
-}
-
-```
-
-## 创建面向Cocos Creator的组件
-```Typescript
-import { Component, _decorator } from "cc";
-const { ccclass, property } = _decorator;
-@ccclass('Player')
-@ecs.register('Player', false)
-export class Player extends CCComp {
-    @property({
-        type: MovementComponent
-    })
-    movement: MovementComponent;
-
-    onLoad() {
-        super.onLoad();
-
-        // 添加MovementComponent组件对象
-        this.ent.add(this.movement);
-    }
-}
-```
-
-# 调试
-添加如下代码
-```TypeScript
-windows['ecs'] = ecs;
+- 组件注册、add/remove/destroy、组件池 reset。
+- `allOf/anyOf/excludeOf/onlyOf` 及组合 matcher。
+- 等价 matcher 的 group 复用。
+- 已存在实体创建 group 后能被扫描到。
+- `entityEnter/entityRemove/firstUpdate` 顺序。
+- `ReactiveSystem` 的 added/removed/ensure/exclude。
+- `DestroySystem`、`RemoveComponentSystem` 清理一帧命令。
+- `RootSystem.clear()` 不残留 watcher，完整世界结束配合 `ECS.clear()`。
+- MOBA 场景中的减速、眩晕、死亡、复活、护盾、吸血、反伤、投射物失效、预测回放。

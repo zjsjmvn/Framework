@@ -99,7 +99,7 @@ export module ECS {
 
     /**
      * 添加tag
-     * 
+     *
      * eg.
      *      @registerTag()
      *      class Tag {
@@ -140,7 +140,7 @@ export module ECS {
      * 
      * key是组件的筛选规则，一个筛选规则对应一个group
      */
-    let groups: Map<number, Group> = new Map();
+    let groups: Map<string, Group> = new Map();
 
     /**
      * 实体自增id
@@ -217,10 +217,11 @@ export module ECS {
      * @param matcher 实体筛选器
      */
     export function createGroup<E extends Entity = Entity>(matcher: IMatcher): Group<E> {
-        let group = groups.get(matcher.mid);
+        let group = groups.get(matcher.key);
         if (!group) {
             group = new Group(matcher);
-            groups.set(matcher.mid, group);
+            groups.set(matcher.key, group);
+            eid2Entity.forEach(group.onComponentAddOrRemove, group);
             let careComponentTypeIds = matcher.indices;
             for (let i = 0; i < careComponentTypeIds.length; i++) {
                 componentAddOrRemove.get(careComponentTypeIds[i])!.push(group.onComponentAddOrRemove.bind(group));
@@ -235,12 +236,19 @@ export module ECS {
      * @returns 
      */
     export function query<E extends Entity = Entity>(matcher: IMatcher): E[] {
-        let group = groups.get(matcher.mid);
+        let group = groups.get(matcher.key);
         if (!group) {
             group = createGroup(matcher);
-            eid2Entity.forEach(group.onComponentAddOrRemove, group);
         }
         return group.matchEntities as E[];
+    }
+
+    /**
+     * 查询最多一个实体。
+     * 如果没有实体匹配返回null；如果超过一个实体匹配则抛错。
+     */
+    export function querySingle<E extends Entity = Entity>(matcher: IMatcher): E | null {
+        return createGroup<E>(matcher).getSingleEntity();
     }
 
     /**
@@ -289,6 +297,13 @@ export module ECS {
      */
     export function activeEntityCount() {
         return eid2Entity.size;
+    }
+
+    /**
+     * 当前缓存的group数量。
+     */
+    export function groupCount() {
+        return groups.size;
     }
     //#endregion
 
@@ -626,6 +641,11 @@ export module ECS {
         }
     }
 
+    type GroupEntityWatcher<E extends Entity = Entity> = {
+        enteredEntities: Map<number, E>;
+        removedEntities: Map<number, E>;
+    };
+
     export class Group<E extends Entity = Entity> {
         /**
          * 实体筛选规则
@@ -660,8 +680,17 @@ export module ECS {
             return this.matchEntities[0];
         }
 
-        private _enteredEntities: Map<number, E> | null = null;
-        private _removedEntities: Map<number, E> | null = null;
+        getSingleEntity(): E | null {
+            if (this.count === 0) {
+                return null;
+            }
+            if (this.count > 1) {
+                throw new Error(`期望最多只有一个实体：${this.matcher.key}，实际有 ${this.count} 个。`);
+            }
+            return this.matchEntities[0];
+        }
+
+        private entityWatchers: GroupEntityWatcher<E>[] = [];
 
         constructor(matcher: IMatcher) {
             this.matcher = matcher;
@@ -676,9 +705,10 @@ export module ECS {
                 this._entitiesCache = null;
                 this.count++;
 
-                if (this._enteredEntities) {
-                    this._enteredEntities.set(entity.eid, entity);
-                    this._removedEntities!.delete(entity.eid);
+                for (let i = 0; i < this.entityWatchers.length; i++) {
+                    let watcher = this.entityWatchers[i];
+                    watcher.enteredEntities.set(entity.eid, entity);
+                    watcher.removedEntities.delete(entity.eid);
                 }
             }
             else if (!isMatched && wasMatched) { // 如果Group中有这个实体，但是这个实体已经不满足匹配规则，则从Group中移除该实体
@@ -686,24 +716,45 @@ export module ECS {
                 this._entitiesCache = null;
                 this.count--;
 
-                if (this._enteredEntities) {
-                    this._enteredEntities.delete(entity.eid);
-                    this._removedEntities!.set(entity.eid, entity);
+                for (let i = 0; i < this.entityWatchers.length; i++) {
+                    let watcher = this.entityWatchers[i];
+                    watcher.enteredEntities.delete(entity.eid);
+                    watcher.removedEntities.set(entity.eid, entity);
                 }
             }
         }
 
         public watchEntityEnterAndRemove(enteredEntities: Map<number, E>, removedEntities: Map<number, E>) {
-            this._enteredEntities = enteredEntities;
-            this._removedEntities = removedEntities;
+            this.entityWatchers.push({
+                enteredEntities,
+                removedEntities,
+            });
+        }
+
+        public unwatchEntityEnterAndRemove(enteredEntities: Map<number, E>, removedEntities: Map<number, E>) {
+            for (let i = this.entityWatchers.length - 1; i >= 0; i--) {
+                let watcher = this.entityWatchers[i];
+                if (watcher.enteredEntities === enteredEntities && watcher.removedEntities === removedEntities) {
+                    watcher.enteredEntities.clear();
+                    watcher.removedEntities.clear();
+                    this.entityWatchers.splice(i, 1);
+                    return;
+                }
+            }
+            enteredEntities.clear();
+            removedEntities.clear();
         }
 
         clear() {
             this._matchEntities.clear();
             this._entitiesCache = null;
             this.count = 0;
-            this._enteredEntities?.clear();
-            this._removedEntities?.clear();
+            for (let i = 0; i < this.entityWatchers.length; i++) {
+                let watcher = this.entityWatchers[i];
+                watcher.enteredEntities.clear();
+                watcher.removedEntities.clear();
+            }
+            this.entityWatchers.length = 0;
         }
     }
 
@@ -831,8 +882,16 @@ export module ECS {
             if (this._indices === null) {
                 this._indices = [];
                 this.rules.forEach((rule) => {
-                    Array.prototype.push.apply(this._indices, rule.indices);
+                    for (let i = 0; i < rule.indices.length; i++) {
+                        let index = rule.indices[i];
+                        if (this._indices!.indexOf(index) < 0) {
+                            this._indices!.push(index);
+                        }
+                    }
                 });
+                if (this._indices.length > 1) {
+                    this._indices.sort((a, b) => { return a - b; });
+                }
             }
             return this._indices;
         }
@@ -888,6 +947,8 @@ export module ECS {
         }
 
         private bindMatchMethod() {
+            this._indices = null;
+            this._key = null;
             if (this.rules.length === 1) {
                 this.isMatch = this.isMatch1;
             }
@@ -949,6 +1010,38 @@ export module ECS {
         firstUpdate(entities: E[]): void;
     }
 
+    export enum GroupEventType {
+        OnEntityAdded = "added",
+        OnEntityRemoved = "removed",
+        OnEntityAddedOrRemoved = "addedOrRemoved",
+    }
+
+    export interface TriggerOnEvent {
+        matcher: IMatcher;
+        eventType: GroupEventType;
+    }
+
+    export function onAdded(matcher: IMatcher): TriggerOnEvent {
+        return {
+            matcher,
+            eventType: GroupEventType.OnEntityAdded,
+        };
+    }
+
+    export function onRemoved(matcher: IMatcher): TriggerOnEvent {
+        return {
+            matcher,
+            eventType: GroupEventType.OnEntityRemoved,
+        };
+    }
+
+    export function onAddedOrRemoved(matcher: IMatcher): TriggerOnEvent {
+        return {
+            matcher,
+            eventType: GroupEventType.OnEntityAddedOrRemoved,
+        };
+    }
+
     export abstract class ComblockSystem<E extends Entity = Entity> {
         protected group: Group<E>;
         protected dt: number = 0;
@@ -962,12 +1055,23 @@ export module ECS {
         private tmpExecute: ((dt: number) => void) | null = null;
         private execute!: (dt: number) => void;
 
-        constructor() {
-            let hasOwnProperty = Object.hasOwnProperty;
+        constructor(matcher?: IMatcher) {
             let prototype = Object.getPrototypeOf(this);
-            let hasEntityEnter = hasOwnProperty.call(prototype, 'entityEnter');
-            let hasEntityRemove = hasOwnProperty.call(prototype, 'entityRemove');
-            let hasFirstUpdate = hasOwnProperty.call(prototype, 'firstUpdate');
+            let hasEntityEnter = false;
+            let hasEntityRemove = false;
+            let hasFirstUpdate = false;
+            while (prototype && prototype !== ComblockSystem.prototype) {
+                if (!hasEntityEnter) {
+                    hasEntityEnter = Object.prototype.hasOwnProperty.call(prototype, 'entityEnter');
+                }
+                if (!hasEntityRemove) {
+                    hasEntityRemove = Object.prototype.hasOwnProperty.call(prototype, 'entityRemove');
+                }
+                if (!hasFirstUpdate) {
+                    hasFirstUpdate = Object.prototype.hasOwnProperty.call(prototype, 'firstUpdate');
+                }
+                prototype = Object.getPrototypeOf(prototype);
+            }
 
             this.hasEntityEnter = hasEntityEnter;
             this.hasEntityRemove = hasEntityRemove;
@@ -977,12 +1081,12 @@ export module ECS {
                 this.removedEntities = new Map<number, E>();
 
                 this.execute = this.execute1;
-                this.group = createGroup(this.filter());
+                this.group = createGroup(matcher || this.filter());
                 this.group.watchEntityEnterAndRemove(this.enteredEntities, this.removedEntities);
             }
             else {
                 this.execute = this.execute0;
-                this.group = createGroup(this.filter());
+                this.group = createGroup(matcher || this.filter());
             }
 
             if (hasFirstUpdate) {
@@ -996,7 +1100,10 @@ export module ECS {
         }
 
         onDestroy(): void {
-
+            if (this.enteredEntities && this.removedEntities) {
+                this.group.unwatchEntityEnterAndRemove(this.enteredEntities, this.removedEntities);
+            }
+            this.tmpExecute = null;
         }
 
         hasEntity(): boolean {
@@ -1067,6 +1174,110 @@ export module ECS {
         abstract update(entities: E[]): void;
     }
 
+    export abstract class ReactiveSystem<E extends Entity = Entity> extends ComblockSystem<E> {
+        private triggerOnEvent!: TriggerOnEvent;
+
+        filter(): IMatcher {
+            return this.getTrigger().matcher;
+        }
+
+        entityEnter(entities: E[]): void {
+            let eventType = this.getTrigger().eventType;
+            if (eventType === GroupEventType.OnEntityAdded || eventType === GroupEventType.OnEntityAddedOrRemoved) {
+                this.executeIfMatched(entities);
+            }
+        }
+
+        entityRemove(entities: E[]): void {
+            let eventType = this.getTrigger().eventType;
+            if (eventType === GroupEventType.OnEntityRemoved || eventType === GroupEventType.OnEntityAddedOrRemoved) {
+                this.executeIfMatched(entities);
+            }
+        }
+
+        update(_entities: E[]): void {
+        }
+
+        protected ensure(): IMatcher | null {
+            return null;
+        }
+
+        protected exclude(): IMatcher | null {
+            return null;
+        }
+
+        private executeIfMatched(entities: E[]): void {
+            let ensureMatcher = this.ensure();
+            let excludeMatcher = this.exclude();
+            let matchedEntities: E[] = [];
+            for (let i = 0; i < entities.length; i++) {
+                let entity = entities[i];
+                if (ensureMatcher && !ensureMatcher.isMatch(entity)) {
+                    continue;
+                }
+                if (excludeMatcher && excludeMatcher.isMatch(entity)) {
+                    continue;
+                }
+                matchedEntities.push(entity);
+            }
+            if (matchedEntities.length > 0) {
+                this.executeReactive(matchedEntities);
+            }
+        }
+
+        private getTrigger(): TriggerOnEvent {
+            if (!this.triggerOnEvent) {
+                this.triggerOnEvent = this.trigger();
+            }
+            return this.triggerOnEvent;
+        }
+
+        abstract trigger(): TriggerOnEvent;
+        abstract executeReactive(entities: E[]): void;
+    }
+
+    export class DestroySystem<E extends Entity = Entity> extends ComblockSystem<E> {
+        constructor(matcher: IMatcher) {
+            super(matcher);
+        }
+
+        filter(): IMatcher {
+            throw new Error("DestroySystem uses the matcher passed to its constructor.");
+        }
+
+        update(entities: E[]): void {
+            let destroyEntities = entities.slice();
+            for (let i = 0; i < destroyEntities.length; i++) {
+                destroyEntities[i].destroy();
+            }
+        }
+    }
+
+    export class RemoveComponentSystem<E extends Entity = Entity> extends ComblockSystem<E> {
+        private componentType: ComponentType<IComponent>;
+        private isRecycle: boolean;
+
+        constructor(matcher: IMatcher, componentType: ComponentType<IComponent>, isRecycle: boolean = true) {
+            super(matcher);
+            this.componentType = componentType;
+            this.isRecycle = isRecycle;
+        }
+
+        filter(): IMatcher {
+            throw new Error("RemoveComponentSystem uses the matcher passed to its constructor.");
+        }
+
+        update(entities: E[]): void {
+            let matchedEntities = entities.slice();
+            for (let i = 0; i < matchedEntities.length; i++) {
+                let entity = matchedEntities[i];
+                if (entity.has(this.componentType)) {
+                    entity.remove(this.componentType, this.isRecycle);
+                }
+            }
+        }
+    }
+
     /**
      * System的root，对游戏中的System遍历从这里开始。
      * 
@@ -1101,6 +1312,8 @@ export module ECS {
 
         clear() {
             this.executeSystemFlows.forEach(sys => sys.onDestroy());
+            this.executeSystemFlows.length = 0;
+            this.systemCnt = 0;
         }
     }
 

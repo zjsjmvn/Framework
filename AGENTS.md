@@ -145,7 +145,7 @@
 - `entity.remove(Component, false)` 会把组件对象留在实体缓存中，下次重新添加复用原对象。
 - `allOf/anyOf/excludeOf` 可组合查询；`onlyOf` 会监听大量组件增删，非必要不要使用。
 - `ComblockSystem` 的 `update` 参数是实体数组，不是单个实体；实现 `entityEnter/entityRemove/firstUpdate` 时保持数组语义。
-- `RootSystem.clear()` 只调用系统 `onDestroy`，实体清理另用 `ECS.clear()`。
+- `RootSystem.clear()` 会调用系统 `onDestroy` 并释放 root 持有的系统列表；实体清理另用 `ECS.clear()`。
 - `EntityLink` 通过 `eid` 把 Cocos 节点和 ECS 实体关联，实体销毁后要处理空返回。
 - `NumericComponent` 的 `Base` 和 `Final` 不允许直接累加；用 `setByKey` 修改 Base/加值/百分比并让 `update()` 计算 Final。
 

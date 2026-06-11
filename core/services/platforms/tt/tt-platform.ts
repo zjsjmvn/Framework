@@ -427,15 +427,22 @@ export default class TTPlatform extends BasePlatform {
         });
     }
 
-    public static get canIUseCheckSceneAndNavigateToScene() {
-        let systemInfos = tt.getSystemInfoSync();
-        if (systemInfos.appName = "Douyin" || systemInfos.appName == "douyin_lite") {
-            let sdkVersion = systemInfos.SDKVersion;
-            if (versionCompare(sdkVersion, '2.92.0', true)) {
-                return true;
-            }
+    public static get canIUseCheckSceneAndNavigateToScene(): boolean {
+        if (sys.platform !== sys.Platform.BYTEDANCE_MINI_GAME) {
             return false;
         }
+
+        const ttApi = (globalThis as any).tt;
+        if (!ttApi?.getSystemInfoSync) {
+            return false;
+        }
+
+        let systemInfos = ttApi.getSystemInfoSync();
+        if (systemInfos.appName === "Douyin" || systemInfos.appName === "douyin_lite") {
+            let sdkVersion = systemInfos.SDKVersion;
+            return versionCompare(sdkVersion, '2.92.0', true);
+        }
+        return false;
     }
 
     public static canIUseSideBar(): Promise<boolean> {

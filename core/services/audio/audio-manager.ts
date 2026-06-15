@@ -294,6 +294,13 @@ export class AudioManager extends Component {
         }
     }
 
+    /** 停止当前背景音乐播放，不影响音效 */
+    stopMusic() {
+        if (this.audioMusic) {
+            this.audioMusic.stop();
+        }
+    }
+
     /** 停止当前音乐与音效的播放 */
     stopAll() {
         if (this.audioMusic) {

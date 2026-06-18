@@ -25,9 +25,7 @@ export default class VMProgress extends VMCustom {
     })
     stringFormat: string = '';
 
-
-    // LIFE-CYCLE CALLBACKS:
-
+    /** 进度组件必须绑定当前值和最大值两个路径，否则无法计算比例。 */
     onLoad() {
         if (this.watchPathArr.length < 2 || this.watchPathArr[0] == '[min]' || this.watchPathArr[1] == '[max]') {
             console.error('VMProgress must have two values!');

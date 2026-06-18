@@ -1,4 +1,6 @@
 import { RewardVideoConfig, InterstitialConfig, BannerConfig, GeZiAdConfig, ShowInterstitialAdCallBackMsg, ShowRewardVideoCallBackMsg } from '../ads-manager';
+
+/** 广告 provider 统一接口；不同平台只需要实现这些加载、展示、预载和缓存能力。 */
 export interface IAdProvider {
     isShowingRewardVideo?: boolean;
     isShowingInterstitial?: boolean;
@@ -14,4 +16,3 @@ export interface IAdProvider {
 
     haveCacheVideo?(posName: string): boolean;
 }
-

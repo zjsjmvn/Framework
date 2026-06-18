@@ -4,7 +4,7 @@ const PREFAB_UI_DIR = 'Prefab/UI/';
 
 const { property, ccclass } = _decorator
 /**
- * @description TODO: 考虑动画添加进来。但是动画可能有animation 也可能有action。考虑show的时候的问题。
+ * @description UI 基类只定义通用生命周期；打开/关闭动画目前由 UIPopup/PopupAction 处理，避免把 Animation/Action 差异塞进所有 UI。
  * @export
  * @abstract
  * @class UIBase

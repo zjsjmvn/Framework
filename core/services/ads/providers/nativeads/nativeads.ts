@@ -608,7 +608,7 @@ export default class NativeAdsProvider implements IAdProvider {
 
     //#region 格子广告
     private initGeZiAds(geZiAdsConfigArr: Array<GeZiAdConfig>) {
-        log(this.logTag, "格子广告初始化待实现");
+        log(this.logTag, "格子广告初始化暂未接入");
     }
     //#endregion
 

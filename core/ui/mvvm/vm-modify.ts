@@ -42,13 +42,11 @@ export default class VMModify extends VMBase {
     })
     valueMax: number = 1;
 
-    // LIFE-CYCLE CALLBACKS:
-
     start() {
 
     }
 
-    //限制最终结果的取值范围
+    /** 根据 Inspector 配置限制最终写回 VM 的数值范围。 */
     private clampValue(res) {
         let min = this.valueMin;
         let max = this.valueMax;

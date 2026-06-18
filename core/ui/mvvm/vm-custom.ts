@@ -67,9 +67,7 @@ export default class VMCustom extends VMBase {
     /**检查的值 */
     private _oldValue: any = null;
 
-
-    // LIFE-CYCLE CALLBACKS:
-
+    /** 初始化绑定目标组件；编辑器下只做配置校验，运行时才缓存真实组件实例。 */
     onLoad() {
         super.onLoad();
         //只在运行时检查组件是否缺失可用
@@ -80,10 +78,12 @@ export default class VMCustom extends VMBase {
         }
     }
 
+    /** 编辑器恢复组件时重新检查 Inspector 中填写的组件名和属性名。 */
     onRestore() {
         this.checkEditorComponent();
     }
 
+    /** 初始化时从 VM 路径取一次当前值，避免等到下一次变更才刷新显示。 */
     start() {
         //从 watch 的路径中获取一个初始值
         this.onValueInit();
@@ -159,7 +159,7 @@ export default class VMCustom extends VMBase {
     update(dt) {
         //脏检查（组件是否存在，是否被激活）
         if (EDITOR == true) return;
-        //if (this.templateMode == true) return; //todo 模板模式下不能计算  
+        // 模板模式暂不参与 controller 脏检查；需要双向模板写回时再补独立计算路径。
         if (!this.controller) return;
         if (!this._canWatchComponent || this._watchComponent['enabled'] === false) return;
 

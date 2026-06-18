@@ -1,3 +1,4 @@
+// Bounce easing 曲线工具，提供弹跳缓入/缓出/缓入缓出给 tween 曲线表复用。
 export class Bounce {
 
     public static easeIn(time: number, duration: number, unusedOvershootOrAmplitude: number, unusedPeriod: number) {

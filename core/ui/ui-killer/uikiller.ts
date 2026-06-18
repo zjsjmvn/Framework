@@ -146,7 +146,7 @@ export default class UIKiller {
      * @param {Node} node
      */
     private static _bindTouchEvent(node: Node, rootNodeScript, defaultNames?) {
-        //todo: EditBox 组件不能注册触摸事件,在原生上会导致不能被输入
+        // EditBox 在原生端注册额外触摸会抢输入焦点，因此跳过 UIKiller 的触摸绑定。
         if (node.getComponent(EditBox)) {
             return;
         }

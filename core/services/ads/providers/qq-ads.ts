@@ -192,7 +192,7 @@
 //         return new Promise((resolve, reject) => {
 //             if (!!this.rewardedVideoAd) {
 //                 this.rewardedVideoAd.load()
-//                     // todo
+//                     // load 成功后只标记缓存；QQ 侧展示回调仍由 showRewardVideo 统一处理。
 
 //                     .then(() => {
 //                         console.log('QQAds 拉取视频广告成功');

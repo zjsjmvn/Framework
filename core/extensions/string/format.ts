@@ -94,7 +94,7 @@ String.prototype.format = function () {
                       array(padLength + 1).join(" ") + val;
                   }
                   else {
-                    // TODO throw ?
+                    // 当前保持历史容错：宽度不足时直接沿用原始指数格式，不主动抛错以免影响旧模板。
                   }
                 }
                 else {
@@ -178,7 +178,7 @@ String.prototype.format = function () {
                   replaceString = (param + array(len + 1).join(" ")).slice(-RegExp.$2);
                   break;
                 default:
-                // TODO throw ?
+                  // 未识别的字符串对齐标记沿用历史行为：不抛错，只返回当前计算出的空串。
               }
               return [
                 line.substring(0, line.indexOf('%' + identifier)),
@@ -283,4 +283,3 @@ Date.prototype.format = function (fmt) {
     if (new RegExp("(" + k + ")").test(fmt)) fmt = fmt.replace(RegExp.$1, (RegExp.$1.length == 1) ? (o[k]) : (("00" + o[k]).substr(("" + o[k]).length)));
   return fmt;
 }
-

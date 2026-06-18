@@ -65,17 +65,17 @@ class StringFormat {
 
     //将数字按分显示 00:00 显示 （ms制）
     private time_m(value: number) {
-        //todo
+        // 预留格式，当前 VMLabel 未接入该分支；实现前需确认输入单位和补零规则。
     }
 
     //将数字按秒显示 00:00:00 显示 （ms制）
     private time_s(value: number) {
-        //todo
+        // 预留格式，当前 VMLabel 未接入该分支；实现前需确认是否要兼容毫秒输入。
     }
 
     //将数字按 0:00:00:000 显示 （ms制）
     private time_ms(value: number) {
-        //todo
+        // 预留格式，后续实现时要与 time_h_m_s 的秒输入语义区分清楚。
     }
 
 
@@ -115,7 +115,7 @@ class StringFormat {
 
     //将时间戳显示为详细的内容
     private timeStamp(value: number) {
-        //todo
+        // 目前只作为兜底展示；如果用于正式 UI，需要按目标平台补本地化格式。
         return new Date(value).toString()
     }
 

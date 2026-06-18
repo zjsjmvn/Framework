@@ -256,7 +256,7 @@ export class AdsManager {
     showInterstitial(posName: string = "Default"): Promise<ShowInterstitialAdCallBackMsg> {
         try {
             console.log("AdsManager showInterstitial");
-            // 
+            // 插屏广告统一在总入口做频控，provider 只负责真实平台展示。
             if (Date.now() - this._last_show_interstitial_timestamp > this.interstitialIntervalSeconds * 1000) {
                 for (let i of this.adProviderArr) {
                     if (i.hasInterstitial(posName)) {

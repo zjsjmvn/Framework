@@ -22,7 +22,7 @@ export default abstract class TickTypeBuff extends BuffSkill {
     public onTick(dt) {
         this.currentTick -= dt;
         if (this.currentTick <= 0) {
-            // do something
+            // 到达触发间隔；具体效果由子类在扩展 onTick 或组合技能逻辑时实现。
             this.currentTick = this.tick;
         }
     }

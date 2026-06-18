@@ -127,9 +127,7 @@ export default class VMState extends VMBase {
     })
     watchNodes: Node[] = [];
 
-
-    // LIFE-CYCLE CALLBACKS:
-
+    /** 初始化参与状态控制的节点列表；未显式配置时默认覆盖自身和子节点。 */
     onLoad() {
         super.onLoad();
         //如果数组里没有监听值，那么默认把所有子节点给监听了
@@ -147,19 +145,19 @@ export default class VMState extends VMBase {
 
     }
 
-    //当值初始化时
+    /** VM 初始值到达时立即刷新节点状态。 */
     protected onValueInit() {
         let value = this.VM.getValue(this.watchPathArr[0]);
         this.checkNodeFromValue(value);
     }
 
-    //当值被改变时
+    /** VM 监听值变化后重新判断节点状态。 */
     protected onValueChanged(newVar: any, oldVar: any, pathArr: any[]) {
         this.checkNodeFromValue(newVar);
 
     }
 
-    //检查节点值更新
+    /** 根据当前值和条件配置更新所有目标节点。 */
     private checkNodeFromValue(value) {
         if (this.foreachChildMode) {
             this.watchNodes.forEach((node, index) => {

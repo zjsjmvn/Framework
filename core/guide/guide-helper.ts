@@ -46,11 +46,8 @@ export module GuideHelper {
         }
 
         /**
-         * deprecated
-         * 通过Tag搜索节点
-         * @param root
-         * @param tag
-         * @returns {*}
+         * 通过旧版 tag 搜索节点。
+         * @deprecated Cocos Creator 3.x 不再推荐依赖节点 tag，新引导请使用稳定 guideId 或节点路径定位。
          */
         public static seekNodeByTag(root, tag) {
             if (!root)
@@ -149,7 +146,6 @@ export module GuideHelper {
         });
     }
 }
-
 
 
 

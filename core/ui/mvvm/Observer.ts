@@ -98,7 +98,7 @@ export class Observer<T> {
                 set: (newVal) => {
                     if (oldVal !== newVal) {
                         if (Object.prototype.toString.call(newVal) === types.obj) {
-                            // TODO: there is some error 
+                            // 暂不递归监听新赋值对象：历史实现会重复 defineProperty，容易触发访问器覆盖问题。
                             //  self.observe(newVal, pathArray);
                         }
                         oldVal = newVal
@@ -154,5 +154,4 @@ export class Observer<T> {
 
 
 }
-
 

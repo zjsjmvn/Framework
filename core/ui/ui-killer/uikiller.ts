@@ -101,10 +101,11 @@ export default class UIKiller {
             // 如果子节点自己有Thor绑定，那么只绑定thor脚本，然后return
             if (child.getComponent(Thor)) {
                 let component = child.getComponent(Thor);
-                if (child[name]) {
+                const componentName = `$${this._getComponentName(component)}`;
+                if (child[componentName]) {
                     return;
                 }
-                child[name] = component;
+                child[componentName] = component;
                 return;
             }
             this._bindNode(child, rootNodeScript);

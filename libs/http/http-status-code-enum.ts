@@ -1,3 +1,4 @@
+// HTTP 状态码枚举，给网络封装提供稳定的语义化常量，避免业务直接散落魔法数字。
 export enum HttpStatusCodeEnum {
     Status100Continue = 100,
     Status101SwitchingProtocols = 101,

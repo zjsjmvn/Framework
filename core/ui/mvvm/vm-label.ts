@@ -13,16 +13,15 @@ export enum LABEL_TYPE {
 
 
 /**
- * TODO: 0的时候不需要显示的问题,也就是要在格式中添加什么值不显示的标签
- * 考虑是否需要公式。一个 符号表示的是乘除。加上/表示转义。
- * 还需要公式。如果是公式的话还需要{{0}}//{{1}} 如果值是1，2.则表示1/2 {{0}}/{{1}}表示0.5
+ * VMLabel 当前只负责模板替换和基础格式化。
+ * “0 值隐藏”和公式计算仍是未落地需求，后续应扩展格式标签，不要在业务 Label 中手写特殊判断。
  */
 
 /**
  * @description
  *  专门处理 Label 相关 的组件，如 ccLabel,ccRichText,ccEditBox
  *  可以使用模板化的方式将数据写入,可以处理字符串格式等
- *  todo 加入stringFormat 可以解析转换常见的字符串格式
+ *  已通过 StringFormatFunction 支持常见字符串格式转换，新增格式请优先扩展 string-format.ts。
  * @author MG
  * @date 2019-09-04
  * @export
@@ -185,4 +184,3 @@ export default class VMLabel extends VMBase {
     }
 
 }
-

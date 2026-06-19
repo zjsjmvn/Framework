@@ -11,19 +11,6 @@ import { BuffSkill } from "./buff-skill";
  */
 export default abstract class TickTypeBuffWithDuration extends BuffSkill {
 
-    // public tick: number = 0;
-    // public currentTick: number = 0;
-
-    // constructor(caster: Entity, target: Entity, tick: number) {
-    //     super(caster, target);
-    //     this.tick = tick;
-    // }
-    // public onTick(dt) {
-    //     this.currentTick -= dt;
-    //     if (this.currentTick <= 0) {
-    //         // do something
-    //         this.currentTick = this.tick;
-    //     }
-    // }
-    // abstract meetRemoveCondition(): boolean;
+    // 这里保留为抽象占位：具体项目如果需要“定时触发 + 持续时间”的 Buff，
+    // 应在子类里定义 tick、剩余时长和触发效果，避免框架层假设具体战斗语义。
 }

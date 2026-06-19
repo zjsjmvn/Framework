@@ -1,14 +1,11 @@
 import { _decorator, CCString, Component, Enum, EventHandler } from 'cc';
 import VMBase from './vm-base';
 
-//todo
-
-// +普通 label 更新数据的情况,label.string = xxx;
-// +frameIndex 插件，通过number 数值设置 BhvFrameIndex 来切换当前贴图
-// +spriteFrame 直接替换贴图的情况 , 
-//  读取本地路径 data.spriteFrame = $res:/pic/com1
-//  读取网页路径 data.spriteFrame = $url:http:xxxxxxxxxx.png
-// +特殊条件控制 
+// VMEvent 只负责“值变化后触发事件”。下面这些旧设想属于其它 VM 组件能力，保留为边界说明：
+// + 普通 label 更新数据的情况：label.string = xxx。
+// + frameIndex 插件：通过 number 数值设置 BhvFrameIndex 来切换当前贴图。
+// + spriteFrame 直接替换贴图：本地路径 data.spriteFrame = $res:/pic/com1，网络路径 data.spriteFrame = $url:http:xxxxxxxxxx.png。
+// + 特殊条件控制。
 
 // 比较条件:,如果传入值 > /< />= /<= /== 某值时，执行的action类型
 
@@ -69,11 +66,7 @@ export default class VMEvent extends VMBase {
     @property([Component.EventHandler])
     changeEvents: EventHandler[] = [];
 
-
-    // LIFE-CYCLE CALLBACKS:
-
-    // onLoad () {}
-
+    /** 初始化阶段不主动触发事件，避免界面刚加载就执行业务回调。 */
     onValueInit() {
 
         // let newVar = this.VM.getValue(this.watchPathArr[0]);
@@ -140,4 +133,3 @@ export default class VMEvent extends VMBase {
 
     // update (dt) {}
 }
-

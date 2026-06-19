@@ -234,24 +234,24 @@
 //     //#region 插屏广告
 
 //     private initInterstitialAds(interstitialAdsConfigArr: Array<InterstitialConfig>) {
-//         // TODO: 实现插屏广告初始化
-//         log(this.logTag, "插屏广告初始化待实现");
+//         // 插屏广告暂未接入 AdmobClient；接入时需补 init/show/has/preload 的完整状态清理。
+//         log(this.logTag, "插屏广告初始化暂未接入");
 //     }
 
 //     showInterstitial(posName: string): Promise<ShowInterstitialAdCallBackMsg> {
-//         // TODO: 实现插屏广告展示
-//         log(this.logTag, `插屏广告展示待实现: ${posName}`);
+//         // 插屏广告展示暂未接入，保持失败返回，避免 AdsManager 误判可展示。
+//         log(this.logTag, `插屏广告展示暂未接入: ${posName}`);
 //         return Promise.resolve(new ShowInterstitialAdCallBackMsg());
 //     }
 
 //     hasInterstitial(posName: string): boolean {
-//         // TODO: 实现插屏广告检查
+//         // 未接入时固定返回 false，让上层尝试其它 provider 或走失败 fallback。
 //         return false;
 //     }
 
 //     preloadInterstitial(): Promise<boolean> {
-//         // TODO: 实现插屏广告预加载
-//         log(this.logTag, "插屏广告预加载待实现");
+//         // 未接入时不做预加载，保持 Promise<boolean> 契约。
+//         log(this.logTag, "插屏广告预加载暂未接入");
 //         return Promise.resolve(false);
 //     }
 //     //#endregion
@@ -342,12 +342,11 @@
 
 //     //#region 格子广告
 //     private initGeZiAds(geZiAdsConfigArr: Array<GeZiAdConfig>) {
-//         // TODO: 实现格子广告初始化
-//         log(this.logTag, "格子广告初始化待实现");
+//         // Admob 当前没有格子广告适配，后续若接平台能力需重新确认 GeZiAdConfig 语义。
+//         log(this.logTag, "格子广告初始化暂未接入");
 //     }
 //     //#endregion
 // }
-
 
 
 

@@ -1,11 +1,7 @@
 import { log, director, warn } from 'cc';
 import IService from './services/i-service';
 
-/**
- * @description 
- * @export
- * @class GameContext
- */
+/** 全局服务容器，负责注册普通服务和挂在场景 Canvas 上的 Cocos 组件服务。 */
 export default class GameContext {
     public static serviceClassDict: Map<string, any> = new Map();
     public static serviceNameArr: Array<string> = new Array();
@@ -54,7 +50,7 @@ export default class GameContext {
     public static manualRegisterService(name, service) {
         GameContext._servicesDictionary.set(name, service);
     }
-    // remove service
+    /** 手动移除服务，主要用于测试或特殊场景重置。 */
     public static removeService(name) {
         GameContext._servicesDictionary.delete(name);
     }

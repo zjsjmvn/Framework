@@ -114,8 +114,7 @@ export const GPRoundBoxAssembler: IAssembler = {
             sprite["_flagChangedVersion"] = sprite.node["flagChangedVersion"];
         }
 
-
-        // quick version
+        // 直接写入当前 chunk 的 index buffer，避免为圆角精灵额外分配临时网格数据。
         const bid = chunk.bufferId;
         const vidOrigin = chunk.vertexOffset;
         const meshBuffer = chunk.meshBuffer;

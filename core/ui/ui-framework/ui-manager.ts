@@ -543,11 +543,8 @@ export default class UIManager {
 
 
     /**
-     * @description
-     * @param {(UIBase | Node)} ui
-     * @return {*}  {Promise<boolean>}
-     * @memberof UIManager
-     * @deprecated
+     * 旧版关闭入口；新代码优先使用 closePopup/closeTip/closeCurrentPopup 等语义明确的方法。
+     * @deprecated 保留给历史调用方兼容，新增业务不要继续扩展这个入口。
      */
     public async closeUI(ui: UIBase | Node): Promise<boolean> {
         //节点类型就是在场景中直接存在的
@@ -646,4 +643,3 @@ export default class UIManager {
 
 
 }
-

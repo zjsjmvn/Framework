@@ -31,8 +31,6 @@ export default class SpriteFrameIndex extends Component {
     @property
     private _index: number = 0;
 
-    // LIFE-CYCLE CALLBACKS:
-
     /**通过设置帧名字来设置对象 */
     setName(name: string) {
         let index = this.spriteFrames.findIndex(v => { return v.name == name });

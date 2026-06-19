@@ -370,7 +370,7 @@ export default class WXPlatform {
         window['wx']?.requirePrivacyAuthorize({
             success: res => {
                 // 进入success回调说明用户已同意隐私政策
-                // TODO：非标准API的方式处理用户个人信息
+                // 微信该接口不属于通用平台契约，用户信息处理应继续留在 WXPlatform 内做能力判断和降级。
             },
             fail: () => {
                 // 进入fail回调说明用户拒绝隐私政策

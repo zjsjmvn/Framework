@@ -163,7 +163,7 @@ export class GPRoundBoxSprite extends UIRenderer {
     public onEnable () {
         super.onEnable();
 
-        // Force update uv, material define, active material, etc
+        // 重新激活材质和 UV，确保图集、灰度和圆角材质状态同步到渲染层。
         this._activateMaterial();
         const spriteFrame = this._spriteFrame;
         if (spriteFrame) {
@@ -179,13 +179,8 @@ export class GPRoundBoxSprite extends UIRenderer {
     }
 
     /**
-     * @en
-     * Quickly switch to other sprite frame in the sprite atlas.
-     * If there is no atlas, the switch fails.
-     *
-     * @zh
-     * 选取使用精灵图集中的其他精灵。
-     * @param name @en Name of the spriteFrame to switch. @zh 要切换的 spriteFrame 名字。
+     * 快速切换到当前图集中指定名字的 SpriteFrame；没有图集时会直接失败。
+     * @param name 要切换的 SpriteFrame 名字。
      */
     public changeSpriteFrameFromAtlas (name: string) {
         if (!this._atlas) {
@@ -197,7 +192,7 @@ export class GPRoundBoxSprite extends UIRenderer {
     }
 
     /**
-     * @deprecated Since v3.7.0, this is an engine private interface that will be removed in the future.
+     * @deprecated Cocos 3.7.0 起该接口属于引擎私有能力，后续可能移除。
      */
     public changeMaterialForDefine () {
         let texture;

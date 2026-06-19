@@ -1,4 +1,4 @@
-
+// Flash easing 曲线工具，保留 Flash/ActionScript 风格参数以兼容旧 tween 配置。
 export class Flash {
     public static ease(time: number, duration: number, overshootOrAmplitude: number, period: number) {
         let num = Math.ceil(time / duration * overshootOrAmplitude);

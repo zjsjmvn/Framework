@@ -360,7 +360,7 @@ export default class ByteDanceAds implements IAdProvider {
                         resolve(true);
                         bundle.bannerInstance.show();
                     });
-                    //TODO: 这个地方会让广告在屏幕最下居中，被写死，需要修改
+                    // 当前沿用底部居中样式；如接入自定义 banner 位，需要把位置配置下沉到 BannerConfig。
                     bundle.bannerInstance.onResize(size => {
                         console.log(size.width, size.height);
                         let width = screen.windowSize.width;
@@ -390,7 +390,6 @@ export default class ByteDanceAds implements IAdProvider {
 
 
 }
-
 
 
 

@@ -1,3 +1,4 @@
+/** 按旧项目约定计算字符串字节长度：ASCII 记 1，非 ASCII 记 2。 */
 export const ByteLength = (str: string) => {
   var length = 0;
   for (var i = 0; i < str.length; i++) {

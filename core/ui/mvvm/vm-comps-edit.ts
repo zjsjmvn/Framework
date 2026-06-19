@@ -21,9 +21,6 @@ enum ACTION_MODE {
 @menu('ModelViewer/Edit-Comps (快速组件操作)')
 export default class MVCompsEdit extends Component {
 
-
-    // LIFE-CYCLE CALLBACKS:
-
     @property({
         type: [CCString]
     })

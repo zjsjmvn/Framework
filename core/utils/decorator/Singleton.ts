@@ -14,7 +14,7 @@ export type Singleton<T extends new (...args: any[]) => any> = T & {
 export function singleton<T extends new (...args: any[]) => any>(classTarget: T) {
     return new Proxy(classTarget, {
         construct(target: Singleton<T>, argumentsList, newTarget) {
-            // Skip proxy for children
+            // 子类构造时跳过当前单例代理，避免父类单例错误复用到子类实例。
             log("construct");
             if (target.prototype !== newTarget.prototype) {
                 return Reflect.construct(target, argumentsList, newTarget)
@@ -38,6 +38,5 @@ export function singleton<T extends new (...args: any[]) => any>(classTarget: T)
     })
 
 }
-
 
 

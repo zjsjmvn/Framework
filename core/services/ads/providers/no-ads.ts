@@ -12,6 +12,7 @@ export enum DebugAdsEnum {
 const { ccclass, property } = _decorator;
 @ccclass
 
+/** 无广告/调试广告 provider：所有广告能力直接返回成功，便于无平台环境跑通流程。 */
 export default class NoAds implements IAdProvider {
     name: string;
     isShowingRewardVideo: boolean;

@@ -31,7 +31,8 @@
 - Button 节点即使没有脚本方法，也会进入触摸绑定，以保留 Cocos Button 事件链。
 - 不要在 Thor 子类中重复手动绑定 `_` 开头节点触摸事件，直接实现约定方法。
 - 修改 `preventSwallow`、`propagationStopped` 或返回 `false` 语义前，必须在 Cocos 预览中验证点击穿透、Button 点击、拖动和嵌套 Thor。
-- `copyBindNodeName` 只用于编辑器类型提示复制，不作为运行时逻辑依赖。
+- `copyBindNodeName` 是编辑器类型提示复制入口；需要脚本主动获取绑定类型文本时调用 `Thor.exportBindNodeName()`，它只返回 `//#region uikiller` 文本并会先触发 `bind()`。
+- 命令行可用 `npm run export:thor-bind -- --asset <scene-or-prefab> --node <NodeName> --component <ThorClass>` 从磁盘上的 `.scene/.prefab` 离线导出同类绑定文本；加 `--script <ts-file> --write` 时只替换目标脚本中已有的 `//#region uikiller` 块。
 
 ## ExtendCCComponent
 
@@ -78,7 +79,7 @@
 
 ## 验证建议
 
-- 改 `Thor/UIKiller`：验证 `_` 节点、`$` 节点、Button、EditBox、嵌套 Thor、返回 `false` 的触摸穿透。
+- 改 `Thor/UIKiller`：验证 `_` 节点、`$` 节点、Button、EditBox、嵌套 Thor、返回 `false` 的触摸穿透；改绑定导出时同时运行 `test/thor-bind-exporter.test.ts` 和 `test/thor-direct-bound-fields-static.test.ts`。
 - 改 `UIManager/UIPopup`：验证打开、关闭、缓存、销毁、等待队列、挂起恢复、空白关闭和动画。
 - 改 MVVM：验证 `VM.add/remove`、路径监听、`VMParent` 的 `*` 替换、Label 模板、controller 写回。
 - 改红点：验证静态路径、动态路径、父级求和、动态节点归零清理。

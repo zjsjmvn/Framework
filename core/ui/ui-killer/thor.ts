@@ -1,8 +1,8 @@
-import { _decorator, Component, log, Node, sp, ValueType } from 'cc';
+import { _decorator, log } from 'cc';
 import { EDITOR } from "cc/env";
 import UIKiller from './uikiller';
 import { ExtendCCComponent } from '../components/extend-cc-component';
-import VMBase from '../mvvm/vm-base';
+import ThorBindExporter from './thor-bind-exporter';
 const { ccclass, property } = _decorator;
 /**
  * @description 
@@ -37,90 +37,25 @@ export default class Thor extends ExtendCCComponent {
     }
     // @property 如果不生效了，就复制到其他脚本的onload里然后浏览器调试即可。
     set copyBindNodeName(val) {
+        this._copyBindNodeName = val;
+        if (!val) {
+            return;
+        }
+        const text = this.exportBindNodeName();
+        log(text);
         if (EDITOR) {
-            this.bind();
-            var text = '';
             try {
-                let handler = (node) => {
-                    let info = '';
-                    for (const k in node) {
-                        const val = node[k];
-                        // log("val" + val)
-                        // 绑定组件
-                        if (val instanceof Component && !(val instanceof VMBase)) {
-                            let index = val.name.indexOf('<');
-                            let name = val.name.slice(index + 1, -1);
-                            if (info !== '') {
-                                info += ', ';
-                            }
-                            if (sp[name] != undefined) {
-                                info += '$' + name + ': sp.' + name;
-                            }
-                            else {
-                                //$UITransform: UITransform
-                                info += '$' + name + ': ' + name;
-
-                            }
-
-                        }
-                        // log("info" + info);
-                        // 绑定节点
-                        if (val instanceof Node
-                            && k != '_parent'
-                            && k != '_scene'
-
-                            && !/^[0-9]*$/.test(val.name[0])
-                            && val.name.indexOf('New') != 0
-                            // 中间没空格
-                            && val.name.indexOf(' ') === -1
-                            && val.name.indexOf('-') === -1) {
-                            if (val.name.toLocaleLowerCase() == '_name' || val.name.indexOf(' ') !== -1) {
-                                // 不能为_name
-                                console.log('名字不能为 _name');
-                            }
-                            else {
-                                if (info !== '') {
-                                    //加逗号 $UITransform: UITransform, $Sprite: Sprite
-                                    info += ', ';
-                                }
-                                // log(val.name)
-                                let nextChildInfo = handler(val);
-                                let childInfo = val.name + ': Node';
-                                if (nextChildInfo.length > 0) {
-                                    // ScrollView: Node & { view: Node & { _content: Node & { $UITransform: UITransform } } } };
-                                    childInfo += ' & { ' + nextChildInfo + ' }';
-                                }
-                                info += childInfo;
-                            }
-                        }
-                    }
-                    return info;
-                }
-                var text = '';
-                for (const key in this) {
-                    const element = this[key];
-                    if (element instanceof Node) {
-                        let info = '';
-                        info += handler(element);
-                        log("out" + info);
-                        if (info.length > 0) {
-                            info = ' & { ' + info + ' }';
-                        }
-                        if (key.indexOf(' ') === -1 && key.indexOf('-') === -1) {
-                            let accessModifier = key === '_touchSwallow' ? 'protected' : 'private';
-                            text += 'public ' + ' ' + key + `: Node${info};` + '\n';
-                        }
-                    }
+                if (typeof document === "undefined") {
+                    return;
                 }
                 var tag = document.createElement('textarea');
                 tag.setAttribute('id', 'cp_hgz_input');
-                tag.value = `    //#region uikiller\n ${text}    //#endregion\n`;
+                tag.value = text;
                 document.getElementsByTagName('body')[0].appendChild(tag);
                 // @ts-ignore
                 document.getElementById('cp_hgz_input').select();
                 document.execCommand('copy');
                 document.getElementById('cp_hgz_input').remove();
-                log(text)
                 console.log('uiKiller 拷贝成功');
             } catch (error) {
                 log(error);
@@ -140,6 +75,11 @@ export default class Thor extends ExtendCCComponent {
         // console.time('bind');
         UIKiller.bind(this);
         // console.timeEnd('bind');
+    }
+
+    public exportBindNodeName(): string {
+        this.bind();
+        return ThorBindExporter.exportComponent(this);
     }
 
 }

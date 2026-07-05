@@ -111,6 +111,7 @@
 - `VMProgress` 默认需要两个路径：当前值和最大值。
 - `VMEvent` 用于值变化时触发 Cocos `EventHandler`，可配置比较过滤。
 - `VMState` 是旧状态控制，`VMStateNew` 支持源路径、目标路径/数字、range 和动态配置；新增功能优先放在 `VMStateNew`。
+- 不想修改 scene/prefab 或不适合在编辑器挂 VM 组件时，优先使用 `code-vm-binding-scope.ts` 做代码声明式绑定；调用方显式传入 `VM`、在生命周期结束时调用 `clear()`，不要运行时给静态节点补挂 `VMLabel/VMProgress` 来绕过编辑器配置。
 - `MVCompsEdit` 是编辑器辅助脚本，不应留在运行时正式节点上。
 
 ## Red Dot

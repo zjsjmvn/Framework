@@ -66,6 +66,7 @@
 - `VMCustom.controller=true` 会用脏检查把组件属性写回 VM，谨慎用于高频节点。
 - `VMProgress` 默认监听两个路径：当前值和最大值。
 - `VMState` 是旧状态组件；新增条件控制优先扩展 `VMStateNew`。
+- 不想修改 scene/prefab 或不适合在编辑器挂 VM 组件时，优先使用 `code-vm-binding-scope.ts` 做代码声明式绑定；调用方显式传入 `VM`、在生命周期结束时调用 `clear()`，不要运行时给静态节点补挂 `VMLabel/VMProgress` 来绕过编辑器配置。
 - `MVCompsEdit` 是编辑器辅助组件，不应挂在正式运行时节点上。
 
 ## Red Dot

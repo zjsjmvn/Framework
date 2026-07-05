@@ -10,7 +10,7 @@ class StringFormat {
         let match_func = format.match(/^[a-z|A-Z]+/gi);//匹配到 format 中的 函数名
         let match_num = format.match(/\d+$/gi);   //匹配到 format 中的参数
         let func: string = '';
-        let num: number;
+        let num!: number;
         let res: number | string = '';
 
 
@@ -161,11 +161,11 @@ class StringFormat {
 
 
     //压缩任意单位的数字，后缀加上单位文字
-    private compressUnit(value, valueArr: number[], unitArr: string[], fixNum: number = 2): string {
+    private compressUnit(value: number, valueArr: number[], unitArr: string[], fixNum: number = 2): string {
         let counts = valueArr;
         let units = unitArr;
-        let res: string;
-        let index;
+        let res!: string;
+        let index!: number;
         for (index = 0; index < counts.length; index++) {
             const e = counts[index];
             if (value < e) {

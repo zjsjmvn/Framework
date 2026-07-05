@@ -32,6 +32,8 @@ export class AudioManager extends Component {
 
     private audioMusic!: AudioMusic;
     private audioEffect!: AudioEffect;
+    private loopEffects: Map<string, AudioEffect> = new Map<string, AudioEffect>();
+    private requestedLoopEffects: Set<string> = new Set<string>();
 
     private _musicVolume: number = 1;
 
@@ -65,6 +67,9 @@ export class AudioManager extends Component {
     set effectVolume(value: number) {
         this._effectVolume = value;
         this.audioEffect.volume = value;
+        this.loopEffects.forEach((effect) => {
+            effect.volume = value;
+        });
     }
     private _audioMusicSwitchState: boolean = true;
     /** 
@@ -100,8 +105,10 @@ export class AudioManager extends Component {
      */
     set audioEffectSwitchState(value: boolean) {
         this._audioEffectSwitchState = value;
-        if (value == false)
+        if (value == false) {
             this.audioEffect.stop();
+            this.stopAllLoopEffects();
+        }
     }
     /**
      * 获取背景音乐播放进度
@@ -264,11 +271,85 @@ export class AudioManager extends Component {
         }
     }
 
+    /**
+     * 播放可被指定停止的循环音效，适合按住按钮这类持续反馈。
+     * @param url        资源地址
+     */
+    playLoopEffect(url: string, callback?: Function) {
+        if (!this._audioEffectSwitchState) {
+            return;
+        }
+
+        this.requestedLoopEffects.add(url);
+        let clip = this.effects.get(url);
+        if (!!clip) {
+            this.playLoopEffectWithClip(url, clip, callback);
+            return;
+        }
+
+        let data: { path: string, bundle: AssetManager.Bundle } = this.uiPrefabNameAndPathMap.get(url);
+        if (!data) {
+            this.requestedLoopEffects.delete(url);
+            error("没有找到音效资源", url);
+            return;
+        }
+        data.bundle.load(data.path, AudioClip, (err: Error | null, data: AudioClip) => {
+            if (err) {
+                this.requestedLoopEffects.delete(url);
+                error(err);
+                return;
+            }
+            this.effects.set(url, data);
+            if (!this.requestedLoopEffects.has(url)) {
+                return;
+            }
+            this.playLoopEffectWithClip(url, data, callback);
+        });
+    }
+
+    /** 停止指定循环音效 */
+    stopLoopEffect(url: string) {
+        this.requestedLoopEffects.delete(url);
+        const effect = this.loopEffects.get(url);
+        if (!effect) {
+            return;
+        }
+        effect.stopLoopSelf();
+    }
+
+    private playLoopEffectWithClip(url: string, clip: AudioClip, callback?: Function) {
+        if (!this.requestedLoopEffects.has(url)) {
+            return;
+        }
+
+        let effect = this.loopEffects.get(url);
+        if (!effect || !effect.node?.isValid) {
+            const node = new Node(`AudioLoopEffect_${url}`);
+            node.parent = this.node;
+            effect = node.addComponent(AudioEffect);
+            effect.volume = this._effectVolume;
+            this.loopEffects.set(url, effect);
+        }
+        effect.playLoopSelf(clip, callback);
+    }
+
+    private stopAllLoopEffects() {
+        this.requestedLoopEffects.clear();
+        this.loopEffects.forEach((effect) => {
+            effect.stopLoopSelf();
+        });
+    }
+
     /** 恢复当前暂停的音乐与音效播放 */
     resumeAll() {
         if (this.audioMusic) {
             this.audioMusic.play();
             this.audioEffect.play();
+            this.loopEffects.forEach((effect, url) => {
+                if (this.requestedLoopEffects.has(url)) {
+                    effect.play();
+                }
+            });
         }
     }
 
@@ -277,6 +358,7 @@ export class AudioManager extends Component {
         if (this.audioMusic) {
             this.audioMusic.pause();
             this.audioEffect.pause();
+            this.loopEffects.forEach((effect) => effect.pause());
         }
     }
 
@@ -306,6 +388,7 @@ export class AudioManager extends Component {
         if (this.audioMusic) {
             this.audioMusic.stop();
             this.audioEffect.stop();
+            this.stopAllLoopEffects();
         }
     }
 

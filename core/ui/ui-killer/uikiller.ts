@@ -57,17 +57,7 @@ export default class UIKiller {
      */
     private static _bindNode(nodeObject: Node, rootNodeScript: Component) {
         //绑定组件到自身node节点上,在node下直接使用$+组件类型即可访问。如nodeA.$Label
-        if (nodeObject.name[0] === this._prefix || nodeObject == rootNodeScript.node) {
-            //@ts-ignore
-            nodeObject._components.forEach((component) => {
-                let name = this._getComponentName(component);
-                name = `$${name}`;
-                if (nodeObject[name]) {
-                    return;
-                }
-                nodeObject[name] = component;
-            });
-        }
+        this._bindNodeComponents(nodeObject);
 
         //绑定子节点到自身node节点上
         nodeObject.children.forEach((child: Node) => {
@@ -109,6 +99,18 @@ export default class UIKiller {
                 return;
             }
             this._bindNode(child, rootNodeScript);
+        });
+    }
+
+    private static _bindNodeComponents(nodeObject: Node) {
+        //@ts-ignore
+        nodeObject._components.forEach((component) => {
+            let name = this._getComponentName(component);
+            name = `$${name}`;
+            if (nodeObject[name]) {
+                return;
+            }
+            nodeObject[name] = component;
         });
     }
     /**

@@ -66,11 +66,12 @@
 
 - 组件自身会绑定触摸事件，回调名为 `_onTouchStart`、`_onTouchMove`、`_onTouchEnd`、`_onTouchCancel`。
 - 所有子节点会绑定到父节点对象上，可通过 `nodeA.nodeB.nodeC` 链式访问。
+- 递归访问到的节点会挂载自身组件快捷字段，例如 `node.Panel.$Sprite`、`node.Panel.Title.$Label`、`this._MsgText.$RichText`；若子节点自身挂有 `Thor`，父级只记录该 Thor 组件，不继续递归它的内部节点。
 - 子节点以下划线 `_` 开头时，会直接绑定到脚本实例上，并监听触摸事件。
 - `_ABC` 对应 `_onABCTouchStart`、`_onABCTouchMove`、`_onABCTouchEnd`、`_onABCTouchCancel`。
 - `_image$1` 会记录 `node.$eventName = '_image'` 和 `node.$ = '1'`，运行时节点名会变成 `_image1`，事件方法仍按 `_image` 生成。
 - `$` 后缀节点可以通过 `event.currentTarget.$` 或 `node.$` 读取编号。
-- 子节点上如果挂有 `Thor`，父级绑定只记录该 Thor 组件，不继续递归它的内部节点；内部由子 Thor 自己绑定。
+- 子节点上如果挂有 `Thor`，内部由子 Thor 自己绑定。
 - `EditBox` 节点不会绑定触摸事件，避免原生输入异常。
 - Button 节点即使没有脚本回调，也会参与触摸绑定，保持按钮事件链。
 - 触摸回调返回 `false` 时表示当前框架逻辑希望该触摸穿透/放行；修改 `preventSwallow`、`propagationStopped` 语义前必须实机验证。

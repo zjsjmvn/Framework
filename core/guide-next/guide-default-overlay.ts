@@ -40,6 +40,8 @@ export class GuideDefaultOverlay extends Component implements IGuideOverlay {
     private textLabel: Label = null;
     /** 当前步骤的触摸处理器，由 GuideRunner 设置。 */
     private touchHandler: IGuideTouchHandler | null = null;
+    /** 当前显示的步骤；用于隐藏遮罩步骤判断默认触摸策略。 */
+    private currentStep: GuideStepConfig | null = null;
 
     /** 初始化默认节点结构并注册触摸事件。 */
     protected onLoad(): void {
@@ -55,6 +57,7 @@ export class GuideDefaultOverlay extends Component implements IGuideOverlay {
     /** 只准备视觉内容，不播放手指动画。 */
     public prepare(step: GuideStepConfig, snapshots: GuideAnchorSnapshot[]): void {
         this.ensureBuilt();
+        this.currentStep = step;
         this.drawMask(step, snapshots);
         this.updateText(step, snapshots);
     }
@@ -84,6 +87,7 @@ export class GuideDefaultOverlay extends Component implements IGuideOverlay {
         this.textNode.active = false;
         this.stopFinger();
         this.touchHandler = null;
+        this.currentStep = null;
     }
 
     /** 释放遮罩节点。 */
@@ -413,6 +417,11 @@ export class GuideDefaultOverlay extends Component implements IGuideOverlay {
 
     /** 根据步骤判断结果决定遮罩是否吞掉本次触摸。 */
     private applyTouchResult(event: EventTouch, shouldSwallow?: boolean): void {
+        if (this.shouldAllowHiddenStepTouchThrough(shouldSwallow)) {
+            event.preventSwallow = true;
+            event.propagationStopped = false;
+            return;
+        }
         if (shouldSwallow === false) {
             // Cocos 的 preventSwallow=true 表示“阻止当前节点吞掉事件”，事件会继续派发给下层命中的节点。
             event.preventSwallow = true;
@@ -421,5 +430,15 @@ export class GuideDefaultOverlay extends Component implements IGuideOverlay {
             event.preventSwallow = false;
             event.propagationStopped = true;
         }
+    }
+
+    private shouldAllowHiddenStepTouchThrough(shouldSwallow?: boolean): boolean {
+        if (shouldSwallow !== undefined) {
+            return false;
+        }
+        if (this.currentStep?.blockOthers === true) {
+            return false;
+        }
+        return this.currentStep?.showMask === false;
     }
 }

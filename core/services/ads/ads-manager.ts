@@ -170,6 +170,7 @@ export class AdsManager {
         console.log(" ads init")
         if (!this.initialized) {
             this.initialized = true;
+            this._last_show_interstitial_timestamp = Date.now();
             for (let adProvider of config.adsProviders) {
                 let rewardVideosConfigArr = config.rewardVideoProviderAndPosIdsMap?.get(adProvider);
                 let interstitialAdsConfigArr = config.interstitialProviderAndPosIdsMap?.get(adProvider);

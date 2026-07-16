@@ -34,6 +34,8 @@ export class AudioManager extends Component {
     private audioEffect!: AudioEffect;
     private loopEffects: Map<string, AudioEffect> = new Map<string, AudioEffect>();
     private requestedLoopEffects: Set<string> = new Set<string>();
+    /** 只允许最后一次背景音乐播放请求在异步加载完成后生效。 */
+    private musicPlayRequestVersion: number = 0;
 
     private _musicVolume: number = 1;
 
@@ -222,6 +224,7 @@ export class AudioManager extends Component {
      * @param callback   音乐播放完成事件
      */
     playMusic(url: string, isLoop: boolean = true, callback?: Function) {
+        const requestVersion = ++this.musicPlayRequestVersion;
         if (this._audioMusicSwitchState) {
             this.audioMusic.loop = isLoop;
             let clip = this.musics.get(url);
@@ -238,6 +241,9 @@ export class AudioManager extends Component {
                         error(err);
                     }
                     this.musics.set(url, data);
+                    if (requestVersion !== this.musicPlayRequestVersion || !this._audioMusicSwitchState) {
+                        return;
+                    }
                     this.audioMusic.playSelf(data, callback)
                 });
             }

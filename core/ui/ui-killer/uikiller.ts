@@ -118,7 +118,8 @@ export default class UIKiller {
      * @param {Component} component 
      */
     static _getComponentName(component) {
-        return component.name.match(/<.*>$/)[0].slice(1, -1);
+        const name = component.name.match(/<.*>$/)[0].slice(1, -1);
+        return name === 'CameraComponent' ? 'Camera' : name;
     }
     /**
      * 绑定触摸事件

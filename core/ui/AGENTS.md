@@ -25,6 +25,7 @@
 - 组件自身绑定 `_onTouchStart`、`_onTouchMove`、`_onTouchEnd`、`_onTouchCancel`。
 - 子节点会挂到父节点对象上，可通过 `nodeA.nodeB.nodeC` 链式访问。
 - 递归访问到的节点会挂载自身组件快捷字段，例如 `node.Panel.$Sprite`、`node.Panel.Title.$Label`、`this._MsgText.$RichText`。
+- Cocos 3.8 的 Camera 组件运行时名可能是 `Camera<CameraComponent>`；UIKiller 会归一为 `$Camera`，以保持运行时字段与 Thor 绑定导出一致。
 - `_Name` 子节点会直接挂到脚本实例上，并绑定 `_onNameTouchStart/Move/End/Cancel`。
 - `_image$1` 会设置 `node.$eventName = '_image'`、`node.$ = '1'`，事件名仍按 `_image` 生成。
 - 子节点上如果挂了 `Thor`，父级只绑定该 Thor 组件，不继续递归子 Thor 的内部节点。

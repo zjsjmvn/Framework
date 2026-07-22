@@ -14,4 +14,19 @@ export class AudioEffect extends AudioSource {
         callback && callback();
     }
 
+    playLoopSelf(clip: AudioClip, callback?: Function) {
+        if (this.playing) {
+            this.stop();
+        }
+        this.clip = clip;
+        this.loop = true;
+        this.play();
+        callback && callback();
+    }
+
+    stopLoopSelf() {
+        this.loop = false;
+        this.stop();
+    }
+
 }

@@ -9,7 +9,56 @@ export enum WeChatAuthScope {
     writePhotosAlbum
 }
 
+type WeChatVibrateShortType = "heavy" | "medium" | "light";
+
 export default class WXPlatform {
+    /**
+     * @description 长震动，约 400ms。低基础库或非微信环境会静默降级。
+     */
+    public static vibrateLong(): void {
+        if (!window["wx"]?.vibrateLong) {
+            return;
+        }
+
+        wx.vibrateLong({
+            fail: (res: { errMsg?: string }) => {
+                console.warn("wx.vibrateLong fail", res?.errMsg);
+            },
+        });
+    }
+
+    /**
+     * @description 短震动，约 15ms。部分设备不支持震动等级时会重试旧参数格式。
+     */
+    public static vibrateShort(type: WeChatVibrateShortType = "light"): void {
+        if (!window["wx"]?.vibrateShort) {
+            return;
+        }
+
+        const vibrateWithoutStyle = () => {
+            wx.vibrateShort({
+                fail: (res: { errMsg?: string }) => {
+                    console.warn("wx.vibrateShort fallback fail", res?.errMsg);
+                },
+            });
+        };
+
+        if (!window["wx"]?.canIUse || !wx.canIUse("vibrateShort.object.type")) {
+            vibrateWithoutStyle();
+            return;
+        }
+
+        wx.vibrateShort({
+            type,
+            fail: (res: { errMsg?: string }) => {
+                if (res?.errMsg?.includes("style is not support")) {
+                    vibrateWithoutStyle();
+                    return;
+                }
+                console.warn("wx.vibrateShort fail", res?.errMsg);
+            },
+        });
+    }
 
     public static login(): Promise<{ errMsg: string, code: string }> {
         return new Promise((resolve, reject) => {

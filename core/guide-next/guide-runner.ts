@@ -110,7 +110,14 @@ export class GuideRunner implements IGuideRuntime {
                 this.trace(`step completed: ${this.getStepName(step, startIndex)}, reason=${reason}`);
             } catch (error) {
                 console.error(`[GuideNext] step failed: ${this.getStepName(step, startIndex)}`, error);
+                // 失败也必须清理遮罩：否则超时/verify 失败后蒙层和引导文本会永久残留在界面上，甚至挡住玩法输入。
+                // 不走 onStop/onComplete，失败语义仍由 reject -> GuideService onError 承担。
                 this.isRunning = false;
+                this.currentStepIndex = -1;
+                this.overlay.clearStep();
+                if (this.destroyOverlayOnComplete) {
+                    this.overlay.dispose();
+                }
                 throw error;
             }
 

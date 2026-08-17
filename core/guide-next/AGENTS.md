@@ -7,7 +7,7 @@
 - `guide-types.ts`：对外类型、步骤配置、运行时接口。
 - `guide-anchor.ts`：目标锚点组件，挂在需要高亮或点击的真实 UI 节点上。
 - `guide-anchor-registry.ts`：全局锚点注册表，负责通过 `guideId` 查找目标。
-- `guide-runner.ts`：核心运行器，负责步骤生命周期、触摸判断、事件等待和进度保存。
+- `guide-runner.ts`：核心运行器，负责步骤生命周期、触摸判断、事件等待和进度保存。步骤失败（超时、verify 失败、目标缺失且策略为失败）会 reject 给 `GuideService.onError`，同时按 `destroyOverlayOnComplete` 清理遮罩，不会把蒙层留在界面上。
 - `guide-default-overlay.ts`：默认遮罩实现，当前只支持矩形镂空和矩形高亮。
 - `guide-flow-component.ts`：Inspector 可配置流程组件。
 - `guide-service.ts`：启动入口，保证同一时间只有一条引导运行。

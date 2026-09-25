@@ -24,7 +24,6 @@ class StringFormat {
                 case 'floorint': res = this.floorInt(value); break;
                 case 'ceilint': res = this.ceilInt(value); break;
                 case 'fix': res = this.fix(value, num); break;
-                case 'kmbt': res = this.KMBT(value); break;
                 case 'per': res = this.per(value, num); break;
                 case 'sep': res = this.sep(value); break;
                 case 'timehms': res = this.time_h_m_s(value); break;
@@ -131,50 +130,6 @@ class StringFormat {
     private limit(value: string, count: number) {
         return value.substring(0, count);
     }
-
-    /** 将数字缩短显示为KMBT单位 大写,目前只支持英文 */
-    private KMBT(value: number, lang: string = 'en') {
-        //10^4=万, 10^8=亿,10^12=兆,10^16=京，
-        let counts = [1000, 1000000, 1000000000, 1000000000000];
-        let units = ['', 'K', 'M', 'B', 'T'];
-
-        switch (lang) {
-            case 'zh':
-                //10^4=万, 10^8=亿,10^12=兆,10^16=京，
-                let counts = [10000, 100000000, 1000000000000, 10000000000000000];
-                let units = ['', '万', '亿', '兆', '京'];
-                break;
-
-            default:
-                break;
-        }
-
-        return this.compressUnit(value, counts, units, 2);
-    }
-
-
-    //压缩任意单位的数字，后缀加上单位文字
-    private compressUnit(value, valueArr: number[], unitArr: string[], fixNum: number = 2): string {
-        let counts = valueArr;
-        let units = unitArr;
-        let res: string;
-        let index;
-        for (index = 0; index < counts.length; index++) {
-            const e = counts[index];
-            if (value < e) {
-                if (index > 0) {
-                    res = (value / counts[index - 1]).toFixed(fixNum);
-                } else {
-                    res = value.toFixed(0);
-                }
-                break;
-            }
-
-        }
-        return res + units[index];
-    }
-
-
 
 }
 

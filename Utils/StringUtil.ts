@@ -26,24 +26,6 @@ export class StringUtil {
         return value.toLocaleString();
     }
 
-    /** 
-     * 转英文单位计数
-     * @param value 数字
-     * @param fixed 保留小数位数
-     * @example
-     * 12345 = 12.35K
-     */
-    static numberToThousand(value: number, fixed: number = 2, k = 1000): string {
-        var sizes = ['', 'K', 'M', 'G'];
-        if (value < k) {
-            return value.toString();
-        }
-        else {
-            var i = Math.floor(Math.log(value) / Math.log(k));
-            var r = ((value / Math.pow(k, i)));
-            return r.toFixed(fixed) + sizes[i];
-        }
-    }
 
     /** 
      * 转中文单位计数

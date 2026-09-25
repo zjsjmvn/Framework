@@ -1,6 +1,7 @@
 import { parse } from './Encrypt/crypto-js';
 import { singleton } from './Decorator/Singleton';
 import Utils from './Utils';
+import { NumberUnits } from './NumberUnits';
 /** 字符串工具 */
 export class StringUtil {
     /** 获取一个唯一标识的字符串 */
@@ -47,23 +48,12 @@ export class StringUtil {
     /** 
      * 转中文单位计数
      * @param value 数字
-     * @param fixed 保留小数位数
+     * @param fixed 万以下保留的小数位数；万及以上一律 4 位有效数字
      * @example
-     * 12345 = 1.23万
+     * 12345 = 1.235万
      */
-    static numberToTenThousand(value: number, fixed: number = 2, k = 10000): string {
-        // var k = 10000;
-        var sizes = ['', '万', '亿', '万亿'];
-        var sign = Math.sign(value);
-        value = Math.abs(value)
-        if (value < k) {
-            let fixedValue = value.toFixed(fixed)
-            return (sign * parseFloat(fixedValue)).toString();
-        }
-        else {
-            var i = Math.floor(Math.log(value) / Math.log(k));
-            return parseFloat((sign * value / Math.pow(k, i)).toFixed(fixed)) + sizes[i];
-        }
+    static numberToTenThousand(value: number, fixed: number = 2): string {
+        return NumberUnits.format(value, fixed);
     }
 
     /**

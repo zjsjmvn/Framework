@@ -286,7 +286,7 @@ export class GuideDefaultOverlay extends Component implements IGuideOverlay {
         if (points.length === 1) {
             tween(this.fingerNode)
                 .repeatForever(
-                    tween()
+                    tween(this.fingerNode)
                         .to(0.32, { scale: v3(1.2, 1.2, 1) })
                         .to(0.32, { scale: v3(1, 1, 1) })
                         .delay(0.25)
@@ -300,12 +300,14 @@ export class GuideDefaultOverlay extends Component implements IGuideOverlay {
         for (let i = 1; i < points.length; i++) {
             const to = points[i];
             const duration = Math.max(0.15, Vec3.distance(from, to) / this.fingerMoveSpeed);
-            actions.push(tween().to(duration, { position: to }).delay(0.15));
+            actions.push(tween(this.fingerNode).to(duration, { position: to }).delay(0.15));
             from = to;
         }
-        actions.push(tween().call(() => this.fingerNode.setPosition(points[0])));
+        actions.push(tween(this.fingerNode).call(() => this.fingerNode.setPosition(points[0])));
 
-        tween(this.fingerNode).repeatForever(tween().sequence(...actions)).start();
+        tween(this.fingerNode)
+            .repeatForever(tween(this.fingerNode).sequence(...actions))
+            .start();
     }
 
     /** 停止手指动画并隐藏手指节点。 */

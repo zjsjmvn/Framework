@@ -617,13 +617,17 @@ export class Bezier {
                     //计算当前路段需要的时间
                     let time = point.length * scale;
                     // 创建动作
-                    let action = tween().to(time, { position: v3(point.pos.x, point.pos.y, 0) });
+                    // Bind each segment to the moving node. Cocos 3 does not
+                    // infer a target for property tweens passed through
+                    // `then(sequence)`, which otherwise leaves the curve at
+                    // its launch position.
+                    let action = tween(target).to(time, { position: v3(point.pos.x, point.pos.y, 0) });
                     arr.push(action);
                     // });
                 }
             }
 
-            let final = tween().sequence(...arr);
+            let final = tween(target).sequence(...arr);
             // final = tween().repeat(repeatTimes, final);
             let t = tween(target).delay(delayBetweenTwoTarget * i).then(final).call(() => {
                 callback();

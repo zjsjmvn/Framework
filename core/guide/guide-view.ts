@@ -102,18 +102,32 @@ export class GuideView extends Thor {
         if (!!posOffset) {
             point = point.add(posOffset);
         }
-        this._finger.setPosition(v3(point.x, point.y));
+        const startPosition = this._finger.position.clone();
         this._finger.active = true;
-        this._finger.getComponent(UIOpacity).opacity = 255;
+        // Guide prefabs authored for Creator 2 do not serialize a UIOpacity
+        // component.  Add the bridge lazily so the fade/hand pulse tween can
+        // run on the migrated node instead of throwing before it starts.
+        const fingerOpacity = this._finger.getComponent(UIOpacity) ?? this._finger.addComponent(UIOpacity);
+        fingerOpacity.opacity = 255;
         let moveTime = 0;
 
         if (point && isAnimation) {
-            let width = this._finger.position.x - point.x;
-            let height = this._finger.position.y - point.y;
-            let length = Math.sqrt(Math.pow(width, 2) + Math.pow(height, 2));
-            moveTime = length / (width * 1);
+            const width = startPosition.x - point.x;
+            const height = startPosition.y - point.y;
+            const length = Math.sqrt(Math.pow(width, 2) + Math.pow(height, 2));
+            // The Creator 2 port assigned the destination before measuring,
+            // producing a zero/negative duration. Measure from the authored
+            // finger position and use a stable 300px/s guide speed.
+            moveTime = Math.max(0.05, length / 300);
             tween(this._finger).to(moveTime, { position: v3(point.x, point.y) }).call(() => {
-                tween(this._finger).to(0.3, { scale: v3(1.3, 1.3, 1.3) }).to(0.3, { scale: v3(1, 1, 1) }).union().repeatForever().start();
+                // CountRiceMain used scaleBy(0.3, 0.8) followed by scaleTo(0.3, 1).
+                // Keep the same undershoot instead of the newer 1.3x overshoot.
+                tween(this._finger)
+                    .by(0.3, { scale: v3(-0.2, -0.2, 0) })
+                    .to(0.3, { scale: v3(1, 1, 1) })
+                    .union()
+                    .repeatForever()
+                    .start();
             }).start();
         } else if (point) {
             this._finger.setPosition(v3(point.x, point.y));
@@ -133,20 +147,34 @@ export class GuideView extends Thor {
         // this._finger.stopAllActions();
         Tween.stopAllByTarget(this._finger);
         this._finger.active = true;
+        const opacity = this._finger.getComponent(UIOpacity) ?? this._finger.addComponent(UIOpacity);
+        Tween.stopAllByTarget(opacity);
+        opacity.opacity = 0;
         //按照speed去运动
         pointArray.forEach((pt, index) => {
             let dis = point.clone().subtract(pt).length();
             let time = dis / fingerMoveSpeed;
             point = pt;
-            let moveTo = tween(this._finger).to(time, { position: pt });
-            array.push(moveTo);
+            // The first leg fades in concurrently with its movement.
+            if (index === 0) {
+                array.push(tween(this._finger).parallel(
+                    tween(this._finger).to(time, { position: pt }),
+                    tween(opacity).to(time, { opacity: 255 }),
+                ));
+            } else {
+                array.push(tween(this._finger).to(time, { position: pt }));
+            }
         });
 
-        // // //延时1秒
-        let delay = tween(this._finger).delay(0.5).call(() => {
+        // Legacy cc.spawn(cc.delayTime(0.5), cc.fadeOut(0.5)) fades during the
+        // final half-second, then resets to the first point at opacity 150.
+        array.push(tween(this._finger).parallel(
+            tween(this._finger).delay(0.5),
+            tween(opacity).to(0.5, { opacity: 0 }),
+        ).call(() => {
             this._finger.setPosition(firstPoint);
-        });
-        array.push(delay);
+            opacity.opacity = 150;
+        }));
 
         let action = tween(this._finger).sequence(...array);
         if (isRepeat) {
@@ -176,12 +204,15 @@ export class GuideView extends Thor {
         for (let i = arr.length - 2; i >= 0; --i) {
             let dis = v2(arr[i + 1]).subtract(arr[i]).length();
             let time = dis / fingerMoveSpeed;
-            let moveAction = tween().to(time, { position: arr[i] });
+            // Keep the tween target on the finger for the reverse legs too;
+            // a targetless Cocos 3 tween does not inherit the target passed to
+            // `then`, so those legs otherwise update no node at runtime.
+            let moveAction = tween(this._finger).to(time, { position: arr[i] });
             actions.push(moveAction);
         }
-        let totalAction = tween().sequence(...actions);
+        let totalAction = tween(this._finger).sequence(...actions);
         if (isRepeat) {
-            totalAction = tween().repeatForever(totalAction);
+            totalAction = tween(this._finger).repeatForever(totalAction);
         }
         // this._finger.runAction(totalAction);
         tween(this._finger).then(totalAction).start();

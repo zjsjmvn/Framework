@@ -1,4 +1,4 @@
-import { _decorator, Component, isValid, Node, Rect, UITransform, v3 } from 'cc';
+import { _decorator, Camera, Component, isValid, Node, Rect, UITransform, v3 } from 'cc';
 import { GuideAnchorSnapshot, GuidePadding, IGuideAnchor, normalizePadding } from './guide-types';
 import { GuideAnchorRegistry } from './guide-anchor-registry';
 
@@ -7,6 +7,9 @@ const { ccclass, property } = _decorator;
 /** 引导目标锚点。挂在需要高亮或点击的真实 UI 节点上。 */
 @ccclass('GuideAnchor')
 export class GuideAnchor extends Component implements IGuideAnchor {
+    private sourceCamera: Camera | null = null;
+    private requiresSourceCamera = false;
+
     /** 稳定业务 id。流程步骤只引用这个 id，不引用场景路径。 */
     @property({ displayName: '引导ID', tooltip: '稳定的业务语义 id，引导步骤通过它查找目标。例如 main.play-button、game.first-box。不要填写场景层级路径。' })
     public guideId: string = '';
@@ -61,6 +64,13 @@ export class GuideAnchor extends Component implements IGuideAnchor {
     /** 节点销毁时兜底注销。 */
     protected onDestroy(): void {
         GuideAnchorRegistry.instance.unregister(this);
+        this.sourceCamera = null;
+    }
+
+    /** 指定世界目标的来源相机；传 null 明确恢复普通 UI 坐标协议。 */
+    public setSourceCamera(sourceCamera: Camera | null): void {
+        this.sourceCamera = sourceCamera;
+        this.requiresSourceCamera = sourceCamera !== null;
     }
 
     /** 运行时设置 guideId，适合动态列表、对象池和生成节点。 */
@@ -88,6 +98,12 @@ export class GuideAnchor extends Component implements IGuideAnchor {
             return false;
         }
 
+        if (this.requiresSourceCamera && (!this.sourceCamera || !isValid(this.sourceCamera) || !isValid(this.sourceCamera.node))) {
+            // 释放失效相机，但保留显式投影要求，不能下一帧改用未投影的世界坐标。
+            this.sourceCamera = null;
+            return false;
+        }
+
         return !!this.node.getComponent(UITransform);
     }
 
@@ -104,15 +120,43 @@ export class GuideAnchor extends Component implements IGuideAnchor {
         }
 
         const worldRect = uiTransform.getBoundingBoxToWorld();
-        // 步骤判断和遮罩绘制统一使用遮罩本地坐标，避免依赖目标节点的父级层级。
-        const leftBottom = overlayTransform.convertToNodeSpaceAR(v3(worldRect.x, worldRect.y, 0));
         const padding = normalizePadding(overridePadding || this.padding);
-        const rectInOverlay = new Rect(
-            leftBottom.x - padding.left,
-            leftBottom.y - padding.bottom,
-            worldRect.width + padding.left + padding.right,
-            worldRect.height + padding.top + padding.bottom,
-        );
+        let rectInOverlay: Rect;
+        if (this.sourceCamera) {
+            const renderCamera = this.sourceCamera.camera;
+            if (!renderCamera) {
+                return null;
+            }
+            // convertToUINode 只读缓存矩阵；镜头本帧刚移动时先同步最新视图与投影。
+            renderCamera.update();
+            // 相机投影可能改变大小和方向，必须投影四角后重新取遮罩局部包围矩形。
+            const depth = this.node.worldPosition.z;
+            const corners = [
+                v3(worldRect.x, worldRect.y, depth),
+                v3(worldRect.x + worldRect.width, worldRect.y, depth),
+                v3(worldRect.x, worldRect.y + worldRect.height, depth),
+                v3(worldRect.x + worldRect.width, worldRect.y + worldRect.height, depth),
+            ].map(point => this.sourceCamera!.convertToUINode(point, overlayNode));
+            if (corners.some(point => !Number.isFinite(point.x) || !Number.isFinite(point.y))) {
+                return null;
+            }
+            const minX = Math.min(...corners.map(point => point.x));
+            const maxX = Math.max(...corners.map(point => point.x));
+            const minY = Math.min(...corners.map(point => point.y));
+            const maxY = Math.max(...corners.map(point => point.y));
+            // padding 的单位属于遮罩 UI，不能随世界相机缩放。
+            rectInOverlay = new Rect(minX - padding.left, minY - padding.bottom,
+                maxX - minX + padding.left + padding.right, maxY - minY + padding.top + padding.bottom);
+        } else {
+            // 步骤判断和遮罩绘制统一使用遮罩本地坐标，避免依赖目标节点的父级层级。
+            const leftBottom = overlayTransform.convertToNodeSpaceAR(v3(worldRect.x, worldRect.y, 0));
+            rectInOverlay = new Rect(
+                leftBottom.x - padding.left,
+                leftBottom.y - padding.bottom,
+                worldRect.width + padding.left + padding.right,
+                worldRect.height + padding.top + padding.bottom,
+            );
+        }
 
         return {
             guideId: this.guideId,

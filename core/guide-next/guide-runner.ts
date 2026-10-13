@@ -15,6 +15,7 @@ import {
     IGuideOverlay,
     IGuideRuntime,
     IGuideStorage,
+    IGuideWaitCancellation,
 } from './guide-types';
 import { GuideAnchorRegistry } from './guide-anchor-registry';
 import { GuideLocalStorage } from './guide-storage';
@@ -57,6 +58,8 @@ export class GuideRunner implements IGuideRuntime {
 
     /** 当前步骤的等待器；没有等待中的步骤时为 null。 */
     private currentWaiter: StepWaiter | null = null;
+    /** 当前目标查询或前后延迟的取消入口，只清理本运行器拥有的等待。 */
+    private cancelPendingWait: (() => void) | null = null;
     /** 是否已经被 stop 主动停止。 */
     private stopped: boolean = false;
     /** stop 时传入的原因，最终会交给 onStop。 */
@@ -104,11 +107,17 @@ export class GuideRunner implements IGuideRuntime {
 
             try {
                 const reason = await this.runStep(step, startIndex);
+                if (!this.canContinue()) {
+                    break;
+                }
                 if (autoSave) {
                     this.saveProgress(startIndex, false);
                 }
                 this.trace(`step completed: ${this.getStepName(step, startIndex)}, reason=${reason}`);
             } catch (error) {
+                if (!this.canContinue()) {
+                    break;
+                }
                 console.error(`[GuideNext] step failed: ${this.getStepName(step, startIndex)}`, error);
                 // 失败也必须清理遮罩：否则超时/verify 失败后蒙层和引导文本会永久残留在界面上，甚至挡住玩法输入。
                 // 不走 onStop/onComplete，失败语义仍由 reject -> GuideService onError 承担。
@@ -124,7 +133,7 @@ export class GuideRunner implements IGuideRuntime {
             startIndex++;
         }
 
-        if (autoSave && !this.stopped) {
+        if (autoSave && this.canContinue()) {
             this.saveProgress(this.flow.steps.length - 1, true);
         }
 
@@ -155,6 +164,7 @@ export class GuideRunner implements IGuideRuntime {
         this.stopped = true;
         this.stopReason = reason;
         this.isRunning = false;
+        this.cancelPendingWait?.();
         this.completeCurrentStep(GuideStepCompleteReason.Skipped);
         this.overlay.clearStep();
     }
@@ -172,34 +182,61 @@ export class GuideRunner implements IGuideRuntime {
     /** 执行单个步骤的完整生命周期。 */
     private async runStep(step: GuideStepConfig, stepIndex: number): Promise<GuideStepCompleteReason> {
         const snapshots = await this.resolveStepSnapshots(step);
-        if (snapshots === null) {
+        if (!this.canContinue() || snapshots === null) {
             return GuideStepCompleteReason.Skipped;
         }
 
         const context = this.createContext(step, stepIndex);
-        if (step.canStart && await step.canStart(context) === false) {
-            this.trace(`step skipped by canStart: ${this.getStepName(step, stepIndex)}`);
-            return GuideStepCompleteReason.Skipped;
+        if (step.canStart) {
+            const canStart = await step.canStart(context);
+            if (!this.canContinue()) {
+                return GuideStepCompleteReason.Skipped;
+            }
+            if (canStart === false) {
+                this.trace(`step skipped by canStart: ${this.getStepName(step, stepIndex)}`);
+                return GuideStepCompleteReason.Skipped;
+            }
         }
 
         if (step.beforeDelay) {
             await this.delay(step.beforeDelay);
+            if (!this.canContinue()) {
+                return GuideStepCompleteReason.Skipped;
+            }
         }
 
         await step.onEnter?.(context);
+        if (!this.canContinue()) {
+            return GuideStepCompleteReason.Skipped;
+        }
         this.overlay.showStep(step, snapshots);
 
         const reason = await this.waitForStepCompletion(step, stepIndex, snapshots);
-        if (step.verify && await step.verify(context) === false) {
-            throw new Error(`Guide step verify failed: ${this.getStepName(step, stepIndex)}`);
+        if (!this.canContinue()) {
+            return GuideStepCompleteReason.Skipped;
+        }
+        if (step.verify) {
+            const verified = await step.verify(context);
+            if (!this.canContinue()) {
+                return GuideStepCompleteReason.Skipped;
+            }
+            if (verified === false) {
+                throw new Error(`Guide step verify failed: ${this.getStepName(step, stepIndex)}`);
+            }
         }
 
         this.overlay.showCompleteText(step);
         await step.onComplete?.(context, reason);
+        if (!this.canContinue()) {
+            return GuideStepCompleteReason.Skipped;
+        }
 
         const waitAfterComplete = step.finishDelay || step.afterDelay || 0;
         if (waitAfterComplete > 0) {
             await this.delay(waitAfterComplete);
+            if (!this.canContinue()) {
+                return GuideStepCompleteReason.Skipped;
+            }
         }
 
         this.overlay.clearStep();
@@ -217,6 +254,9 @@ export class GuideRunner implements IGuideRuntime {
         const anchors: IGuideAnchor[] = [];
         for (const guideId of targetIds) {
             const anchor = await this.resolveAnchor(guideId, step);
+            if (!this.canContinue()) {
+                return null;
+            }
             if (!anchor) {
                 const policy = step.targetMissPolicy || GuideTargetMissPolicy.FailGuide;
                 if (policy === GuideTargetMissPolicy.SkipStep) {
@@ -253,11 +293,17 @@ export class GuideRunner implements IGuideRuntime {
         }
 
         this.trace(`wait target: ${guideId}, timeout=${step.waitTargetTimeout || 5}`);
-        return this.anchorRegistry.waitFor(guideId, step.waitTargetTimeout || 5);
+        return this.waitWithCancellation(
+            cancellation => this.anchorRegistry.waitFor(guideId, step.waitTargetTimeout || 5, cancellation),
+            null,
+        );
     }
 
     /** 根据步骤类型安装对应等待逻辑，并返回步骤完成原因。 */
     private waitForStepCompletion(step: GuideStepConfig, stepIndex: number, snapshots: GuideAnchorSnapshot[]): Promise<GuideStepCompleteReason> {
+        if (!this.canContinue()) {
+            return Promise.resolve(GuideStepCompleteReason.Skipped);
+        }
         return new Promise((resolve, reject) => {
             const waiter: StepWaiter = {
                 resolve,
@@ -590,6 +636,11 @@ export class GuideRunner implements IGuideRuntime {
         }
     }
 
+    /** 异步操作返回后确认流程仍在运行，避免停止后的旧步骤继续产生副作用。 */
+    private canContinue(): boolean {
+        return this.isRunning && !this.stopped;
+    }
+
     /** 生成日志里使用的步骤名。 */
     private getStepName(step: GuideStepConfig, index: number): string {
         return step.id || step.debugName || `${this.flow.guideId}[${index}]`;
@@ -604,8 +655,69 @@ export class GuideRunner implements IGuideRuntime {
         console.log(`[GuideNext] ${this.flow.guideId}: ${message}`);
     }
 
-    /** 秒级延迟工具。 */
+    /** 等待期间支持主动停止；旧实现忽略取消参数时也不会拖住本运行器收尾。 */
+    private waitWithCancellation<T>(wait: (cancellation: IGuideWaitCancellation) => Promise<T>, cancelledValue: T): Promise<T> {
+        return new Promise((resolve, reject) => {
+            const listeners = new Set<() => void>();
+            let cancelled = false;
+            let settled = false;
+            const cancellation: IGuideWaitCancellation = {
+                get cancelled() { return cancelled; },
+                onCancel: callback => {
+                    if (cancelled) {
+                        callback();
+                        return () => {};
+                    }
+                    listeners.add(callback);
+                    return () => { listeners.delete(callback); };
+                },
+            };
+            const cleanup = () => {
+                if (this.cancelPendingWait === cancel) {
+                    this.cancelPendingWait = null;
+                }
+                listeners.clear();
+            };
+            const finish = (value: T) => {
+                if (settled) {
+                    return;
+                }
+                settled = true;
+                cleanup();
+                resolve(value);
+            };
+            const cancel = () => {
+                if (settled) {
+                    return;
+                }
+                cancelled = true;
+                Array.from(listeners).forEach(callback => callback());
+                finish(cancelledValue);
+            };
+            this.cancelPendingWait = cancel;
+            if (!this.canContinue()) {
+                cancel();
+                return;
+            }
+            Promise.resolve().then(() => settled ? cancelledValue : wait(cancellation)).then(finish, error => {
+                if (settled) {
+                    return;
+                }
+                settled = true;
+                cleanup();
+                reject(error);
+            });
+        });
+    }
+
+    /** 可取消的秒级延迟，停止时立即清除自己的定时器。 */
     private delay(seconds: number): Promise<void> {
-        return new Promise((resolve) => setTimeout(resolve, seconds * 1000));
+        return this.waitWithCancellation<void>(cancellation => new Promise(resolve => {
+            const timer = setTimeout(resolve, seconds * 1000);
+            cancellation.onCancel(() => {
+                clearTimeout(timer);
+                resolve();
+            });
+        }), undefined);
     }
 }

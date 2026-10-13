@@ -322,12 +322,21 @@ export interface IGuideStorage {
     clearProgress(guideId: string, version?: number): void;
 }
 
+/** 单次异步等待的取消通知，不依赖浏览器或原生平台的 AbortController。 */
+export interface IGuideWaitCancellation {
+    /** 当前等待是否已经取消。 */
+    readonly cancelled: boolean;
+    /** 注册取消回调，返回解除监听函数；已取消时立即调用。 */
+    onCancel(callback: () => void): () => void;
+}
+
 /** 锚点注册和等待接口。 */
 export interface IGuideAnchorRegistry {
     register(anchor: IGuideAnchor): void;
     unregister(anchor: IGuideAnchor): void;
     resolve(guideId: string): IGuideAnchor | null;
-    waitFor(guideId: string, timeoutSeconds?: number): Promise<IGuideAnchor | null>;
+    /** 可选取消参数只影响本次等待；旧的两参数实现仍可继续使用。 */
+    waitFor(guideId: string, timeoutSeconds?: number, cancellation?: IGuideWaitCancellation): Promise<IGuideAnchor | null>;
     getAllGuideIds(): string[];
 }
 
@@ -355,6 +364,8 @@ export interface IGuideOverlay {
     prepare(step: GuideStepConfig, snapshots: GuideAnchorSnapshot[]): void;
     /** 显示当前步骤。 */
     showStep(step: GuideStepConfig, snapshots: GuideAnchorSnapshot[]): void;
+    /** 刷新当前步骤的目标布局，保持动画与完成文案；自定义遮罩可不实现。 */
+    refreshTargetLayout?(step: GuideStepConfig, snapshots: GuideAnchorSnapshot[]): void;
     /** 显示步骤完成文案。 */
     showCompleteText(step: GuideStepConfig): void;
     /** 清理当前步骤视觉和触摸状态。 */

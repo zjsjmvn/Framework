@@ -1,4 +1,4 @@
-import { _decorator, assetManager, Color, Component, EventTouch, Graphics, Label, Node, Rect, Sprite, SpriteFrame, tween, Tween, UITransform, v2, v3, Vec2, Vec3 } from 'cc';
+import { _decorator, assetManager, Color, Component, EventTouch, Graphics, isValid, Label, Node, Rect, Sprite, SpriteFrame, tween, Tween, UITransform, v2, v3, Vec2, Vec3 } from 'cc';
 import { GuideAnchorSnapshot, GuideStepConfig, IGuideOverlay, IGuideTouchHandler } from './guide-types';
 
 const { ccclass, property } = _decorator;
@@ -32,8 +32,16 @@ export class GuideDefaultOverlay extends Component implements IGuideOverlay {
     private fingerSprite: Sprite = null;
     /** 默认手指图形绘制组件。 */
     private fingerGraphics: Graphics = null;
-    /** 已尝试加载的手指图片路径，避免 ensureBuilt 反复发起加载。 */
+    /** 已应用的手指图片路径，已完成资源可以在下一步骤复用。 */
     private loadedFingerSpritePath: string = '';
+    /** 当前待返回的图片请求，取消后同一路径可以重新加载。 */
+    private pendingFingerSpritePath: string = '';
+    /** 图片请求代次，切步和销毁后拒绝旧资源回调。 */
+    private fingerLoadGeneration = 0;
+    /** 手指动画已经启动，刷新布局只更新位置与可见性。 */
+    private fingerAnimationStarted = false;
+    /** 同步释放标记，阻止延迟销毁前的旧回调修改节点。 */
+    private disposed = false;
     /** 提示文案节点。 */
     private textNode: Node = null;
     /** 提示文案 Label。 */
@@ -51,13 +59,16 @@ export class GuideDefaultOverlay extends Component implements IGuideOverlay {
 
     /** 节点销毁时停止手指 tween，避免 tween 持有失效节点。 */
     protected onDestroy(): void {
-        this.stopFinger();
+        this.disposed = true;
+        this.clearStep();
     }
 
     /** 只准备视觉内容，不播放手指动画。 */
     public prepare(step: GuideStepConfig, snapshots: GuideAnchorSnapshot[]): void {
-        this.ensureBuilt();
+        if (this.disposed || !isValid(this.node, true)) return;
+        if (this.currentStep && this.currentStep !== step) this.cancelFingerLoad();
         this.currentStep = step;
+        this.ensureBuilt();
         this.drawMask(step, snapshots);
         this.updateText(step, snapshots);
     }
@@ -65,26 +76,48 @@ export class GuideDefaultOverlay extends Component implements IGuideOverlay {
     /** 显示一个步骤的完整默认视觉效果。 */
     public showStep(step: GuideStepConfig, snapshots: GuideAnchorSnapshot[]): void {
         this.prepare(step, snapshots);
+        if (this.disposed || this.currentStep !== step || !isValid(this.node, true)) return;
         this.playFinger(step, snapshots);
+    }
+
+    /** 只更新几何布局，单目标手指保持缩放动画相位，完成文案保持原内容。 */
+    public refreshTargetLayout(step: GuideStepConfig, snapshots: GuideAnchorSnapshot[]): void {
+        if (this.disposed || this.currentStep !== step || !isValid(this.node, true)) return;
+        this.drawMask(step, snapshots);
+        this.layoutText(step, snapshots);
+        if (!this.fingerAnimationStarted || snapshots.length > 1) return;
+        if (snapshots.length === 0 || step.showFinger === false) {
+            this.fingerNode.active = false;
+            return;
+        }
+        const rect = snapshots[0].rectInOverlay;
+        const point = this.rectCenter(rect);
+        point.x += step.fingerOffset?.x ?? 0;
+        point.y += step.fingerOffset?.y ?? 0;
+        this.fingerNode.setPosition(point);
+        const transform = this.node.getComponent(UITransform);
+        const left = -transform.width * transform.anchorX;
+        const bottom = -transform.height * transform.anchorY;
+        this.fingerNode.active = rect.x + rect.width > left && rect.x < left + transform.width
+            && rect.y + rect.height > bottom && rect.y < bottom + transform.height;
     }
 
     /** 步骤完成后显示 completeText。 */
     public showCompleteText(step: GuideStepConfig): void {
-        if (!step.completeText) {
+        if (!step.completeText || this.disposed || this.currentStep !== step || !isValid(this.node, true)) {
             return;
         }
 
-        this.ensureBuilt();
         this.textNode.active = true;
         this.textLabel.string = step.completeText;
     }
 
     /** 清理当前步骤的绘制、文案、手指动画和触摸处理器。 */
     public clearStep(): void {
-        this.ensureBuilt();
-        this.maskGraphics.clear();
-        this.highlightGraphics.clear();
-        this.textNode.active = false;
+        this.cancelFingerLoad();
+        if (isValid(this.maskGraphics, true)) this.maskGraphics.clear();
+        if (isValid(this.highlightGraphics, true)) this.highlightGraphics.clear();
+        if (isValid(this.textNode, true)) this.textNode.active = false;
         this.stopFinger();
         this.touchHandler = null;
         this.currentStep = null;
@@ -92,6 +125,8 @@ export class GuideDefaultOverlay extends Component implements IGuideOverlay {
 
     /** 释放遮罩节点。 */
     public dispose(): void {
+        if (this.disposed) return;
+        this.disposed = true;
         this.clearStep();
         if (this.node && this.node.isValid) {
             this.node.destroy();
@@ -105,6 +140,7 @@ export class GuideDefaultOverlay extends Component implements IGuideOverlay {
 
     /** 懒创建默认遮罩内部节点，支持外部 prefab 只挂一个 GuideDefaultOverlay。 */
     private ensureBuilt(): void {
+        if (this.disposed) return;
         let transform = this.node.getComponent(UITransform);
         if (!transform) {
             transform = this.node.addComponent(UITransform);
@@ -138,8 +174,17 @@ export class GuideDefaultOverlay extends Component implements IGuideOverlay {
             this.node.addChild(this.fingerNode);
             const fingerTransform = this.fingerNode.addComponent(UITransform);
             fingerTransform.setContentSize(44, 56);
-            this.fingerSprite = this.fingerNode.addComponent(Sprite);
-            this.fingerGraphics = this.fingerNode.addComponent(Graphics);
+            // 每个子节点只挂一个渲染组件，父节点统一承载位置与动画。
+            const spriteNode = new Node('FingerSprite');
+            spriteNode.layer = this.node.layer;
+            this.fingerNode.addChild(spriteNode);
+            spriteNode.addComponent(UITransform).setContentSize(44, 56);
+            this.fingerSprite = spriteNode.addComponent(Sprite);
+            const graphicsNode = new Node('FingerGraphics');
+            graphicsNode.layer = this.node.layer;
+            this.fingerNode.addChild(graphicsNode);
+            graphicsNode.addComponent(UITransform).setContentSize(44, 56);
+            this.fingerGraphics = graphicsNode.addComponent(Graphics);
             this.fingerNode.active = false;
         }
         this.refreshFingerVisual();
@@ -179,6 +224,7 @@ export class GuideDefaultOverlay extends Component implements IGuideOverlay {
         const bottom = -height * transform.anchorY;
 
         this.maskGraphics.clear();
+        this.highlightGraphics.clear();
         this.maskGraphics.fillColor = new Color(0, 0, 0, step.showMask === false ? 0 : this.maskOpacity);
 
         if (step.showMask === false) {
@@ -194,7 +240,6 @@ export class GuideDefaultOverlay extends Component implements IGuideOverlay {
         // Graphics 这里没有直接的多矩形镂空能力，所以只绘制目标矩形以外的区域。
         this.fillOutsideRects(left, bottom, width, height, rects);
 
-        this.highlightGraphics.clear();
         this.highlightGraphics.strokeColor = new Color(255, 255, 255, 230);
         this.highlightGraphics.lineWidth = 4;
         for (const rect of rects) {
@@ -210,8 +255,8 @@ export class GuideDefaultOverlay extends Component implements IGuideOverlay {
 
         // 用所有洞的边界切分遮罩，再填充中心点不在洞里的网格，避免依赖 shader 或 Mask 组件。
         holes.forEach((hole) => {
-            xs.push(hole.x, hole.x + hole.width);
-            ys.push(hole.y, hole.y + hole.height);
+            xs.push(Math.max(left, Math.min(left + width, hole.x)), Math.max(left, Math.min(left + width, hole.x + hole.width)));
+            ys.push(Math.max(bottom, Math.min(bottom + height, hole.y)), Math.max(bottom, Math.min(bottom + height, hole.y + hole.height)));
         });
 
         const sortedX = Array.from(new Set(xs)).sort((a, b) => a - b);
@@ -245,23 +290,32 @@ export class GuideDefaultOverlay extends Component implements IGuideOverlay {
 
         this.textNode.active = true;
         this.textLabel.string = step.text;
+        this.layoutText(step, snapshots);
+    }
+
+    /** 几何刷新不重写文案，以免完成提示被原步骤提示覆盖。 */
+    private layoutText(step: GuideStepConfig, snapshots: GuideAnchorSnapshot[]): void {
+        if (!this.textNode.active) return;
+        const transform = this.node.getComponent(UITransform);
+        const textTransform = this.textNode.getComponent(UITransform);
+        textTransform.width = Math.min(textTransform.width, transform.width);
+        const firstRect = snapshots[0]?.rectInOverlay;
+        const topSpace = firstRect ? transform.height / 2 - (firstRect.y + firstRect.height) : 0;
+        let x = firstRect ? firstRect.x + firstRect.width / 2 : 0;
+        let y = firstRect ? (topSpace > textTransform.height + 40 ? firstRect.y + firstRect.height + 64 : firstRect.y - 64) : -180;
 
         if (step.textPosition) {
-            this.textNode.setPosition(step.textPosition.x, step.textPosition.y, 0);
-            return;
+            x = step.textPosition.x;
+            y = step.textPosition.y;
         }
-
-        const firstRect = snapshots[0]?.rectInOverlay;
-        if (!firstRect) {
-            this.textNode.setPosition(0, -180, 0);
-            return;
-        }
-
-        const transform = this.node.getComponent(UITransform);
-        const textHeight = this.textNode.getComponent(UITransform).height;
-        const topSpace = transform.height / 2 - (firstRect.y + firstRect.height);
-        const y = topSpace > textHeight + 40 ? firstRect.y + firstRect.height + 64 : firstRect.y - 64;
-        this.textNode.setPosition(firstRect.x + firstRect.width / 2, y, 0);
+        const left = -transform.width * transform.anchorX;
+        const bottom = -transform.height * transform.anchorY;
+        const minX = left + textTransform.width * textTransform.anchorX;
+        const maxX = left + transform.width - textTransform.width * (1 - textTransform.anchorX);
+        const minY = bottom + textTransform.height * textTransform.anchorY;
+        const maxY = bottom + transform.height - textTransform.height * (1 - textTransform.anchorY);
+        this.textNode.setPosition(Math.max(minX, Math.min(maxX, x)),
+            minY <= maxY ? Math.max(minY, Math.min(maxY, y)) : bottom + transform.height / 2, 0);
     }
 
     /** 播放默认手指动画：单目标为点击缩放，多目标为按目标中心循环移动。 */
@@ -280,6 +334,7 @@ export class GuideDefaultOverlay extends Component implements IGuideOverlay {
         }
 
         this.fingerNode.active = true;
+        this.fingerAnimationStarted = true;
         this.fingerNode.setPosition(points[0]);
         this.fingerNode.setScale(1, 1, 1);
 
@@ -310,11 +365,12 @@ export class GuideDefaultOverlay extends Component implements IGuideOverlay {
 
     /** 停止手指动画并隐藏手指节点。 */
     private stopFinger(): void {
+        this.fingerAnimationStarted = false;
         if (!this.fingerNode) {
             return;
         }
         Tween.stopAllByTarget(this.fingerNode);
-        this.fingerNode.active = false;
+        if (isValid(this.fingerNode, true)) this.fingerNode.active = false;
     }
 
     /** 用 Graphics 画一个简单手指图形，避免默认实现依赖外部图片资源。 */
@@ -322,9 +378,11 @@ export class GuideDefaultOverlay extends Component implements IGuideOverlay {
         if (this.fingerSprite) {
             this.fingerSprite.spriteFrame = null;
             this.fingerSprite.enabled = false;
+            this.fingerSprite.node.active = false;
         }
         if (this.fingerGraphics) {
             this.fingerGraphics.enabled = true;
+            this.fingerGraphics.node.active = true;
         }
         this.fingerGraphics.clear();
         this.fingerGraphics.fillColor = new Color(255, 255, 255, 255);
@@ -343,29 +401,46 @@ export class GuideDefaultOverlay extends Component implements IGuideOverlay {
     private refreshFingerVisual(): void {
         const path = (this.fingerSpritePath || '').trim();
         if (!path) {
+            this.cancelFingerLoad();
             this.loadedFingerSpritePath = '';
             this.drawFinger();
             return;
         }
 
-        if (this.loadedFingerSpritePath === path) {
+        if (this.loadedFingerSpritePath === path && this.fingerSprite.spriteFrame) {
             return;
         }
-        this.loadedFingerSpritePath = path;
+        if (this.pendingFingerSpritePath === path) return;
+        this.cancelFingerLoad();
+        const generation = this.fingerLoadGeneration;
+        this.pendingFingerSpritePath = path;
+        this.drawFinger();
         this.loadFingerSpriteFrame(path, (spriteFrame) => {
-            if (!this.node?.isValid || this.loadedFingerSpritePath !== path) {
+            if (this.disposed || !isValid(this.node, true) || generation !== this.fingerLoadGeneration
+                || this.pendingFingerSpritePath !== path || (this.fingerSpritePath || '').trim() !== path) {
                 return;
             }
+            this.pendingFingerSpritePath = '';
             if (!spriteFrame) {
+                this.loadedFingerSpritePath = '';
                 this.drawFinger();
                 return;
             }
 
+            this.loadedFingerSpritePath = path;
             this.fingerGraphics.clear();
             this.fingerGraphics.enabled = false;
+            this.fingerGraphics.node.active = false;
             this.fingerSprite.enabled = true;
+            this.fingerSprite.node.active = true;
             this.fingerSprite.spriteFrame = spriteFrame;
         });
+    }
+
+    /** 只取消本实例回调资格，底层共享 bundle 请求由资源系统维护。 */
+    private cancelFingerLoad(): void {
+        this.fingerLoadGeneration++;
+        this.pendingFingerSpritePath = '';
     }
 
     /** 支持 bundle/path/spriteFrame 格式，便于业务传 game_base 子包内的手指图。 */

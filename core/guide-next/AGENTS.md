@@ -5,10 +5,10 @@
 ## 目录职责
 
 - `guide-types.ts`：对外类型、步骤配置、运行时接口。
-- `guide-anchor.ts`：目标锚点组件，挂在需要高亮或点击的真实 UI 节点上。
+- `guide-anchor.ts`：目标锚点组件，挂在需要高亮或点击的真实节点上；世界目标由业务显式指定来源相机，将四角投影到遮罩坐标后再添加 UI 边距，普通 UI 目标沿原坐标协议。
 - `guide-anchor-registry.ts`：全局锚点注册表，负责通过 `guideId` 查找目标。
-- `guide-runner.ts`：核心运行器，负责步骤生命周期、触摸判断、事件等待和进度保存。步骤失败（超时、verify 失败、目标缺失且策略为失败）会 reject 给 `GuideService.onError`，同时按 `destroyOverlayOnComplete` 清理遮罩，不会把蒙层留在界面上。
-- `guide-default-overlay.ts`：默认遮罩实现，当前只支持矩形镂空和矩形高亮。
+- `guide-runner.ts`：核心运行器，负责步骤生命周期、触摸判断、事件等待和进度保存。步骤失败（超时、verify 失败、目标缺失且策略为失败）会 reject 给 `GuideService.onError`，同时按 `destroyOverlayOnComplete` 清理遮罩。主动停止会取消本运行器的目标等待、步骤等待和前后延迟；异步回调返回后先核对运行状态，停止后不再安装触摸、显示步骤或保存完成进度。
+- `guide-default-overlay.ts`：默认遮罩实现，当前只支持矩形镂空和矩形高亮；手指父节点承载动画，Sprite 与 Graphics 分别放在独立子节点。可选 `refreshTargetLayout` 只刷新当前步骤几何位置，不重播动画或覆盖完成文案。
 - `guide-flow-component.ts`：Inspector 可配置流程组件。
 - `guide-service.ts`：启动入口，保证同一时间只有一条引导运行。
 - `guide-storage.ts`：默认本地进度存储。
@@ -46,6 +46,8 @@ getOrAddGuideAnchor(node, 'game.first-box');
 
 对象池节点复用时必须重新设置 `guideId`，避免旧 id 留在新内容上。
 
+跨相机世界目标调用 `anchor.setSourceCamera(camera)`；回收或更换用途时调用 `setSourceCamera(null)` 清理。来源相机未就绪或失效时目标不可用，不静默退回世界坐标。禁用锚点仅注销，重新启用保留同场景相机；销毁释放引用。业务在镜头同步后重新取得快照，并调用遮罩可选的 `refreshTargetLayout(step, snapshots)`；该接口不更新运行器命中快照，适用于已全面透传、以事件推进的移动目标。
+
 ## 启动流程
 
 代码配置优先从 `index.ts` 导入：
@@ -63,6 +65,7 @@ import { GuideFlowConfig, GuideService, GuideStepKind, GuideTargetMissPolicy } f
 - 默认遮罩共用的手指图、遮罩透明度等字段优先放在 `GuideFlowConfig.overlayDefaults`。
 - 代码里判断“能不能起引导”时，优先返回 `GuideStartDecision` 之类的结构化结果，再由业务层打印原因，不要只留一个裸 `boolean`。
 - 需要异步等待 UI 出现时，默认还是使用 `targetMissPolicy: GuideTargetMissPolicy.Wait`。
+- 自定义锚点注册表可实现 `waitFor` 的可选第三参数 `IGuideWaitCancellation`，取消时只清理本次等待并返回 `null`，不能清空其它业务锚点或等待者；旧两参数实现仍可用，但其内部资源须由实现自己清理。
 - 排查流程时临时打开 `GuideFlowConfig.debug`，能看到启动、恢复、等待目标、步骤完成和停止日志。
 - `GuideService` 只负责启动和遮罩默认值，不要把业务选择逻辑塞进来。
 - `guide-flow-utils.ts` 和 `guide-start-decision.ts` 这类纯工具优先写成无场景依赖的小函数，便于根目录 `test/` 下的 Node 测试直接测。

@@ -1,5 +1,5 @@
 import { isValid } from 'cc';
-import { IGuideAnchor, IGuideAnchorRegistry } from './guide-types';
+import { IGuideAnchor, IGuideAnchorRegistry, IGuideWaitCancellation } from './guide-types';
 
 /** 等待某个 guideId 注册的挂起请求。 */
 interface Waiter {
@@ -9,6 +9,10 @@ interface Waiter {
     resolve: (anchor: IGuideAnchor | null) => void;
     /** 超时定时器。 */
     timer: any;
+    /** 解除本次等待的取消监听。 */
+    cancelCleanup: (() => void) | null;
+    /** 防止取消、目标出现与超时重复收尾。 */
+    completed: boolean;
 }
 
 /** 全局锚点注册表。目标节点通过 GuideAnchor 生命周期注册，步骤通过 guideId 查询。 */
@@ -93,8 +97,11 @@ export class GuideAnchorRegistry implements IGuideAnchorRegistry {
         return null;
     }
 
-    /** 等待某个 guideId 出现。超时返回 null，不会抛错。 */
-    public waitFor(guideId: string, timeoutSeconds: number = 5): Promise<IGuideAnchor | null> {
+    /** 等待某个 guideId 出现。超时或本次等待被取消时返回 null，不影响其他等待者。 */
+    public waitFor(guideId: string, timeoutSeconds: number = 5, cancellation?: IGuideWaitCancellation): Promise<IGuideAnchor | null> {
+        if (cancellation?.cancelled) {
+            return Promise.resolve(null);
+        }
         const anchor = this.resolve(guideId);
         if (anchor) {
             return Promise.resolve(anchor);
@@ -105,16 +112,23 @@ export class GuideAnchorRegistry implements IGuideAnchorRegistry {
                 guideId,
                 resolve,
                 timer: null,
+                cancelCleanup: null,
+                completed: false,
             };
 
+            this.waiters.push(waiter);
             if (timeoutSeconds > 0) {
                 waiter.timer = setTimeout(() => {
-                    this.removeWaiter(waiter);
-                    resolve(null);
+                    this.finishWaiter(waiter, null);
                 }, timeoutSeconds * 1000);
             }
 
-            this.waiters.push(waiter);
+            const cancelCleanup = cancellation?.onCancel(() => this.finishWaiter(waiter, null));
+            if (waiter.completed) {
+                cancelCleanup?.();
+            } else {
+                waiter.cancelCleanup = cancelCleanup ?? null;
+            }
         });
     }
 
@@ -127,11 +141,7 @@ export class GuideAnchorRegistry implements IGuideAnchorRegistry {
     public clear(): void {
         this.anchors.clear();
         while (this.waiters.length > 0) {
-            const waiter = this.waiters.pop();
-            if (waiter.timer) {
-                clearTimeout(waiter.timer);
-            }
-            waiter.resolve(null);
+            this.finishWaiter(this.waiters[this.waiters.length - 1], null);
         }
     }
 
@@ -144,19 +154,26 @@ export class GuideAnchorRegistry implements IGuideAnchorRegistry {
                 continue;
             }
 
-            this.waiters.splice(i, 1);
-            if (waiter.timer) {
-                clearTimeout(waiter.timer);
-            }
-            waiter.resolve(anchor);
+            this.finishWaiter(waiter, anchor);
         }
     }
 
-    /** 从等待队列里移除指定 waiter。 */
-    private removeWaiter(waiter: Waiter): void {
+    /** 单次等待的所有结束路径统一清理定时器、取消监听和队列项。 */
+    private finishWaiter(waiter: Waiter, anchor: IGuideAnchor | null): void {
+        if (waiter.completed) {
+            return;
+        }
+        waiter.completed = true;
         const index = this.waiters.indexOf(waiter);
         if (index >= 0) {
             this.waiters.splice(index, 1);
         }
+        if (waiter.timer !== null) {
+            clearTimeout(waiter.timer);
+            waiter.timer = null;
+        }
+        waiter.cancelCleanup?.();
+        waiter.cancelCleanup = null;
+        waiter.resolve(anchor);
     }
 }

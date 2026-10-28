@@ -87,6 +87,7 @@ export class AudioManager extends Component {
     set audioMusicSwitchState(value: boolean) {
         this._audioMusicSwitchState = value;
         if (value == false) {
+            ++this.musicPlayRequestVersion;
             this.audioMusic.loop = false;
             this.audioMusic.stop();
 
@@ -384,6 +385,7 @@ export class AudioManager extends Component {
 
     /** 停止当前背景音乐播放，不影响音效 */
     stopMusic() {
+        ++this.musicPlayRequestVersion;
         if (this.audioMusic) {
             this.audioMusic.stop();
         }

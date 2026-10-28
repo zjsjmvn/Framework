@@ -178,6 +178,7 @@
 - `AudioManager.instance` 会创建持久节点 `AudioManager`，子节点 `AudioMusic` 和 `AudioEffect`。
 - 调用 `init/registerMusicAndEffect(path, bundle)` 后，会扫描指定目录下 `AudioClip`，按文件名映射路径。
 - `playMusic/playEffect` 的参数是扫描得到的音频文件名，不是完整路径。
+- 音乐只让最后一次播放请求生效；停止音乐或关闭音乐开关时，必须使尚未完成的加载请求失效。
 - 音乐使用 `AudioMusic`，音效使用 `AudioEffect.playOneShot`；音效播放期间无法精确即时关闭。
 - 需要按住按钮期间循环播放、松手即时停止的音效，使用 `AudioManager.playLoopEffect(url)` 和 `AudioManager.stopLoopEffect(url)`；不要用 `playEffect` 模拟这类持续音效。
 - 修改音频缓存和释放逻辑时，确认 `musics/effects` Map 与 bundle 资源生命周期一致。

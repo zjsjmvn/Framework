@@ -235,8 +235,9 @@ export default class ByteDanceAds implements IAdProvider {
     }
 
     hasRewardVideo(posName: string): boolean {
-        let bundle = this.rewardVideoInstanceMap.get(posName);
-        return bundle.hasRewardVideoInCache;
+        return true;
+        // let bundle = this.rewardVideoInstanceMap.get(posName);
+        // return bundle.hasRewardVideoInCache;
     }
 
 

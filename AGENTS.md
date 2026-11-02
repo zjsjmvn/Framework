@@ -94,12 +94,9 @@
 - `PopupAction` 默认依赖 `Bg` 和 `Container` 节点，并要求对应节点上有 `UIOpacity`。
 - `UIManager` 是单例，负责 prefab 扫描、弹窗队列、挂起/恢复、缓存、tips。
 - `UIManager.registerUIPrefab(path, bundle?)` 只枚举元数据并返回名称列表，不加载依赖；相同包和路径可重复注册，同名不同来源报错并保留原映射。
-- 普通 authored prefab 通过 `preparePrefab(name)` 异步准备，使用 `resLoader.loadAsync` 合并请求并持有一份引用；加载失败可重试。`isPrefabReady(name)` 为真后才能 `instantiatePrefab(name, child?)`，子模板仍由 authored 节点树提供。
-- `mountPrefab(node, parent)` 挂载实例，`closePrefab(node)` 立即停用并移除，实例追踪等到 `NODE_DESTROYED` 后清理；`releasePrefab(name)` 取消未完成准备，有活跃实例时延迟到最后实例销毁再 `decRef`。旧资源被替换时，旧实例的引用也保留到各自销毁。
-- `getPrefabCacheStats()` 返回缓存条目的名称、实例数和释放状态；业务通过这些公共 API 管理普通 prefab，保持加载与展示分离。
-- `UIManager.showPopup(Class, data, params)` 会按类名查找 prefab；prefab 根节点必须挂对应 `UIBase/UIPopup` 脚本。
-- `needCache=true` 的 UI 关闭后会从父节点移除并缓存实例；再次打开复用同一节点。
-- `PopupParams.immediately=false` 会进入等待队列；`suspendCurrent=true` 会挂起当前弹窗。
+- 弹窗沿用 `UIPopup` 子类和 `UIManager.showPopup(Class, data, params)`，Prefab 根节点挂对应类；返回的 Promise 在挂载、`init` 和 `show` 完成后给出该实例。预加载使用同一弹窗缓存的 `preloadPopup(Class)`。
+- `CacheMode` 决定节点/Prefab 复用；关闭使用 `closePopup(instance)` 或 `closePopupByClass(Class)`，会话释放使用 `releasePopup(Class)`。缓存模式、取消和延迟销毁引用的契约见 [core/ui 约定](core/ui/AGENTS.md#ui-framework)。
+- 普通节点素材通过 `resLoader` 加载，由业务模块持有引用、实例化并清理；其生命周期与弹窗队列分开。
 - 不要在业务中直接操作 `UIManager` 的内部队列、`_currentShowingPopup` 或缓存 Map。
 
 ## MVVM
@@ -216,7 +213,7 @@
 ## 修改建议与验证
 
 - 改 `ui-killer`、`Thor`、`ExtendCCComponent`：优先运行编辑器/弹窗/Thor 自动绑定相关轻量测试，并在 Cocos 预览中点按 `_` 节点、Button、EditBox 和嵌套 Thor 节点。
-- 改 `UIManager/UIPopup`：验证 prefab 扫描、打开、关闭、缓存、挂起恢复、空白关闭和动画；普通 prefab 另运行根仓库 `tests/render/ui-manager-prefabs.test.js`，覆盖取消、并发及延迟销毁引用。
+- 改 `UIManager/UIPopup`：运行根仓库 `tests/render/ui-manager-prefabs.test.js` 验证实际弹窗加载、生命周期、三种缓存模式、排队、挂起恢复、取消和延迟销毁引用；再用 Cocos 预览检查空白关闭与动画。
 - 改 `MVVM`：验证 `VM.add/remove`、路径监听、`VMParent` 的 `*` 替换、Label 模板和 controller 双向写回。
 - 改 `ECS`：验证组件注册、添加/删除/回收、group 查询、entityEnter/entityRemove、RootSystem 执行顺序。
 - 改 `resLoader/ImageUtil`：验证 bundle 资源加载、目录加载、释放、重复加载和运行时图片显示；根仓库 `tests/render/res-loader.test.js` 覆盖旧重载、失败重试及跨包/类型请求隔离。

@@ -143,7 +143,10 @@ export default abstract class UIPopup<T extends UIData> extends UIBase {
      * @param {T} [uiData]
      * @memberof UIPopup
      */
-    public abstract init(uiData?: T);
+    public init(uiData?: T) {
+        super.init(uiData);
+        this.data = uiData;
+    }
 
 
     public onLoad() {
@@ -158,8 +161,11 @@ export default abstract class UIPopup<T extends UIData> extends UIBase {
         this.node._touchListener?.setSwallowTouches(false);
     }
 
+    private presentationVersion = 0;
     public async show() {
+        const version = ++this.presentationVersion;
         await this.beforeShow();
+        if (version !== this.presentationVersion || !isValid(this.node, true)) return;
         super.show();
         this.onShow();
         this.runOpenAction();
@@ -167,27 +173,38 @@ export default abstract class UIPopup<T extends UIData> extends UIBase {
     }
 
     public async hide() {
+        const version = ++this.presentationVersion;
         await this.beforeHide();
+        if (version !== this.presentationVersion || !isValid(this.node, true)) return;
         super.hide();
         this.onHide();
         await this.afterHide();
     }
 
-    private isClosing = false;
-    public async close() {
-        if (this.isClosing) return;
-        this.isClosing = true;
-
-        await this.beforeClose();
-        await this.runCloseAction();
-        // 不需要缓存才destroy。
-        if (!this.needCache) {
-            super.close();
-        }
-        this.onClose();
-        await this.afterClose();
-
-        this.isClosing = false;
+    private closing: Promise<void> | null = null;
+    public close(): Promise<void> {
+        if (this.closing) return this.closing;
+        const version = ++this.presentationVersion;
+        const request = (async () => {
+            try {
+                await this.beforeClose();
+                if (version !== this.presentationVersion || !isValid(this.node, true)) return;
+                await this.runCloseAction();
+                if (version !== this.presentationVersion || !isValid(this.node, true)) return;
+                this.node.active = false;
+                this.onClose();
+                await this.afterClose();
+            } finally {
+                if (isValid(this.node, true)) {
+                    this.node.active = false;
+                    if (!this.needCache) super.close();
+                }
+            }
+        })().finally(() => {
+            if (this.closing === request) this.closing = null;
+        });
+        this.closing = request;
+        return request;
     }
 
 
@@ -253,6 +270,7 @@ export default abstract class UIPopup<T extends UIData> extends UIBase {
 
 
     onDestroy() {
+        this.presentationVersion++;
         if (this._touchBlankPlaceToClose && isValid(this.node, true)) {
             this.node.off(Node.EventType.TOUCH_END, this.onThisNodeTouchEnd_UsedFor_TouchMarginToClose, this, true);
         }

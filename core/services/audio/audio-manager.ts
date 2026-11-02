@@ -400,9 +400,9 @@ export class AudioManager extends Component {
         this.audioMusic.clip = null;
         this.loopEffects.forEach(effect => { effect.clip = null; });
         ++this.cacheGeneration;
-        const pending = [...this.loading.values()];
+        const pending = Array.from(this.loading.values());
         this.loading.clear();
-        const retained = [...this.clips.values()];
+        const retained = Array.from(this.clips.values());
         this.clips.clear();
         for (const clip of retained) clip.decRef();
         for (const request of pending) for (const complete of request.callbacks) {
@@ -430,7 +430,7 @@ export class AudioManager extends Component {
 
     protected onDestroy(): void {
         this.disposed = true;
-        for (const session of [...this.sessions]) session.destroy();
+        for (const session of Array.from(this.sessions)) session.destroy();
         this.releaseCachedClips();
         this.assetsByName.clear();
         if (AudioManager._instance === this) AudioManager._instance = null!;

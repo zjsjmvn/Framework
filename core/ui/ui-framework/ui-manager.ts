@@ -1,729 +1,438 @@
-import { Prefab, director, error, instantiate, js, resources, log, Node, Label, isValid, warn, AssetManager } from 'cc';
+import { Prefab, director, error, instantiate, js, resources, Node, isValid, AssetManager, Vec3, Color } from 'cc';
 import { singleton } from '../../utils/decorator/singleton';
 import UIBase from './ui-base';
 import UIPopup from './ui-popup';
 import UITips from './ui-tips';
-import { Vec3 } from 'cc';
-import { Color } from 'cc';
 import { resLoader } from '../../utils/res-loader';
 
 export class ViewZOrder {
-    /**场景层 */
     public static readonly Scene = 20;
-    /**顶部和底部菜单栏层级 */
     public static readonly MenuPanel = 80;
-    /**UI层 */
     public static readonly UI = 100;
-    /**弹框层 */
     public static readonly Popup = 200;
-    /**提示层 */
     public static readonly Tips = 300;
-    /**引导层 */
     public static readonly Guide = 400;
-    /**通知层 */
     public static readonly Notice = 500;
-    /**loading层 */
     public static readonly Loading = 600;
 }
-/**
- * 弹窗缓存模式
- */
 export enum CacheMode {
-    /** 一次性的（立即销毁节点，预制体资源随即释放） */
+    /** Destroy the node and release its prefab after deferred node destruction. */
     Once = 1,
-    /** 正常的（立即销毁节点，但是缓存预制体资源） */
+    /** Destroy the node and retain its prefab. */
     Normal,
-    /** 频繁的（只关闭节点，且缓存预制体资源） */
-    Frequent
+    /** Hide and detach the instance, retaining it and its prefab. */
+    Frequent,
 }
-
-
 export class PopupParams {
-    /** 缓存模式 */
     mode?: CacheMode = CacheMode.Normal;
-    /** 优先级（优先级大的优先展示） */
     priority?: number = 0;
-    /** 立刻展示（将会挂起当前展示中的弹窗） */
     immediately?: boolean = true;
-    /**
-     * @description 是否挂起当前,比如展示loading的时候就不要挂起。
-     * @type {boolean}
-     * @memberof PopupParams 
-     */
     suspendCurrent?: boolean = false;
+    parent?: Node;
+    /** Rechecked after loading and lifecycle awaits. */
+    isValid?: () => boolean;
 }
+export class PopupCancelledError extends Error {
+    public constructor(name: string) {
+        super('Popup request was cancelled: ' + name);
+        this.name = 'PopupCancelledError';
+    }
+}
+type PopupClass<T extends UIPopup<any> = UIPopup<any>> = new () => T;
+type PopupPrefab = {
+    name: string;
+    promise: Promise<Prefab>;
+    asset: Prefab | null;
+    requests: Set<PopupDataBundle>;
+    nodes: Set<Node>;
+    keep: boolean;
+    releasing: boolean;
+};
 export class PopupDataBundle {
-    /** 弹窗选项 */
-    uiClass: any;
-
+    uiClass: PopupClass;
     data: any;
-    /** 缓存模式 */
     params: PopupParams;
-    /** 弹窗节点 */
     node?: Node;
-
     zOrder: ViewZOrder = ViewZOrder.Popup;
+    instance?: UIPopup<any>;
+    prefab?: PopupPrefab;
+    mode: CacheMode;
+    explicitMode = false;
+    cancelled = false;
+    initialized = false;
+    opened = false;
+    settled = false;
+    resolve: (popup: UIPopup<any>) => void;
+    reject: (failure: unknown) => void;
+    closing?: Promise<void>;
 }
 
-/**
- * 考虑缓存的问题。
- */
+/** Popup requests, queue entries and prefab ownership share one lifecycle. */
 @singleton
 export default class UIManager {
     public static instance: UIManager;
-
-    /**
-     * @description  当前弹窗
-     * @readonly
-     * @memberof UIManager
-     */
-    public get currentShowingPopup() {
-        return this._currentShowingPopup;
-    }
     private _currentShowingPopup: PopupDataBundle = null;
-
-    /**
-     * @description 正在显示的ui栈，可能ui会叠好几层
-     * @private
-     * @type {PopupDataBundle[]}
-     * @memberof UIManager
-     */
     private showingUIStack: PopupDataBundle[] = [];
-
-    /**
-     * @description 等待队列
-     * @readonly
-     * @memberof UIManager
-     */
-    public get waitingQueue() {
-        return this._waitingQueue;
-    }
     private _waitingQueue: PopupDataBundle[] = [];
-
-
-    /**
-     * @description 被挂起的弹窗队列
-     * @readonly
-     * @memberof UIManager
-     */
-    public get suspendedQueue() {
-        return this._suspendedQueue;
-    }
     private _suspendedQueue: PopupDataBundle[] = [];
-
-    /**
-     * @description 缓存的ui，如果ui标记needCache那么就会在存到这里。
-     * @private
-     * @type {UIBase[]}
-     * @memberof UIManager
-     */
     private cachedUI: Map<string, UIBase> = new Map();
+    private uiPrefabNameAndPathMap = new Map<string, { path: string; bundle: AssetManager.Bundle }>();
+    private popupPrefabs = new Map<string, PopupPrefab>();
+    private popupRequests = new Set<PopupDataBundle>();
+    public get currentShowingPopup() { return this._currentShowingPopup; }
+    public get waitingQueue() { return this._waitingQueue; }
+    public get suspendedQueue() { return this._suspendedQueue; }
 
-    /**
-     * @description 扫描到的弹框预制体都放在这里。
-     * @private
-     * @type {Map<string, string>}
-     * @memberof UIManager
-     */
-    private uiPrefabNameAndPathMap: Map<string, { path: string, bundle: AssetManager.Bundle }> = new Map();
-
-    /** Authored views can use the same manager without requiring a popup subclass. */
-    private preparedPrefabs = new Map<string, { asset: Prefab; nodes: Set<Node>; releasing: boolean }>();
-    private preparingPrefabs = new Map<string, Promise<Prefab>>();
-    private prefabVersions = new Map<string, number>();
-    private managedPrefabNodes = new WeakMap<Node, string>();
-
-    public isPrefabReady(name: string): boolean {
-        const prepared = this.preparedPrefabs.get(name);
-        return !!prepared && !prepared.releasing && prepared.asset.isValid !== false;
+    public showPopup<T extends UIPopup<any>>(uiClass: PopupClass<T>, data?: Parameters<T['init']>[0], params?: PopupParams): Promise<T>;
+    public showPopup<T>(node: Node, data?: T, params?: PopupParams): Promise<UIPopup<any>>;
+    public showPopup(uiClass: PopupClass | Node, data?: any, params?: PopupParams): Promise<UIPopup<any>> {
+        if (uiClass instanceof Node) return this.openNodeTypePopup(uiClass, data);
+        const bundle = new PopupDataBundle();
+        bundle.uiClass = uiClass;
+        bundle.data = data;
+        bundle.explicitMode = params?.mode !== undefined;
+        bundle.params = Object.assign(new PopupParams(), params);
+        bundle.mode = bundle.params.mode;
+        const result = new Promise<UIPopup<any>>((resolve, reject) => {
+            bundle.resolve = resolve;
+            bundle.reject = reject;
+        });
+        this.popupRequests.add(bundle);
+        void this.openClassTypePopup(bundle);
+        return result;
     }
 
-    /** Prepare one registered view, retaining its dependencies until its last instance closes. */
-    public preparePrefab(name: string): Promise<Prefab> {
-        if (this.isPrefabReady(name)) return Promise.resolve(this.preparedPrefabs.get(name)!.asset);
-        const pending = this.preparingPrefabs.get(name);
-        if (pending) return pending;
-        const location = this.uiPrefabNameAndPathMap.get(name);
-        if (!location) return Promise.reject(new Error(`UI prefab is not registered: ${name}`));
-        const version = this.prefabVersions.get(name) ?? 0;
-        const request = resLoader.loadAsync(location.bundle.name, location.path, Prefab).then(asset => {
-            if ((this.prefabVersions.get(name) ?? 0) !== version) throw new Error(`UI preparation was cancelled: ${name}`);
-            const previous = this.preparedPrefabs.get(name);
-            if (previous && previous.asset === asset) {
-                previous.releasing = false;
-            } else {
-                if (previous) {
-                    previous.releasing = true;
-                    this.finishPrefabRelease(name, previous);
-                }
-                asset.addRef();
-                this.preparedPrefabs.set(name, { asset, nodes: new Set(), releasing: false });
+    /** Uses the same prefab cache as showPopup. */
+    public preloadPopup<T extends UIPopup<any>>(uiClass: PopupClass<T>): Promise<Prefab> {
+        try { return this.getPopupPrefab(uiClass, false).promise; }
+        catch (failure) { return Promise.reject(failure); }
+    }
+
+    public isPopupReady<T extends UIPopup<any>>(uiClass: PopupClass<T>): boolean {
+        const prefab = this.popupPrefabs.get(js.getClassName(uiClass));
+        return Boolean(prefab && !prefab.releasing && isValid(prefab.asset));
+    }
+
+    public async closePopupByClass<T extends UIBase>(uiClass: new () => T): Promise<void> {
+        const bundles = Array.from(this.popupRequests).filter(bundle => (bundle.uiClass as Function) === uiClass);
+        for (const bundle of bundles) this.cancelRequest(bundle);
+        await Promise.all(bundles.map(bundle => this.closeBundle(bundle)));
+    }
+
+    /** Cancel all class requests and release its cached instance and prefab. */
+    public async releasePopup<T extends UIPopup<any>>(uiClass: PopupClass<T>): Promise<void> {
+        const name = js.getClassName(uiClass);
+        const prefab = this.popupPrefabs.get(name);
+        if (prefab) {
+            this.popupPrefabs.delete(name);
+            prefab.keep = false;
+            prefab.releasing = true;
+        }
+        const cached = this.cachedUI.get(name);
+        this.cachedUI.delete(name);
+        if (isValid(cached?.node, true)) this.destroyNode(cached.node);
+        try { await this.closePopupByClass(uiClass); }
+        finally { if (prefab) this.finishPrefabRelease(prefab); }
+    }
+
+    public async closeAllUI(): Promise<void> {
+        const bundles = Array.from(this.popupRequests);
+        // Cancel the entire queue before a close can advance it.
+        for (const bundle of bundles) this.cancelRequest(bundle);
+        await Promise.all(bundles.map(bundle => this.closeBundle(bundle)));
+    }
+
+    public async openNodeTypePopup(node: Node, data?: any): Promise<UIPopup<any>> {
+        const popup = node.getComponent(UIPopup);
+        if (!popup) throw new Error('Node has no UIPopup component: ' + node.name);
+        node.active = true;
+        node.setPosition(0, 0);
+        popup.init(data);
+        await popup.show();
+        return popup;
+    }
+
+    private validRequest(bundle: PopupDataBundle): boolean {
+        if (bundle.cancelled || !this.popupRequests.has(bundle)) return false;
+        if (bundle.params.parent && !isValid(bundle.params.parent, true)) return false;
+        return !bundle.params.isValid || bundle.params.isValid();
+    }
+    private assertRequest(bundle: PopupDataBundle): void {
+        if (!this.validRequest(bundle)) throw new PopupCancelledError(js.getClassName(bundle.uiClass));
+    }
+
+    private async openClassTypePopup(bundle: PopupDataBundle): Promise<void> {
+        try {
+            this.assertRequest(bundle);
+            if (this._currentShowingPopup && !bundle.params.immediately) {
+                this._waitingQueue.push(bundle);
+                this._waitingQueue.sort((a, b) => b.params.priority - a.params.priority);
+                return;
             }
+            if (this._currentShowingPopup && bundle.params.suspendCurrent) {
+                const suspension = this.suspendCurrentPopup();
+                // Reserve the incoming request while suspension hooks await.
+                this._currentShowingPopup = bundle;
+                await suspension;
+            }
+            this.assertRequest(bundle);
+            this.showingUIStack.push(bundle);
+            this._currentShowingPopup = bundle;
+            let popup = this.getUIFromCachedMap(bundle.uiClass) as UIPopup<any>;
+            if (popup) bundle.prefab = this.popupPrefabs.get(js.getClassName(bundle.uiClass));
+            if (!popup) {
+                const prefab = this.getPopupPrefab(bundle.uiClass, bundle.mode !== CacheMode.Once);
+                bundle.prefab = prefab;
+                prefab.requests.add(bundle);
+                const asset = await prefab.promise;
+                this.assertRequest(bundle);
+                const node = instantiate(asset);
+                bundle.node = node;
+                this.trackPopupNode(node, prefab);
+                prefab.requests.delete(bundle);
+                popup = node.getComponent(bundle.uiClass);
+                if (!popup) throw new Error('Prefab has no matching UIPopup component: ' + js.getClassName(bundle.uiClass));
+            }
+            bundle.instance = popup;
+            bundle.node = popup.node;
+            if (!bundle.explicitMode && popup.needCache) bundle.mode = CacheMode.Frequent;
+            popup.needCache = bundle.mode === CacheMode.Frequent;
+            const parent = bundle.params.parent ?? director.getScene()?.getChildByName('Canvas');
+            if (!isValid(parent, true)) throw new Error('Popup parent Canvas is missing');
+            this.assertRequest(bundle);
+            parent.addChild(popup.node);
+            popup.node.setPosition(0, 0);
+            popup.node.setSiblingIndex(bundle.zOrder as number);
+            bundle.initialized = true;
+            popup.init(bundle.data);
+            this.assertRequest(bundle);
+            await popup.show();
+            this.assertRequest(bundle);
+            bundle.opened = true;
+            bundle.settled = true;
+            bundle.resolve(popup);
+        } catch (failure) {
+            if (!bundle.settled) { bundle.settled = true; bundle.reject(failure); }
+            await this.closeBundle(bundle).catch(closeFailure => error(closeFailure));
+        }
+    }
+
+    public getUIFromCachedMap<T extends UIBase>(uiClass: new () => T): T {
+        const name = js.getClassName(uiClass);
+        const popup = this.cachedUI.get(name);
+        this.cachedUI.delete(name);
+        return isValid(popup?.node, true) ? popup as T : null;
+    }
+    private setUIToCachedMap(bundle: PopupDataBundle): void {
+        const name = js.getClassName(bundle.uiClass);
+        const existing = this.cachedUI.get(name);
+        if (isValid(existing?.node, true) && existing !== bundle.instance) {
+            this.destroyNode(bundle.node);
+            return;
+        }
+        bundle.node.active = false;
+        bundle.node.removeFromParent();
+        this.cachedUI.set(name, bundle.instance);
+    }
+    private cancelRequest(bundle: PopupDataBundle): void {
+        bundle.cancelled = true;
+        this.removeBundle(bundle);
+        if (!bundle.settled) {
+            bundle.settled = true;
+            bundle.reject(new PopupCancelledError(js.getClassName(bundle.uiClass)));
+        }
+    }
+    private removeBundle(bundle: PopupDataBundle): void {
+        for (const queue of [this.showingUIStack, this._waitingQueue, this._suspendedQueue]) {
+            const index = queue.indexOf(bundle);
+            if (index >= 0) queue.splice(index, 1);
+        }
+        if (this._currentShowingPopup === bundle) this._currentShowingPopup = null;
+    }
+
+    public closePopup(ui: UIPopup<any> | Node): Promise<void> {
+        if (ui instanceof Node) return Promise.resolve(ui.getComponent(UIBase)?.hide());
+        const bundle = Array.from(this.popupRequests).find(candidate => candidate.instance === ui);
+        return bundle ? this.closeBundle(bundle) : Promise.resolve();
+    }
+    private closeBundle(bundle: PopupDataBundle): Promise<void> {
+        if (bundle.closing) return bundle.closing;
+        this.cancelRequest(bundle);
+        const close = async () => {
+            try {
+                if (bundle.initialized && isValid(bundle.instance?.node, true)) {
+                    const node = bundle.instance.node;
+                    let destroyed: () => void;
+                    const destruction = new Promise<void>(resolve => {
+                        destroyed = resolve;
+                        node.once(Node.EventType.NODE_DESTROYED, destroyed);
+                    });
+                    try { await Promise.race([bundle.instance.close(), destruction]); }
+                    finally { if (isValid(node)) node.off(Node.EventType.NODE_DESTROYED, destroyed); }
+                }
+            }
+            finally {
+                if (isValid(bundle.node)) {
+                    if (isValid(bundle.node, true) && bundle.opened && bundle.mode === CacheMode.Frequent && !bundle.prefab?.releasing) this.setUIToCachedMap(bundle);
+                    else this.destroyNode(bundle.node);
+                }
+                this.popupRequests.delete(bundle);
+                if (bundle.prefab) {
+                    bundle.prefab.requests.delete(bundle);
+                    this.finishPrefabRelease(bundle.prefab);
+                }
+                await this.showNextPopup();
+            }
+        };
+        bundle.closing = close();
+        return bundle.closing;
+    }
+
+    private async suspendCurrentPopup(): Promise<void> {
+        const bundle = this._currentShowingPopup;
+        if (!bundle) return;
+        if (!bundle.opened) {
+            this.cancelRequest(bundle);
+            void this.closeBundle(bundle);
+            return;
+        }
+        this.removeBundle(bundle);
+        this._suspendedQueue.unshift(bundle);
+        await bundle.instance['onSuspended']();
+        if (!this.validRequest(bundle)) return;
+        await bundle.instance.hide();
+    }
+    public async resumeSuspendPopup(): Promise<void> {
+        if (!this._currentShowingPopup) await this.showNextPopup();
+    }
+    private async showNextPopup(): Promise<void> {
+        if (this._currentShowingPopup) return;
+        while (this._suspendedQueue.length) {
+            const bundle = this._suspendedQueue.shift();
+            if (!this.validRequest(bundle) || !isValid(bundle.node, true)) {
+                await this.closeBundle(bundle);
+                return;
+            }
+            this._currentShowingPopup = bundle;
+            this.showingUIStack.push(bundle);
+            try {
+                await bundle.instance['onResume']();
+                this.assertRequest(bundle);
+                await bundle.instance.show();
+                this.assertRequest(bundle);
+                return;
+            } catch (failure) { await this.closeBundle(bundle); return; }
+        }
+        if (this.showingUIStack.length) {
+            this._currentShowingPopup = this.showingUIStack[this.showingUIStack.length - 1];
+            return;
+        }
+        const next = this._waitingQueue.shift();
+        if (next) void this.openClassTypePopup(next);
+    }
+
+    private getPopupPrefab(uiClass: PopupClass, keep: boolean): PopupPrefab {
+        const name = js.getClassName(uiClass);
+        const cached = this.popupPrefabs.get(name);
+        if (cached && !cached.releasing && (!cached.asset || isValid(cached.asset))) {
+            if (keep) cached.keep = true;
+            return cached;
+        }
+        if (cached) {
+            cached.keep = false;
+            cached.releasing = true;
+            this.finishPrefabRelease(cached);
+        }
+        const location = this.uiPrefabNameAndPathMap.get(name);
+        if (!location) throw new Error('Popup prefab is not registered: ' + name);
+        const entry: PopupPrefab = { name, promise: null, asset: null, requests: new Set(), nodes: new Set(), keep, releasing: false };
+        entry.promise = this.loadPrefab(location.path, location.bundle).then(asset => {
+            if (entry.releasing || this.popupPrefabs.get(name) !== entry) throw new PopupCancelledError(name);
+            entry.asset = asset;
+            asset.addRef();
             return asset;
-        }).finally(() => {
-            if (this.preparingPrefabs.get(name) === request) this.preparingPrefabs.delete(name);
+        }).catch(failure => {
+            if (this.popupPrefabs.get(name) === entry) this.popupPrefabs.delete(name);
+            throw failure;
         });
-        this.preparingPrefabs.set(name, request);
-        return request;
+        this.popupPrefabs.set(name, entry);
+        return entry;
     }
-
-    /** Instantiate a prepared view or an authored child template; loading stays explicit. */
-    public instantiatePrefab(name: string, child?: string): Node {
-        const prepared = this.preparedPrefabs.get(name);
-        if (!this.isPrefabReady(name)) throw new Error(`UI prefab was not prepared: ${name}`);
-        let template = prepared.asset.data;
-        for (const part of child?.split('/') ?? []) template = template?.getChildByName(part);
-        if (!template) throw new Error(`UI template is missing: ${name}/${child}`);
-        const node = instantiate(template);
-        prepared.nodes.add(node);
-        this.managedPrefabNodes.set(node, name);
+    private trackPopupNode(node: Node, prefab: PopupPrefab): void {
+        prefab.nodes.add(node);
         node.once(Node.EventType.NODE_DESTROYED, () => {
-            prepared.nodes.delete(node);
-            this.managedPrefabNodes.delete(node);
-            this.finishPrefabRelease(name, prepared);
+            prefab.nodes.delete(node);
+            for (const bundle of Array.from(this.popupRequests)) {
+                if (bundle.node !== node || bundle.cancelled) continue;
+                this.cancelRequest(bundle);
+                this.popupRequests.delete(bundle);
+                void this.showNextPopup();
+            }
+            const cached = this.cachedUI.get(prefab.name);
+            if (cached?.node === node) this.cachedUI.delete(prefab.name);
+            this.finishPrefabRelease(prefab);
         });
-        return node;
     }
-
-    public mountPrefab(node: Node, parent: Node): void {
-        if (!node?.isValid || !parent?.isValid) return;
-        parent.addChild(node);
-        node.setSiblingIndex(parent.children.length - 1);
+    private finishPrefabRelease(prefab: PopupPrefab): void {
+        if ((!prefab.releasing && prefab.keep) || prefab.nodes.size || prefab.requests.size) return;
+        prefab.releasing = true;
+        if (this.popupPrefabs.get(prefab.name) === prefab) this.popupPrefabs.delete(prefab.name);
+        if (prefab.asset) { prefab.asset.decRef(); prefab.asset = null; }
     }
-
-    /** Close immediately for input; dependency release waits for Cocos deferred destruction. */
-    public closePrefab(node: Node): void {
-        if (!node?.isValid) return;
+    private destroyNode(node: Node): void {
         node.active = false;
         node.removeFromParent();
         node.destroy();
     }
 
-    public releasePrefab(name: string): void {
-        this.prefabVersions.set(name, (this.prefabVersions.get(name) ?? 0) + 1);
-        this.preparingPrefabs.delete(name);
-        const prepared = this.preparedPrefabs.get(name);
-        if (!prepared) return;
-        prepared.releasing = true;
-        this.finishPrefabRelease(name, prepared);
-    }
-
-    private finishPrefabRelease(name: string, prepared: { asset: Prefab; nodes: Set<Node>; releasing: boolean }): void {
-        if (!prepared.releasing || prepared.nodes.size) return;
-        if (this.preparedPrefabs.get(name) === prepared) this.preparedPrefabs.delete(name);
-        prepared.asset.decRef();
-    }
-
-    public getPrefabCacheStats(): ReadonlyArray<{ name: string; instances: number; releasing: boolean }> {
-        return [...this.preparedPrefabs].map(([name, entry]) => ({ name, instances: entry.nodes.size, releasing: entry.releasing }));
-    }
-
-    public closeAllUI() {
-        // if (this.showingUIStack.length == 0) {
-        //     return;
-        // }
-        // while (this.showingUIStack.length > 0) {
-        //     this.closeUI(this.showingUIStack[0]);
-        // }
-        // while (this._suspendedQueue.length > 0) {
-        //     //@ts-ignore
-        //     this.closeUI(this._suspendedQueue[0].node.getComponent(UIBase));
-        // }
-        // this._queue = [];
-    }
-
-    public async showTips<T>(uiClass: (new () => UITips<T>) | Node, data: T) {
-        let initUI = (uiInstance: UIBase) => {
-            if (!uiInstance) {
-                console.error(`${js.getClassName(uiClass)}没有绑定UI脚本!!!`);
-                return;
-            }
-            let uiRoot = director.getScene().getChildByName('Canvas');
-            if (!uiRoot) {
-                console.error(`当前场景没有${director.getScene().name}Canvas!!!`);
-                return;
-            }
-            uiInstance.node.parent = uiRoot;
-            uiInstance.init(data);
-            uiInstance.node.setSiblingIndex(ViewZOrder.Tips as number);
-            uiInstance.show();
-        }
-        let pathAndBundle = this.uiPrefabNameAndPathMap.get(js.getClassName(uiClass));
-        if (!pathAndBundle) {
-            error(`没有找到uiClass = ${js.getClassName(uiClass)}对应的预制体路径`)
-            return;
-        }
+    public async showTips<T>(uiClass: (new () => UITips<T>) | Node, data: T): Promise<void> {
+        const location = this.uiPrefabNameAndPathMap.get(js.getClassName(uiClass));
+        if (!location) { error('Tip prefab is not registered: ' + js.getClassName(uiClass)); return; }
         try {
-            let prefab = await this.loadPrefab(pathAndBundle.path, pathAndBundle.bundle);
-            let node = instantiate(prefab);
-            //@ts-ignore
-            let uiInstance = node.getComponent(UIBase);
-            // this._currentShowingPopup.node = node;
-            initUI(uiInstance);
-        } catch (e) {
-            error(`showTips error: ${e}`);
-        }
+            const prefab = await this.loadPrefab(location.path, location.bundle);
+            const node = instantiate(prefab);
+            const ui = node.getComponent(UIBase);
+            const parent = director.getScene()?.getChildByName('Canvas');
+            if (!ui || !parent) { node.destroy(); error('Tip component or Canvas is missing'); return; }
+            parent.addChild(node);
+            ui.init(data);
+            node.setSiblingIndex(ViewZOrder.Tips as number);
+            ui.show();
+        } catch (failure) { error('showTips error: ' + failure); }
     }
-
-
-
-    public async showPublicTip(uiClass, message: string, pos?: Vec3,
-        labelColor?: Color,
-        delayDuration?: number,
-        opacityInDuration?: number,
-        opacityOutDuration?: number) {
-
-        let data = {} as any;
-        data.message = message;
-        data.pos = pos;
-        data.labelColor = labelColor;
-        data.delayDuration = delayDuration;
-        data.opacityInDuration = opacityInDuration;
-        data.opacityOutDuration = opacityOutDuration;
-
-        // 如果能有烟花什么的就好了。
-        UIManager.instance.showTips(uiClass, data);
-
+    public async showPublicTip(uiClass: any, message: string, pos?: Vec3, labelColor?: Color,
+        delayDuration?: number, opacityInDuration?: number, opacityOutDuration?: number): Promise<void> {
+        void this.showTips(uiClass, { message, pos, labelColor, delayDuration, opacityInDuration, opacityOutDuration });
     }
-    //#region popup
-    // 默认不挂起当前弹窗。
-    public async showPopup<T>(ui: (new () => UIPopup<T>) | Node, data?: T, params?: PopupParams) {
-        if (ui instanceof Node) {
-            await this.openNodeTypePopup(ui, data);
-        } else {
-            let bundle = this.generatePopupDataBundle(ui, data, null, ViewZOrder.Popup, params);
-            await this.openClassTypePopup(bundle);
-        }
-    }
-
-    public closePopupByClass<T extends UIBase>(uiClass: { new(): T }) {
-        // for (let i = 0; i < this.showingUIStack.length; ++i) {
-        //     if (js.getClassName(this.showingUIStack[i]) === js.getClassName(uiClass)) {
-        //         if (isValid(this.showingUIStack[i].node)) {
-        //             this.showingUIStack[i].close();
-        //             // return this.closeUI(this.dynamicUIStack[i]);
-        //         }
-        //         this.showingUIStack.splice(i, 1);
-        //         return;
-        //     }
-        // }
-
-        let findUI = (arr: Array<PopupDataBundle>) => {
-            let findArr = [];
-            for (let i = 0; i < arr.length; ++i) {
-                let bundle = arr[i];
-                console.log("closePopup " + isValid(bundle.node));
-                if (isValid(bundle.node)) {
-                    //@ts-ignore
-                    let instance = bundle.node?.getComponent(UIPopup);
-                    if (instance != null && instance instanceof uiClass) {
-                        findArr.push(instance);
-                    }
-                }
-            }
-            return findArr;
-        }
-
-        let resultArr = [];
-        resultArr = resultArr.concat(findUI(this.showingUIStack));
-        resultArr = resultArr.concat(findUI(this._waitingQueue));
-        resultArr = resultArr.concat(findUI(this._suspendedQueue));
-
-
-
-
-        console.log(resultArr.length);
-
-
-
-
-        for (let index = 0; index < resultArr.length; index++) {
-            const element = resultArr[index];
-            this.closePopup(element);
-        }
-
-    }
-
-    /**
-     * @description 按节点打开，传过来要打开的弹窗的节点，然后控制其显示关闭
-     * @param {Node} uiNode
-     * @param {number} [zOrder=ViewZOrder.UI]
-     * @param {Function} [callback]
-     * @memberof UIManager
-     */
-    public async openNodeTypePopup(uiNode: Node, data?: any) {
-        if (!uiNode.active) {
-            uiNode.active = true;
-        }
-        uiNode.setPosition(0, 0);
-        //@ts-ignore
-        uiNode.getComponent(UIBase).init(data);
-        //@ts-ignore
-        uiNode.getComponent(UIBase).show();
-        return Promise.resolve();
-    }
-
-    private pushQueue(popupDataBundle: PopupDataBundle) {
-        if (!this._currentShowingPopup) {
-            this.openClassTypePopup(popupDataBundle);
-            return;
-        }
-        // 加入队列
-        this._waitingQueue.push(popupDataBundle);
-        // 按照优先级从大到小排序
-        this._waitingQueue.sort((a, b) => (b.params.priority - a.params.priority));
-    }
-
-    private async showNextPopup() {
-        if (this.showingUIStack.length > 0) {
-            // 等于最后一个
-            this._currentShowingPopup = this.showingUIStack[this.showingUIStack.length - 1];
-            return;
-        }
-        if (this._currentShowingPopup || (this._suspendedQueue.length === 0 && this._waitingQueue.length === 0)) {
-            return;
-        }
-        let bundle: PopupDataBundle = null;
-        let fromSuspendedQueue = false;
-        if (this._suspendedQueue.length > 0) {
-            bundle = this._suspendedQueue.shift();
-            fromSuspendedQueue = true;
-        } else {
-            bundle = this._waitingQueue.shift();
-        }
-        if (!!bundle) {
-            // 已有实例
-            if (isValid(bundle.node)) {
-                // 设为当前弹窗
-                this._currentShowingPopup = bundle;
-                if (!this.showingUIStack.includes(bundle)) {
-                    this.showingUIStack.push(bundle);
-                }
-                // 直接展示
-                //@ts-ignore
-                let popup = bundle.node.getComponent(UIPopup);
-                if (!popup) {
-                    error(`showNextPopup error: node ${bundle.node.name} 没有绑定UIPopup脚本`);
-                    this._currentShowingPopup = null;
-                    return;
-                }
-                if (fromSuspendedQueue) {
-                    // @ts-ignore
-                    await popup.onResume();
-                }
-                await popup.show();
-                return;
-            }
-            // 加载并展示
-            await this.openClassTypePopup(bundle);
-        }
-
-    }
-
-    private async openClassTypePopup(popupDataBundle: PopupDataBundle): Promise<void> {
-        if (this._currentShowingPopup) {
-            // 是否立即强制展示
-            if (popupDataBundle.params && popupDataBundle.params.immediately) {
-                if (popupDataBundle.params.suspendCurrent) {
-                    await this.suspendCurrentPopup();
-                }
-            } else {
-                // 将请求推入等待队列
-                this.pushQueue(popupDataBundle);
-                return;
-            }
-        }
-
-        this._currentShowingPopup = popupDataBundle;
-        let uiInstance = this.getUIFromCachedMap(popupDataBundle.uiClass);
-        console.log("huan cun nadao ")
-        let node = uiInstance?.node;
-        if (!uiInstance) {
-            let pathAndBundle = this.uiPrefabNameAndPathMap.get(js.getClassName(popupDataBundle.uiClass));
-            if (!pathAndBundle) {
-                error(`没有找到uiClass = ${js.getClassName(popupDataBundle.uiClass)}对应的预制体路径`);
-                this._currentShowingPopup = null;
-                await this.showNextPopup();
-                return;
-            }
-            let prefab = await this.loadPrefab(pathAndBundle.path, pathAndBundle.bundle);
-            node = instantiate(prefab);
-            //@ts-ignore
-            uiInstance = node.getComponent(UIBase);
-        }
-        if (!uiInstance) {
-            error(`${js.getClassName(popupDataBundle.uiClass)}没有绑定UI脚本!!!`);
-            if (isValid(node)) {
-                node.destroy();
-            }
-            this._currentShowingPopup = null;
-            await this.showNextPopup();
-            return;
-        }
-        let scene = director.getScene();
-        let uiRoot = scene?.getChildByName('Canvas');
-        if (!uiRoot) {
-            console.error(`当前场景没有${scene?.name ?? ''}Canvas!!!`);
-            this._currentShowingPopup = null;
-            await this.showNextPopup();
-            return;
-        }
-        popupDataBundle.node = node;
-        uiInstance.node.parent = uiRoot;
-        uiInstance.node.setPosition(0, 0);
-        uiInstance.init(popupDataBundle.data);
-        uiInstance.node.setSiblingIndex(popupDataBundle.zOrder as number);
-        await uiInstance.show();
-        if (!this.showingUIStack.includes(popupDataBundle)) {
-            this.showingUIStack.push(popupDataBundle);
-        }
-    }
-
-    private generatePopupDataBundle(uiClass, data, node, zOrder, params: PopupParams) {
-        let bundle = new PopupDataBundle();
-        bundle.data = data;
-        bundle.uiClass = uiClass;
-        bundle.zOrder = zOrder;
-        bundle.node = node;
-        bundle.params = params;
-        if (bundle.params == undefined) {
-            bundle.params = new PopupParams();
-        }
-        return bundle;
-    }
-
-    public getUIFromCachedMap<T extends UIBase>(uiClass: { new(): T }): T {
-        let ui = null;
-        let uiName = js.getClassName(uiClass);
-        if (this.cachedUI.has(uiName)) {
-            ui = this.cachedUI.get(uiName);
-        }
-        return ui;
-    }
-
-    private setUIToCachedMap(ui: UIBase) {
-        let uiName = js.getClassName(ui);
-        if (this.cachedUI.has(uiName)) {
-            var instance = this.cachedUI.get(uiName);
-            if (instance == ui) {
-                ui.node.removeFromParent();
-                return;
-            };
-            ui.node.destroy();
-            return;
-        } else {
-            ui.node.removeFromParent();
-            this.cachedUI.set(uiName, ui);
-        }
-    }
-    /**
-     * 挂起当前展示中的弹窗
-     */
-    private async suspendCurrentPopup() {
-        if (!this._currentShowingPopup) {
-            return;
-        }
-        // 从showingStack移除
-        let index = this.showingUIStack.findIndex((x) => {
-            return x == this._currentShowingPopup
-        })
-        if (index >= 0) {
-            this.showingUIStack.splice(index, 1);
-        }
-        // 将当前弹窗推入挂起队列
-        this._suspendedQueue.unshift(this._currentShowingPopup);
-        // @ts-ignore
-        await this._currentShowingPopup.node.getComponent(UIPopup).onSuspended();
-        // 关闭当前弹窗（挂起）
-        // @ts-ignore
-        await this._currentShowingPopup.node.getComponent(UIPopup).hide();
-        // 置空当前
-        this._currentShowingPopup = null;
-    }
-
-    // 恢复挂起的弹窗
-    public async resumeSuspendPopup() {
-        if (this._suspendedQueue.length <= 0) {
-            return;
-        }
-        let bundle = this._suspendedQueue.shift();
-        // @ts-ignore
-        await bundle.node.getComponent(UIPopup).onResume();
-        // @ts-ignore
-        await bundle.node.getComponent(UIPopup).show();
-        this._currentShowingPopup = bundle;
-        this.showingUIStack.push(this._currentShowingPopup);
-    }
-
-
-    public async closePopup(ui: UIPopup<any> | Node): Promise<void> {
-        //节点类型就是在场景中直接存在的
-        if (ui instanceof Node) {
-            //@ts-ignore
-            //node一般都属于弹框里的弹框，不能销毁。否则没办法再次显示了
-            await ui.getComponent(UIBase).hide();
-            return Promise.resolve();
-        } else {
-            let clear = (arr) => {
-                let index = arr.findIndex((bundle: PopupDataBundle) => {
-                    console.log("closePopup " + isValid(bundle.node));
-                    if (isValid(bundle.node)) {
-                        //@ts-ignore
-                        return bundle.node?.getComponent(UIPopup) == ui;
-                    } else {
-                        // 如果无效，暂时不管。
-                        return false;
-                    }
-                })
-                if (index >= 0) {
-                    return arr.splice(index, 1);
-                }
-                return null;
-            }
-            // 清理栈  // 清理等待队列   // 清理挂起队列
-            clear(this.showingUIStack) || clear(this._waitingQueue) || clear(this._suspendedQueue);
-            if (isValid(ui)) {
-                //@ts-ignore       
-                if (!isValid(this._currentShowingPopup?.node)) {
-                    this._currentShowingPopup = null;
-                }
-                //@ts-ignore
-
-                if (this._currentShowingPopup?.node?.getComponent(UIPopup) === ui) {
-                    this._currentShowingPopup = null;
-                    log('this._currentShowingPopup set to null');
-                }
-                await ui.close();
-                await this.showNextPopup();
-                if (ui.needCache) {
-                    this.setUIToCachedMap(ui);
-                }
-                return Promise.resolve();
-            } else {
-                error("ui is not available");
-            }
-        }
-    }
-    // public async suspendCurrentP
-
-
-
-    //#endregion
-
-
-
-
-    /**
-     * @description 暂时先这样用。
-     * @param {(UITips | Node)} ui
-     * @return {*}  {Promise<void>}
-     * @memberof UIManager
-     */
     public async closeTip(ui: UITips<any> | Node): Promise<void> {
-        if (ui instanceof Node) {
-            //@ts-ignore
-            //node一般都属于弹框里的弹框，不能销毁。否则没办法再次显示了
-            await ui.getComponent(UITips).hide();
-        } else {
-            ui.close();
-        }
-        return Promise.resolve();
+        if (ui instanceof Node) await ui.getComponent(UITips)?.hide();
+        else await ui.close();
     }
-
-
-
-
-    /**
-     * 旧版关闭入口；新代码优先使用 closePopup/closeTip/closeCurrentPopup 等语义明确的方法。
-     * @deprecated 保留给历史调用方兼容，新增业务不要继续扩展这个入口。
-     */
+    /** @deprecated Use closePopup or closeTip for managed UI. */
     public async closeUI(ui: UIBase | Node): Promise<boolean> {
-        //节点类型就是在场景中直接存在的
-        if (ui instanceof Node) {
-            //@ts-ignore
-            //node一般都属于弹框里的弹框，不能销毁。否则没办法再次显示了
-            await ui.getComponent(UIBase).hide();
-            return Promise.resolve(true);
-        } else {
-            // 不在uiStack的ui都是由节点自己管理。
-            let index = this.showingUIStack.findIndex(bundle => bundle.node?.getComponent(UIBase) === ui);
-            if (index < 0) {
-                // 判断是否在队列
-
-                // 判断是否挂起
-
-
-                await ui.hide();
-                return Promise.resolve(true);
-            } else {
-                if (index >= 0) {
-                    this.showingUIStack.splice(index, 1);
-                }
-                if (isValid(ui)) {
-                    if (ui.needCache) {
-                        await ui.hide();
-                        this.setUIToCachedMap(ui);
-                        return Promise.resolve(true);
-                    } else {
-                        await ui.close();
-                        this._currentShowingPopup = null;
-                        await this.showNextPopup();
-                        return Promise.resolve(true);
-                    }
-                }
-            }
-        }
+        if (ui instanceof UIPopup) await this.closePopup(ui);
+        else if (ui instanceof Node) await ui.getComponent(UIBase)?.hide();
+        else await ui.hide();
+        return true;
     }
 
-
-
-    /**
-     * @description 扫描弹窗预制体
-     * @param {string} path
-     * @memberof UIManager
-     */
-    public registerUIPrefab(path: string, bundle?: AssetManager.Bundle): string[] {
-        let infos = [];
-
-        if (bundle) {
-            bundle.getDirWithPath(path, Prefab, infos);
-        } else {
-            resources.getDirWithPath(path, Prefab, infos);
-        }
+    public registerUIPrefab(path: string, bundle: AssetManager.Bundle = resources): string[] {
+        const infos = [];
+        bundle.getDirWithPath(path, Prefab, infos);
         const names: string[] = [];
-        infos.forEach((info) => {
-            let splitPathArr = (info.path as string).split('/')
-            if (splitPathArr.length > 0) {
-                let lastPath = splitPathArr.slice(-1)
-                if (lastPath.length > 0) {
-                    let prefabPath = this.uiPrefabNameAndPathMap.get(lastPath[0]);
-                    if (prefabPath?.path) {
-                        if (prefabPath.path === info.path && prefabPath.bundle.name === (bundle ?? resources).name) {
-                            names.push(lastPath[0]);
-                            return;
-                        }
-                        error(`已经存在${lastPath[0]},prefabPath = ${prefabPath.path}`);
-                        return;
-                    }
-                    if (bundle) {
-                        this.uiPrefabNameAndPathMap.set(lastPath[0], { path: info.path, bundle: bundle });
-                    } else {
-                        this.uiPrefabNameAndPathMap.set(lastPath[0], { path: info.path, bundle: resources });
-                    }
-                    names.push(lastPath[0]);
-                } else {
-                    error("lastPath length is zero")
-                }
-            } else {
-                error("splitPathArr length is zero")
+        for (const info of infos) {
+            const name = (info.path as string).split('/').pop();
+            const existing = this.uiPrefabNameAndPathMap.get(name);
+            if (existing && (existing.path !== info.path || existing.bundle.name !== bundle.name)) {
+                error('已经存在' + name + ',prefabPath = ' + existing.path);
+                continue;
             }
-        });
+            this.uiPrefabNameAndPathMap.set(name, { path: info.path, bundle });
+            names.push(name);
+        }
         return names;
     }
-
     private loadPrefab(path: string, bundle: AssetManager.Bundle): Promise<Prefab> {
         return resLoader.loadAsync(bundle.name, path, Prefab);
     }
-
-
 }

@@ -49,9 +49,15 @@
 - `UIPopup` 用于弹窗，支持空白关闭、任意处关闭和 `PopupAction` 动画。
 - 开启 `touchBlankPlaceToClose` 的 popup 必须有 `Container` 节点。
 - `PopupAction` 默认依赖 `Bg`、`Container` 和 `UIOpacity`。
-- `UIManager.registerUIPrefab(path, bundle?)` 以 prefab 文件名映射 UI 类名，重名 prefab 会报错。
-- `showPopup(Class, data, params)` 要求 prefab 根节点挂对应 `UIBase/UIPopup` 脚本。
-- `needCache=true` 的 UI 关闭后会从父节点移除并缓存实例；再次打开复用节点。
+- `UIManager.registerUIPrefab(path, bundle?)` 只枚举 Prefab 元数据，以文件名映射 UI 类名；相同包/路径重复注册幂等，同名不同来源报错并保留原映射。
+- 弹窗继承 `UIPopup<T>`，Prefab 根节点序列化对应子类。`showPopup(Class, data, params): Promise<Popup>` 复用框架的加载、队列与缓存流程，在节点挂载、`init(data)` 和 `show()` 完成后返回实例。子类的 `init` 调用 `super.init(data)` 保存本次数据；业务绑定在已有根节点上执行。
+- `preloadPopup(Class): Promise<Prefab>` 真实加载并反序列化指定弹窗，和 `showPopup` 共用一份在途请求及缓存引用；失败后可重试。只枚举元数据或下载资源不算准备完成。
+- `isPopupReady(Class)` 查询同一管理器缓存；会话释放后即为假，即使引擎 Bundle 仍因其他引用保有有效 Prefab，也要重新进入管理器准备流程。
+- `CacheMode.Once` 关闭后销毁节点并释放 Prefab；`Normal` 销毁节点、保留 Prefab；`Frequent` 停用并移出节点后缓存实例，下一次复用并重新 `init`。显式 `params.mode` 优先；未指定时，Prefab 的 `needCache=true` 选择 `Frequent`。
+- `params.parent` 指定挂载父节点，默认当前场景 Canvas；`params.isValid()` 校验业务打开意图。`immediately=false` 等当前弹窗结束后按优先级展示；`suspendCurrent=true` 挂起当前弹窗并在后继关闭后恢复。业务数据与资源加载均不能越过已失效的父节点或打开意图。
+- 关闭入口使用 `closePopup(instance)` 或 `closePopupByClass(Class)`；后者同时取消该类正在加载、等待和挂起的请求。未展示完成的 `showPopup` Promise 以 `PopupCancelledError` 拒绝，迟到加载不得再次 `init/show`。关闭钩子与动画完成后由管理器按缓存模式回收节点。
+- `releasePopup(Class)` 取消该类全部请求、关闭实例并退休其 Prefab 缓存；迟到预加载以 `PopupCancelledError` 拒绝。Prefab 的 `decRef` 等待最后实例的 `NODE_DESTROYED`，不能在 `destroy()` 调用后就释放依赖。重新打开形成的新缓存不受旧实例销毁回调影响。
+- 普通节点模板由业务模块通过 `resLoader` 加载、持有引用并实例化；弹窗资源及实例只由以上 popup API 管理。
 - 不要从业务直接改 `UIManager` 的内部队列、`_currentShowingPopup`、`cachedUI` 或 prefab 映射 Map。
 - 改 `showPopup/closePopup/showNextPopup/suspendCurrentPopup` 时，验证等待队列、挂起队列、缓存 UI 和销毁 UI 四种路径。
 
@@ -83,6 +89,6 @@
 ## 验证建议
 
 - 改 `Thor/UIKiller`：验证 `_` 节点、`$` 节点、Button、EditBox、嵌套 Thor、返回 `false` 的触摸穿透；改绑定导出时同时运行 `test/thor-bind-exporter.test.ts` 和 `test/thor-direct-bound-fields-static.test.ts`。
-- 改 `UIManager/UIPopup`：验证打开、关闭、缓存、销毁、等待队列、挂起恢复、空白关闭和动画。
+- 改 `UIManager/UIPopup`：运行根仓库 `tests/render/ui-manager-prefabs.test.js`，覆盖真实 `showPopup/preloadPopup`、三种缓存模式、加载失败重试、挂起/等待期间取消及延迟销毁引用；Cocos 预览补充空白关闭和动画。
 - 改 MVVM：验证 `VM.add/remove`、路径监听、`VMParent` 的 `*` 替换、Label 模板、controller 写回。
 - 改红点：验证静态路径、动态路径、父级求和、动态节点归零清理。

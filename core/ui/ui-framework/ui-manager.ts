@@ -5,7 +5,7 @@ import UIPopup from './ui-popup';
 import UITips from './ui-tips';
 import { Vec3 } from 'cc';
 import { Color } from 'cc';
-import { mkdirSync } from 'fs';
+import { resLoader } from '../../utils/res-loader';
 
 export class ViewZOrder {
     /**场景层 */
@@ -126,6 +126,97 @@ export default class UIManager {
      * @memberof UIManager
      */
     private uiPrefabNameAndPathMap: Map<string, { path: string, bundle: AssetManager.Bundle }> = new Map();
+
+    /** Authored views can use the same manager without requiring a popup subclass. */
+    private preparedPrefabs = new Map<string, { asset: Prefab; nodes: Set<Node>; releasing: boolean }>();
+    private preparingPrefabs = new Map<string, Promise<Prefab>>();
+    private prefabVersions = new Map<string, number>();
+    private managedPrefabNodes = new WeakMap<Node, string>();
+
+    public isPrefabReady(name: string): boolean {
+        const prepared = this.preparedPrefabs.get(name);
+        return !!prepared && !prepared.releasing && prepared.asset.isValid !== false;
+    }
+
+    /** Prepare one registered view, retaining its dependencies until its last instance closes. */
+    public preparePrefab(name: string): Promise<Prefab> {
+        if (this.isPrefabReady(name)) return Promise.resolve(this.preparedPrefabs.get(name)!.asset);
+        const pending = this.preparingPrefabs.get(name);
+        if (pending) return pending;
+        const location = this.uiPrefabNameAndPathMap.get(name);
+        if (!location) return Promise.reject(new Error(`UI prefab is not registered: ${name}`));
+        const version = this.prefabVersions.get(name) ?? 0;
+        const request = resLoader.loadAsync(location.bundle.name, location.path, Prefab).then(asset => {
+            if ((this.prefabVersions.get(name) ?? 0) !== version) throw new Error(`UI preparation was cancelled: ${name}`);
+            const previous = this.preparedPrefabs.get(name);
+            if (previous && previous.asset === asset) {
+                previous.releasing = false;
+            } else {
+                if (previous) {
+                    previous.releasing = true;
+                    this.finishPrefabRelease(name, previous);
+                }
+                asset.addRef();
+                this.preparedPrefabs.set(name, { asset, nodes: new Set(), releasing: false });
+            }
+            return asset;
+        }).finally(() => {
+            if (this.preparingPrefabs.get(name) === request) this.preparingPrefabs.delete(name);
+        });
+        this.preparingPrefabs.set(name, request);
+        return request;
+    }
+
+    /** Instantiate a prepared view or an authored child template; loading stays explicit. */
+    public instantiatePrefab(name: string, child?: string): Node {
+        const prepared = this.preparedPrefabs.get(name);
+        if (!this.isPrefabReady(name)) throw new Error(`UI prefab was not prepared: ${name}`);
+        let template = prepared.asset.data;
+        for (const part of child?.split('/') ?? []) template = template?.getChildByName(part);
+        if (!template) throw new Error(`UI template is missing: ${name}/${child}`);
+        const node = instantiate(template);
+        prepared.nodes.add(node);
+        this.managedPrefabNodes.set(node, name);
+        node.once(Node.EventType.NODE_DESTROYED, () => {
+            prepared.nodes.delete(node);
+            this.managedPrefabNodes.delete(node);
+            this.finishPrefabRelease(name, prepared);
+        });
+        return node;
+    }
+
+    public mountPrefab(node: Node, parent: Node): void {
+        if (!node?.isValid || !parent?.isValid) return;
+        parent.addChild(node);
+        node.setSiblingIndex(parent.children.length - 1);
+    }
+
+    /** Close immediately for input; dependency release waits for Cocos deferred destruction. */
+    public closePrefab(node: Node): void {
+        if (!node?.isValid) return;
+        node.active = false;
+        node.removeFromParent();
+        node.destroy();
+    }
+
+    public releasePrefab(name: string): void {
+        this.prefabVersions.set(name, (this.prefabVersions.get(name) ?? 0) + 1);
+        this.preparingPrefabs.delete(name);
+        const prepared = this.preparedPrefabs.get(name);
+        if (!prepared) return;
+        prepared.releasing = true;
+        this.finishPrefabRelease(name, prepared);
+    }
+
+    private finishPrefabRelease(name: string, prepared: { asset: Prefab; nodes: Set<Node>; releasing: boolean }): void {
+        if (!prepared.releasing || prepared.nodes.size) return;
+        if (this.preparedPrefabs.get(name) === prepared) this.preparedPrefabs.delete(name);
+        prepared.asset.decRef();
+    }
+
+    public getPrefabCacheStats(): ReadonlyArray<{ name: string; instances: number; releasing: boolean }> {
+        return [...this.preparedPrefabs].map(([name, entry]) => ({ name, instances: entry.nodes.size, releasing: entry.releasing }));
+    }
 
     public closeAllUI() {
         // if (this.showingUIStack.length == 0) {
@@ -465,7 +556,7 @@ export default class UIManager {
     }
 
 
-    public async closePopup(ui: UIPopup | Node): Promise<void> {
+    public async closePopup(ui: UIPopup<any> | Node): Promise<void> {
         //节点类型就是在场景中直接存在的
         if (ui instanceof Node) {
             //@ts-ignore
@@ -528,7 +619,7 @@ export default class UIManager {
      * @return {*}  {Promise<void>}
      * @memberof UIManager
      */
-    public async closeTip(ui: UITips | Node): Promise<void> {
+    public async closeTip(ui: UITips<any> | Node): Promise<void> {
         if (ui instanceof Node) {
             //@ts-ignore
             //node一般都属于弹框里的弹框，不能销毁。否则没办法再次显示了
@@ -555,7 +646,7 @@ export default class UIManager {
             return Promise.resolve(true);
         } else {
             // 不在uiStack的ui都是由节点自己管理。
-            let index = this.showingUIStack.indexOf(ui);
+            let index = this.showingUIStack.findIndex(bundle => bundle.node?.getComponent(UIBase) === ui);
             if (index < 0) {
                 // 判断是否在队列
 
@@ -591,7 +682,7 @@ export default class UIManager {
      * @param {string} path
      * @memberof UIManager
      */
-    public registerUIPrefab(path: string, bundle?: AssetManager.Bundle) {
+    public registerUIPrefab(path: string, bundle?: AssetManager.Bundle): string[] {
         let infos = [];
 
         if (bundle) {
@@ -599,15 +690,18 @@ export default class UIManager {
         } else {
             resources.getDirWithPath(path, Prefab, infos);
         }
-        log('infos', path, infos);
+        const names: string[] = [];
         infos.forEach((info) => {
             let splitPathArr = (info.path as string).split('/')
-            log("splitPathArr", splitPathArr)
             if (splitPathArr.length > 0) {
                 let lastPath = splitPathArr.slice(-1)
                 if (lastPath.length > 0) {
                     let prefabPath = this.uiPrefabNameAndPathMap.get(lastPath[0]);
                     if (prefabPath?.path) {
+                        if (prefabPath.path === info.path && prefabPath.bundle.name === (bundle ?? resources).name) {
+                            names.push(lastPath[0]);
+                            return;
+                        }
                         error(`已经存在${lastPath[0]},prefabPath = ${prefabPath.path}`);
                         return;
                     }
@@ -616,29 +710,19 @@ export default class UIManager {
                     } else {
                         this.uiPrefabNameAndPathMap.set(lastPath[0], { path: info.path, bundle: resources });
                     }
+                    names.push(lastPath[0]);
                 } else {
                     error("lastPath length is zero")
                 }
             } else {
                 error("splitPathArr length is zero")
             }
-        })
+        });
+        return names;
     }
 
     private loadPrefab(path: string, bundle: AssetManager.Bundle): Promise<Prefab> {
-        return new Promise((res, reject) => {
-            bundle.load(path, (error, prefab: Prefab) => {
-                if (error) {
-                    reject(new Error(`UIManager loadPrefab error: ${error}`));
-                    return;
-                }
-                if (!prefab) {
-                    reject(new Error(`UIManager loadPrefab error: prefab is null, path=${path}`));
-                    return;
-                }
-                res(prefab);
-            });
-        });
+        return resLoader.loadAsync(bundle.name, path, Prefab);
     }
 
 

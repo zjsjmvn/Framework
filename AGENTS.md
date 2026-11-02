@@ -93,7 +93,10 @@
 - 开启 `touchBlankPlaceToClose` 的弹窗必须有 `Container` 节点，用于计算非空白区域。
 - `PopupAction` 默认依赖 `Bg` 和 `Container` 节点，并要求对应节点上有 `UIOpacity`。
 - `UIManager` 是单例，负责 prefab 扫描、弹窗队列、挂起/恢复、缓存、tips。
-- UI prefab 注册通过 `UIManager.registerUIPrefab(path, bundle?)`，以 prefab 文件名映射脚本类名；重名 prefab 会报错。
+- `UIManager.registerUIPrefab(path, bundle?)` 只枚举元数据并返回名称列表，不加载依赖；相同包和路径可重复注册，同名不同来源报错并保留原映射。
+- 普通 authored prefab 通过 `preparePrefab(name)` 异步准备，使用 `resLoader.loadAsync` 合并请求并持有一份引用；加载失败可重试。`isPrefabReady(name)` 为真后才能 `instantiatePrefab(name, child?)`，子模板仍由 authored 节点树提供。
+- `mountPrefab(node, parent)` 挂载实例，`closePrefab(node)` 立即停用并移除，实例追踪等到 `NODE_DESTROYED` 后清理；`releasePrefab(name)` 取消未完成准备，有活跃实例时延迟到最后实例销毁再 `decRef`。旧资源被替换时，旧实例的引用也保留到各自销毁。
+- `getPrefabCacheStats()` 返回缓存条目的名称、实例数和释放状态；业务通过这些公共 API 管理普通 prefab，保持加载与展示分离。
 - `UIManager.showPopup(Class, data, params)` 会按类名查找 prefab；prefab 根节点必须挂对应 `UIBase/UIPopup` 脚本。
 - `needCache=true` 的 UI 关闭后会从父节点移除并缓存实例；再次打开复用同一节点。
 - `PopupParams.immediately=false` 会进入等待队列；`suspendCurrent=true` 会挂起当前弹窗。
@@ -155,7 +158,10 @@
 ## Resource / Asset
 
 - `resLoader` 封装 `resources` 和 bundle 加载，支持 remote、bundle、单资源、目录、释放和缓存读取。
-- 默认 bundle 名是 `resources`；加载其他 bundle 时显式传 bundleName。
+- 默认包为 `resources`；业务加载其他包时传入包名和无扩展名包内路径。原 `load/loadDir` 回调重载保留；`loadAsync(bundleName, path, Type, onProgress?)`、`loadDirAsync(...)` 返回已加载资源，也支持省略包名的默认包重载。空目录表示包根目录。
+- `loadBundle(url, version?)` 的同源同版本在途请求合并，加载失败 reject；`load/loadDir` 自动加载包失败时回调一次错误。失败清除在途请求，调用方可重试。
+- 同包实例、路径、类型和加载种类相同的资源请求合并，目录与单资源隔离，数组路径保序；进度和完成回调分别广播，一个订阅抛错不阻断其余订阅。完成后移除在途记录，资产缓存由 Cocos 持有。
+- 需要首次使用前完成解码或反序列化时，使用 `load/loadAsync` 等真实加载接口准备必要资源；仅下载的 `preload` 不满足此契约。
 - `release` 和 `releaseDir` 会释放 prefab 依赖，使用前确认资源确实不再被节点或缓存 UI 引用。
 - `ImageUtil` 会手动向 `assetManager.assets` 和 `dependUtil` 注册运行时图片资源；改动前要验证资源释放与重复 uuid 问题。
 - `EditorTool.load` 只在 `EDITOR` 环境通过 `Editor.Message.request('asset-db', 'query-uuid', ...)` 加载资源，运行时返回 `null`。
@@ -176,12 +182,14 @@
 ## Audio
 
 - `AudioManager.instance` 会创建持久节点 `AudioManager`，子节点 `AudioMusic` 和 `AudioEffect`。
-- 调用 `init/registerMusicAndEffect(path, bundle)` 后，会扫描指定目录下 `AudioClip`，按文件名映射路径。
-- `playMusic/playEffect` 的参数是扫描得到的音频文件名，不是完整路径。
+- `init/registerMusicAndEffect(path, bundle)` 扫描 `AudioClip` 元数据，按文件名登记包和路径；重复相同映射幂等，同名不同来源报错。`playMusic/playEffect` 传文件名，真实资源加载统一经过 `resLoader`。
+- 页面使用 `createEffectSession()` 创建独立音效会话，关闭时 `destroy()`；会话的开关、音量、取消和专用通道互不干扰。`session.playEffect(name, channel?)` 省略通道时播 one-shot，同一命名通道替换旧音效并从零播放；需要即时停止的非循环音效使用命名通道及 `stopChannel()`。
+- `session.cancel()`、关闭会话或管理器音效开关、销毁会话都会使旧播放请求失效；共享加载仍可完成并缓存，新的播放请求可复用资源。
+- `preloadEffects(names)` 真实加载指定音效，所有使用者共用一份在途请求和每个缓存 clip 的一份引用；失败 reject 并允许重试。
 - 音乐只让最后一次播放请求生效；停止音乐或关闭音乐开关时，必须使尚未完成的加载请求失效。
-- 音乐使用 `AudioMusic`，音效使用 `AudioEffect.playOneShot`；音效播放期间无法精确即时关闭。
+- one-shot 已经开始后无法通过源节点 `stop()` 精确停止；音乐和可停止命名通道分别持有受控 `AudioSource`。
 - 需要按住按钮期间循环播放、松手即时停止的音效，使用 `AudioManager.playLoopEffect(url)` 和 `AudioManager.stopLoopEffect(url)`；不要用 `playEffect` 模拟这类持续音效。
-- 修改音频缓存和释放逻辑时，确认 `musics/effects` Map 与 bundle 资源生命周期一致。
+- 页面退出先销毁自身会话，再调用 `releaseUnusedClips()` 请求清理；管理器等待会话、在途加载、音乐和循环音效都不再使用缓存后释放。`releaseCachedClips()` 会全局取消播放和加载资格，仅用于明确的全局清理；注册映射仍保留供后续重载。
 
 ## Ads / Platform / Share / Record
 
@@ -208,10 +216,11 @@
 ## 修改建议与验证
 
 - 改 `ui-killer`、`Thor`、`ExtendCCComponent`：优先运行编辑器/弹窗/Thor 自动绑定相关轻量测试，并在 Cocos 预览中点按 `_` 节点、Button、EditBox 和嵌套 Thor 节点。
-- 改 `UIManager/UIPopup`：验证 prefab 扫描、打开、关闭、缓存、挂起恢复、空白关闭和动画。
+- 改 `UIManager/UIPopup`：验证 prefab 扫描、打开、关闭、缓存、挂起恢复、空白关闭和动画；普通 prefab 另运行根仓库 `tests/render/ui-manager-prefabs.test.js`，覆盖取消、并发及延迟销毁引用。
 - 改 `MVVM`：验证 `VM.add/remove`、路径监听、`VMParent` 的 `*` 替换、Label 模板和 controller 双向写回。
 - 改 `ECS`：验证组件注册、添加/删除/回收、group 查询、entityEnter/entityRemove、RootSystem 执行顺序。
-- 改 `resLoader/ImageUtil`：验证 bundle 资源加载、目录加载、释放、重复加载和运行时图片显示。
+- 改 `resLoader/ImageUtil`：验证 bundle 资源加载、目录加载、释放、重复加载和运行时图片显示；根仓库 `tests/render/res-loader.test.js` 覆盖旧重载、失败重试及跨包/类型请求隔离。
+- 改 `AudioManager`：运行根仓库 `tests/render/count-rice-sound-session.test.js`，覆盖会话取消、命名通道、预热共享和引用释放；再用真实 Cocos 预览检查原生音频加载。
 - 改 `EventManager`：验证重复监听、解绑、tag 解绑、节点销毁自动解绑和回调中移除监听。
 - 改 `guide-next`：同时遵守 `core/guide-next/AGENTS.md` 的验证清单。
 - 改广告/平台：至少在对应平台 mock 或真机环境验证广告加载、展示、关闭、失败、重复调用和 fallback。

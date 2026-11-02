@@ -9,8 +9,8 @@ const { ccclass, menu } = _decorator;
 /** 游戏音效 */
 @ccclass('AudioEffect')
 export class AudioEffect extends AudioSource {
-    playSelf(clip: AudioClip, callback?: Function) {
-        this.playOneShot(clip, this.volume);
+    playSelf(clip: AudioClip, callback?: Function, volume: number = this.volume) {
+        this.playOneShot(clip, volume);
         callback && callback();
     }
 
@@ -27,6 +27,8 @@ export class AudioEffect extends AudioSource {
     stopLoopSelf() {
         this.loop = false;
         this.stop();
+        // Invalidate a deferred native AudioPlayer load as well as a live voice.
+        this.clip = null;
     }
 
 }
